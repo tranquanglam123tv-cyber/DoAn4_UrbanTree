@@ -7,6 +7,8 @@
     "dev": "vite --port=3000 --host=0.0.0.0",
     "backend": "npm start --prefix backend",
     "backend:dev": "npm run dev --prefix backend",
+    "tunnel": "cloudflared tunnel --url http://localhost:3000",
+    "share": "cmd /c share_online.bat",
     "demo": "node backend/scripts/run_demo.js",
     "build": "vite build",
     "preview": "vite preview",
