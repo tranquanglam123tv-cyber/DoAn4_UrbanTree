@@ -104,14 +104,13 @@ app.get('/', (req, res) => {
 
 // Khởi chạy server nếu chạy trực tiếp
 if (require.main === module) {
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`====================================================`);
-    console.log(`🚀 UrbanTree Backend Server đang chạy tại:`);
-    console.log(`👉 http://localhost:${PORT}`);
-    console.log(`👉 Thống kê Dashboard: http://localhost:${PORT}/api/dashboard/stats`);
-    console.log(`👉 Danh sách API Cây xanh: http://localhost:${PORT}/api/trees`);
-    console.log(`👉 Cổng Blockchain APIs: http://localhost:${PORT}/api/blockchain/status`);
-    console.log(`👉 Explorer Hoạt động Sổ cái: http://localhost:${PORT}/api/blockchain/explorer`);
+    console.log(`🚀 UrbanTree Backend Server đang chạy (Host 0.0.0.0):`);
+    console.log(`👉 Local:   http://localhost:${PORT}`);
+    console.log(`👉 LAN/Wi-Fi: Mở trên điện thoại qua IP máy tính port ${PORT}`);
+    console.log(`👉 Cổng Citizen QR:  http://localhost:${PORT}/citizen`);
+    console.log(`👉 Cổng Verifier:    http://localhost:${PORT}/verifier`);
     console.log(`====================================================`);
   });
 }
