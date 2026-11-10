@@ -24,4 +24,4 @@ Write-Host "[3/3] Dang lay link HTTPS cong khai tu Cloudflare..." -ForegroundCol
 Write-Host "👉 Hay copy duong link https://...trycloudflare.com ben duoi de gui cho moi nguoi:" -ForegroundColor Green
 Write-Host "--------------------------------------------------------" -ForegroundColor Gray
 
-& $cfExe tunnel --url http://localhost:3000
+& $cfExe tunnel --url http://127.0.0.1:3000 --http-host-header localhost:3000

@@ -30,6 +30,6 @@ echo   (Đợi vài giây để lấy link HTTPS công khai)
 echo ========================================================
 echo.
 
-%CF_EXE% tunnel --url http://localhost:3000
+%CF_EXE% tunnel --url http://127.0.0.1:3000 --http-host-header localhost:3000
 
 
