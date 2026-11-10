@@ -34,8 +34,17 @@ echo   👉 Cổng Citizen (QR)   : http://localhost:5001/citizen
 echo   👉 Cổng Verifier       : http://localhost:5001/verifier
 echo.
 echo   📱 TRÊN ĐIỆN THOẠI (BẮT CHUNG WI-FI VỚI MÁY TÍNH):
-echo   👉 Mở Safari / Chrome  : http://%LOCAL_IP%:3000
-echo   👉 Cổng Citizen (QR)   : http://%LOCAL_IP%:5001/citizen
+echo   👉 Cách 1 (Khuyên dùng - Không bao giờ đổi):
+echo      Frontend : http://%COMPUTERNAME%.local:3000
+echo      Citizen  : http://%COMPUTERNAME%.local:5001/citizen
+echo.
+echo   👉 Cách 2 (Theo IP Wi-Fi tự động):
+echo      Frontend : http://%LOCAL_IP%:3000
+echo      Citizen  : http://%LOCAL_IP%:5001/citizen
+echo.
+echo   💡 Mẹo: Dùng http://%COMPUTERNAME%.local:3000 thì bạn đổi sang bất kỳ
+echo   Wi-Fi nào (ở nhà, trường, quán cafe) điện thoại vẫn tự nhận mà KHÔNG CẦN
+echo   xem lại IP hay gõ ipconfig!
 echo.
 echo   👉 Trên điện thoại bấm nút Chia sẻ / 3 chấm ->
 echo      chọn "Thêm vào màn hình chính" (Add to Home screen)

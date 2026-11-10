@@ -102,15 +102,53 @@ app.get('/', (req, res) => {
   });
 });
 
+const os = require('os');
+
+function getLocalNetworkInfo() {
+  const interfaces = os.networkInterfaces();
+  const hostname = os.hostname();
+  let wifiIp = 'localhost';
+
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        wifiIp = iface.address;
+        break;
+      }
+    }
+    if (wifiIp !== 'localhost') break;
+  }
+
+  return {
+    ip: wifiIp,
+    hostname: `${hostname.toLowerCase()}.local`
+  };
+}
+
+// API Thông tin mạng nội bộ & Tự động đổi IP theo Wi-Fi
+app.get('/api/system/network', (req, res) => {
+  const net = getLocalNetworkInfo();
+  res.json({
+    success: true,
+    data: {
+      ...net,
+      frontendUrl: `http://${net.ip}:3000`,
+      frontendMdnsUrl: `http://${net.hostname}:3000`,
+      citizenUrl: `http://${net.ip}:${PORT}/citizen`,
+      citizenMdnsUrl: `http://${net.hostname}:${PORT}/citizen`
+    }
+  });
+});
+
 // Khởi chạy server nếu chạy trực tiếp
 if (require.main === module) {
+  const net = getLocalNetworkInfo();
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`====================================================`);
-    console.log(`🚀 UrbanTree Backend Server đang chạy (Host 0.0.0.0):`);
-    console.log(`👉 Local:   http://localhost:${PORT}`);
-    console.log(`👉 LAN/Wi-Fi: Mở trên điện thoại qua IP máy tính port ${PORT}`);
-    console.log(`👉 Cổng Citizen QR:  http://localhost:${PORT}/citizen`);
-    console.log(`👉 Cổng Verifier:    http://localhost:${PORT}/verifier`);
+    console.log(`🚀 UrbanTree Backend Server (Host 0.0.0.0, Port ${PORT})`);
+    console.log(`💻 Trên máy tính (PC):  http://localhost:${PORT}`);
+    console.log(`📱 Trên điện thoại:     http://${net.ip}:${PORT}/citizen`);
+    console.log(`✨ Hoặc dùng tên miền: http://${net.hostname}:${PORT}/citizen`);
     console.log(`====================================================`);
   });
 }
