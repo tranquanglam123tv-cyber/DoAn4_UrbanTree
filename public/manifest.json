@@ -1,0 +1,106 @@
+{
+  "name": "UrbanTree - Quản lý Cây xanh Đô thị & Blockchain",
+  "short_name": "UrbanTree",
+  "description": "Hệ thống quản lý cây xanh đô thị tích hợp QR Code định danh, nhật ký chăm sóc, phản ánh sự cố từ người dân và bảo chứng toàn vẹn bằng Blockchain.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "window-controls-overlay",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#F8FAF8",
+  "theme_color": "#174B36",
+  "lang": "vi-VN",
+  "dir": "ltr",
+  "categories": [
+    "utilities",
+    "productivity",
+    "government"
+  ],
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Bản đồ cây xanh",
+      "short_name": "Bản đồ",
+      "description": "Mở bản đồ số GIS vị trí các cây xanh đô thị",
+      "url": "/?tab=map",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Quét QR Code",
+      "short_name": "Quét QR",
+      "description": "Quét mã QR gắn trên thân cây xanh",
+      "url": "/?action=scan",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Báo cáo sự cố khẩn",
+      "short_name": "Báo sự cố",
+      "description": "Gửi phản ánh cây đổ, cành gãy khẩn cấp",
+      "url": "/?tab=incidents",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Đối soát Blockchain",
+      "short_name": "Kiểm toán",
+      "description": "Cổng kiểm toán đối soát Merkle Tree & Smart Contract",
+      "url": "/?tab=blockchain",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

@@ -33,3 +33,4 @@ pause > nul
 start http://localhost:3000
 start http://localhost:5001/citizen
 start http://localhost:5001/verifier
+

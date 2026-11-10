@@ -131,3 +131,22 @@
   margin: 10px 12px;
   line-height: 1.4;
 }
+
+/* 📱 PWA Standalone Mode & iOS Notch Safe-Area Support */
+@supports (padding-top: env(safe-area-inset-top)) {
+  body {
+    --safe-top: env(safe-area-inset-top);
+    --safe-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@media all and (display-mode: standalone) {
+  body {
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  header {
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+  }
+}

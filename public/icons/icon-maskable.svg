@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGradMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1B4D3E" />
+      <stop offset="50%" stop-color="#12352A" />
+      <stop offset="100%" stop-color="#0B2019" />
+    </linearGradient>
+    <linearGradient id="leafGrad1Mask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#74C69D" />
+      <stop offset="100%" stop-color="#40916C" />
+    </linearGradient>
+    <linearGradient id="leafGrad2Mask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#95D5B2" />
+      <stop offset="100%" stop-color="#52B788" />
+    </linearGradient>
+    <linearGradient id="trunkGradMask" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#D8F3DC" />
+      <stop offset="100%" stop-color="#74C69D" />
+    </linearGradient>
+  </defs>
+
+  <!-- Full bleed background for maskable (no corner radius, OS clips it) -->
+  <rect width="512" height="512" fill="url(#bgGradMask)" />
+
+  <!-- Inner safe-zone container scaled down to 80% to fit within Android safe circle -->
+  <g transform="translate(51.2, 51.2) scale(0.8)">
+    <!-- Outer Shield -->
+    <path d="M256 70 C345 92 410 115 410 180 C410 295 330 385 256 438 C182 385 102 295 102 180 C102 115 167 92 256 70 Z" 
+          fill="none" stroke="#52B788" stroke-width="8" opacity="0.4" />
+
+    <!-- Tree Canopy Layers -->
+    <path d="M256 110 L335 205 H177 Z" fill="url(#leafGrad2Mask)" opacity="0.95" />
+    <path d="M256 165 L365 290 H147 Z" fill="url(#leafGrad1Mask)" opacity="0.95" />
+    <path d="M256 220 L395 365 H117 Z" fill="url(#leafGrad2Mask)" opacity="0.9" />
+
+    <!-- Trunk -->
+    <path d="M246 360 L246 425 H266 L266 360 Z" fill="url(#trunkGradMask)" />
+
+    <!-- QR Elements -->
+    <rect x="175" y="380" width="36" height="36" rx="6" fill="#2D6A4F" stroke="#95D5B2" stroke-width="3" />
+    <rect x="185" y="390" width="16" height="16" rx="3" fill="#D8F3DC" />
+    <rect x="301" y="380" width="36" height="36" rx="6" fill="#2D6A4F" stroke="#95D5B2" stroke-width="3" />
+    <rect x="311" y="390" width="16" height="16" rx="3" fill="#D8F3DC" />
+
+    <!-- Center Node -->
+    <circle cx="256" cy="275" r="16" fill="#081C15" stroke="#74C69D" stroke-width="5" />
+    <circle cx="256" cy="275" r="7" fill="#D8F3DC" />
+
+    <line x1="256" y1="215" x2="256" y2="259" stroke="#D8F3DC" stroke-width="4" stroke-linecap="round" />
+    <line x1="210" y1="250" x2="242" y2="268" stroke="#74C69D" stroke-width="3" stroke-linecap="round" />
+    <line x1="302" y1="250" x2="270" y2="268" stroke="#74C69D" stroke-width="3" stroke-linecap="round" />
+  </g>
+</svg>
