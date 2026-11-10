@@ -31,6 +31,92 @@
   background: #94a3b8;
 }
 
+/* Micro-interaction & Animation Keyframes */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(52, 122, 80, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(52, 122, 80, 0.5), 0 0 10px rgba(243, 232, 178, 0.4);
+  }
+}
+
+@keyframes laserSweep {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(300px);
+    opacity: 0.2;
+  }
+}
+
+@keyframes floatSoft {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2.5s infinite ease-in-out;
+}
+
+.animate-float {
+  animation: floatSoft 3s ease-in-out infinite;
+}
+
+.scanner-beam-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #10b981, #34d399, transparent);
+  box-shadow: 0 0 15px 3px rgba(16, 185, 129, 0.7);
+  animation: laserSweep 1.2s ease-in-out infinite alternate;
+}
+
+/* Card Hover Elevation & Glassmorphism */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(23, 75, 54, 0.08);
+  box-shadow: 0 4px 20px -2px rgba(23, 75, 54, 0.05);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-interactive {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px -5px rgba(23, 75, 54, 0.1), 0 10px 10px -5px rgba(23, 75, 54, 0.04);
+}
+
 /* Leaflet map polish */
 .leaflet-container {
   font-family: inherit;

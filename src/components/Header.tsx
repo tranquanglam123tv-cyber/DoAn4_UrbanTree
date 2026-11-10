@@ -81,10 +81,10 @@ export const Header: React.FC<HeaderProps> = ({
               <>
                 <button
                   onClick={() => setActiveTab('dashboard')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 whitespace-nowrap ${
                     activeTab === 'dashboard'
                       ? 'bg-[#174B36] text-white shadow-xs'
-                      : 'text-[#1E2922]/70 hover:text-[#174B36] hover:bg-[#E0EBDD]/50'
+                      : 'text-[#1E2922]/70 hover:text-[#174B36] hover:bg-[#E0EBDD]/60'
                   }`}
                 >
                   <LayoutDashboard className="w-4 h-4" />
@@ -93,10 +93,10 @@ export const Header: React.FC<HeaderProps> = ({
 
                 <button
                   onClick={() => setActiveTab('trees')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 whitespace-nowrap ${
                     activeTab === 'trees'
                       ? 'bg-[#174B36] text-white shadow-xs'
-                      : 'text-[#1E2922]/70 hover:text-[#174B36] hover:bg-[#E0EBDD]/50'
+                      : 'text-[#1E2922]/70 hover:text-[#174B36] hover:bg-[#E0EBDD]/60'
                   }`}
                 >
                   <Trees className="w-4 h-4" />
@@ -105,10 +105,10 @@ export const Header: React.FC<HeaderProps> = ({
 
                 <button
                   onClick={() => setActiveTab('map')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 whitespace-nowrap ${
                     activeTab === 'map'
                       ? 'bg-[#174B36] text-white shadow-xs'
-                      : 'text-[#1E2922]/70 hover:text-[#174B36] hover:bg-[#E0EBDD]/50'
+                      : 'text-[#1E2922]/70 hover:text-[#174B36] hover:bg-[#E0EBDD]/60'
                   }`}
                 >
                   <MapPin className="w-4 h-4" />
@@ -117,10 +117,10 @@ export const Header: React.FC<HeaderProps> = ({
 
                 <button
                   onClick={() => setActiveTab('care')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 whitespace-nowrap ${
                     activeTab === 'care'
                       ? 'bg-[#174B36] text-white shadow-xs'
-                      : 'text-[#1E2922]/70 hover:text-[#174B36] hover:bg-[#E0EBDD]/50'
+                      : 'text-[#1E2922]/70 hover:text-[#174B36] hover:bg-[#E0EBDD]/60'
                   }`}
                 >
                   <ClipboardList className="w-4 h-4" />
@@ -131,10 +131,10 @@ export const Header: React.FC<HeaderProps> = ({
 
             <button
               onClick={() => setActiveTab('incidents')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 whitespace-nowrap ${
                 activeTab === 'incidents'
                   ? 'bg-[#174B36] text-white shadow-xs'
-                  : 'text-[#1E2922]/70 hover:text-[#174B36] hover:bg-[#E0EBDD]/50'
+                  : 'text-[#1E2922]/70 hover:text-[#174B36] hover:bg-[#E0EBDD]/60'
               }`}
             >
               <AlertTriangle className="w-4 h-4" />
@@ -144,14 +144,14 @@ export const Header: React.FC<HeaderProps> = ({
             {currentUser.role === 'ADMIN' && (
               <button
                 onClick={() => setActiveTab('blockchain')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 whitespace-nowrap ${
                   activeTab === 'blockchain'
                     ? 'bg-[#174B36] text-white shadow-xs'
-                    : 'text-[#1E2922]/70 hover:text-[#174B36] hover:bg-[#E0EBDD]/50'
+                    : 'text-[#1E2922]/70 hover:text-[#174B36] hover:bg-[#E0EBDD]/60'
                 }`}
               >
-                <ShieldCheck className="w-4 h-4" />
-                <span>Xác minh Blockchain</span>
+                <ShieldCheck className="w-4 h-4 text-emerald-500 animate-pulse" />
+                <span>Blockchain A19</span>
               </button>
             )}
           </nav>

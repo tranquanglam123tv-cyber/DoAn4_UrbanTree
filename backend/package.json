@@ -20,10 +20,13 @@
   "author": "UrbanTree Team",
   "license": "ISC",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "ethers": "^6.13.2",
     "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^10.5.0",
     "qrcode": "^1.5.4",
     "sqlite3": "^5.1.7"
   },

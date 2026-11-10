@@ -31,15 +31,20 @@ db.serialize(() => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT UNIQUE NOT NULL,
       email TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
+      password_hash TEXT,
       full_name TEXT NOT NULL,
       phone TEXT,
-      role TEXT NOT NULL CHECK(role IN ('ADMIN', 'STAFF')),
+      role TEXT NOT NULL CHECK(role IN ('ADMIN', 'STAFF', 'CITIZEN')),
       status TEXT DEFAULT 'ACTIVE' CHECK(status IN ('ACTIVE', 'INACTIVE')),
+      google_id TEXT,
+      avatar_url TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  addColumnIfNotExists('users', 'google_id', 'TEXT');
+  addColumnIfNotExists('users', 'avatar_url', 'TEXT');
 
   // ==============================================================
   // 2. NHÓM QUẢN LÝ LOÀI CÂY (tree_types)
@@ -189,7 +194,7 @@ db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS blockchain_audits (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      record_type TEXT NOT NULL CHECK(record_type IN ('TREE_PROFILE', 'CARE_LOG', 'INCIDENT_REPORT')),
+      record_type TEXT NOT NULL CHECK(record_type IN ('TREE_PROFILE', 'CARE_LOG', 'INCIDENT_REPORT', 'AI_ASSESSMENT')),
       record_id TEXT NOT NULL,
       data_hash TEXT NOT NULL,
       tx_hash TEXT,
@@ -205,6 +210,44 @@ db.serialize(() => {
     )
   `);
   db.run(`CREATE INDEX IF NOT EXISTS idx_audit_record ON blockchain_audits(record_type, record_id);`);
+
+  // ==============================================================
+  // 8. NHÓM XÁC THỰC MÃ OTP (otp_codes)
+  // ==============================================================
+  db.run(`
+    CREATE TABLE IF NOT EXISTS otp_codes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT NOT NULL,
+      code TEXT NOT NULL,
+      type TEXT DEFAULT 'LOGIN' CHECK(type IN ('LOGIN', 'REGISTER', 'RESET_PASSWORD')),
+      expires_at DATETIME NOT NULL,
+      is_used INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_otp_email ON otp_codes(email);`);
+
+  // ==============================================================
+  // 9. NHÓM ĐÁNH GIÁ TRÍ TUỆ NHÂN TẠO GEMINI (ai_assessments)
+  // ==============================================================
+  db.run(`
+    CREATE TABLE IF NOT EXISTS ai_assessments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tree_id INTEGER,
+      assessment_type TEXT NOT NULL CHECK(assessment_type IN ('HEALTH', 'CLIMATE_MATCH', 'RISK', 'CARE_PLAN')),
+      score REAL,
+      grade TEXT,
+      risk_level TEXT CHECK(risk_level IN ('Thấp', 'Trung bình', 'Cao', 'Khẩn cấp', NULL)),
+      summary TEXT,
+      details TEXT,
+      data_hash TEXT,
+      tx_hash TEXT,
+      anchor_status TEXT DEFAULT 'NOT_ANCHORED' CHECK(anchor_status IN ('NOT_ANCHORED', 'PENDING', 'CONFIRMED', 'FAILED')),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (tree_id) REFERENCES trees(id) ON DELETE CASCADE
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_ai_tree ON ai_assessments(tree_id, assessment_type);`);
 
   // ==============================================================
   // CHÈN DỮ LIỆU MẪU BAN ĐẦU (SEED DATA)

@@ -50,6 +50,9 @@ export const BlockchainVerifyView: React.FC = () => {
     setIsVerifying(true);
     setVerifyResult(null);
 
+    // Tạo độ trễ 600ms để hiệu ứng tia quét Laser chạy mượt mà
+    await new Promise((r) => setTimeout(r, 600));
+
     try {
       let recordData: any = null;
       if (selectedRecordType === 'TREE_PROFILE') {
@@ -218,6 +221,17 @@ export const BlockchainVerifyView: React.FC = () => {
             <RefreshCw className={`w-4 h-4 ${isVerifying ? 'animate-spin' : ''}`} />
             <span>{isVerifying ? 'Đang băm & đối soát...' : 'Kiểm tra tính toàn vẹn (Run Verification)'}</span>
           </button>
+
+          {/* Scanning Laser Beam */}
+          {isVerifying && (
+            <div className="relative overflow-hidden p-6 rounded-2xl bg-slate-900 text-white text-center shadow-lg border border-emerald-500/30">
+              <div className="scanner-beam-line"></div>
+              <div className="flex items-center justify-center gap-2.5 font-mono text-emerald-400 text-xs font-bold">
+                <RefreshCw className="w-4 h-4 animate-spin text-emerald-300" />
+                <span>ĐANG QUÉT MÃ BĂM SHA-256 & TRUY VẤN SMART CONTRACT ON-CHAIN...</span>
+              </div>
+            </div>
+          )}
 
           {/* Verification Result Output */}
           {verifyResult && (

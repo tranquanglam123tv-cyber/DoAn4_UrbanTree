@@ -22,100 +22,180 @@
             }
         }
     </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(180deg, #F0F4ED 0%, #F6F5EC 40%, #EBF3EA 100%);
+            min-height: 100vh;
+        }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(52, 122, 80, 0.12);
+            box-shadow: 0 10px 25px -5px rgba(23, 75, 54, 0.07), 0 8px 10px -6px rgba(23, 75, 54, 0.04);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .glass-card:hover {
+            box-shadow: 0 18px 32px -8px rgba(23, 75, 54, 0.12);
+        }
+
+        /* Hiệu ứng quét Laser Scanner */
+        .scanner-beam {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #10b981, #34d399, transparent);
+            box-shadow: 0 0 15px 3px rgba(16, 185, 129, 0.7);
+            animation: scanLaser 1.2s ease-in-out infinite alternate;
+        }
+
+        @keyframes scanLaser {
+            0% { transform: translateY(0); opacity: 0.3; }
+            50% { opacity: 1; }
+            100% { transform: translateY(180px); opacity: 0.3; }
+        }
+    </style>
 </head>
 
-<body class="bg-canvas text-gray-800 min-h-screen">
-    <!-- Header -->
-    <header class="bg-forest text-white py-4 px-6 shadow-md border-b-2 border-vangogh">
+<body class="text-gray-800 min-h-screen selection:bg-leaf selection:text-white pb-14">
+    <!-- Header Công Nghệ Cao -->
+    <header class="bg-forest/95 backdrop-blur-md text-white py-3.5 px-6 sticky top-0 z-40 shadow-lg border-b border-vangogh/25">
         <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <div class="flex items-center space-x-3">
-                <i class="fa-solid fa-tree text-vangogh text-2xl"></i>
+            <div class="flex items-center space-x-3.5">
+                <div class="w-10 h-10 rounded-xl bg-leaf flex items-center justify-center shadow-inner">
+                    <i class="fa-solid fa-shield-halved text-vangogh text-xl"></i>
+                </div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-wide">URBANTREE BLOCKCHAIN PORTAL</h1>
-                    <p class="text-xs text-vangogh/80">Trung tâm Kiểm toán & Bảo chứng Toàn vẹn Dữ liệu Cây xanh</p>
+                    <div class="flex items-center space-x-2">
+                        <h1 class="text-base font-extrabold tracking-tight uppercase">Cổng Kiểm Toán Blockchain (A18/A19)</h1>
+                        <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono border border-emerald-500/40 flex items-center">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-ping"></span>
+                            EVM SMART CONTRACT
+                        </span>
+                    </div>
+                    <p class="text-xs text-vangogh/80">Đối soát toàn vẹn dữ liệu Merkle • Zero Mismatch Auditor</p>
                 </div>
             </div>
-            <div class="flex items-center space-x-2">
-                <span class="inline-block w-3 h-3 rounded-full bg-green-400 animate-pulse"></span>
-                <span class="text-xs font-mono bg-leaf/50 px-2 py-1 rounded" id="network-status">Node:
-                    Localhost:8545</span>
+
+            <div class="flex items-center space-x-2.5">
+                <div class="flex items-center space-x-1.5 bg-emerald-950 px-3 py-1.5 rounded-xl border border-emerald-700/50 shadow-inner">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                    </span>
+                    <span class="text-xs font-mono text-emerald-300" id="network-status">Node: Localhost:8545</span>
+                </div>
+                <a href="/admin" class="text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-xl border border-white/15 backdrop-blur-sm transition flex items-center space-x-1">
+                    <i class="fa-solid fa-truck-medical text-vangogh"></i>
+                    <span>Admin</span>
+                </a>
+                <a href="/citizen" class="text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-xl border border-white/15 backdrop-blur-sm transition flex items-center space-x-1">
+                    <i class="fa-solid fa-mobile-screen text-vangogh"></i>
+                    <span>Citizen</span>
+                </a>
             </div>
         </div>
     </header>
 
-    <main class="max-w-6xl mx-auto p-6 space-y-8">
-        <!-- Section A19: CỔNG XÁC MINH TOÀN VẸN (INTEGRITY VERIFIER) -->
-        <section class="bg-white rounded-xl shadow p-6 border border-gray-200">
-            <div class="flex items-center space-x-3 mb-4 border-b pb-3">
-                <i class="fa-solid fa-shield-halved text-leaf text-2xl"></i>
+    <main class="max-w-6xl mx-auto p-6 space-y-6">
+
+        <!-- SECTION A19: CỔNG XÁC MINH TOÀN VẸN (INTEGRITY VERIFIER) -->
+        <section class="glass-card rounded-2xl p-6 relative overflow-hidden">
+            <div class="flex items-center space-x-3 mb-5 border-b border-gray-100 pb-4">
+                <div class="w-9 h-9 rounded-xl bg-leaf/10 text-leaf flex items-center justify-center">
+                    <i class="fa-solid fa-fingerprint text-xl"></i>
+                </div>
                 <div>
-                    <h2 class="text-lg font-bold text-forest">A19 — Kiểm toán Đối soát Mã băm (Zero Mismatch Verifier)
-                    </h2>
-                    <p class="text-xs text-gray-500">So sánh mã băm tính toán từ SQLite Off-chain với bản ghi bất biến
-                        trên Smart Contract On-chain</p>
+                    <h2 class="text-base font-extrabold text-forest">A19 — Kiểm Toán Đối Soát Mã Băm (Zero Mismatch Verifier)</h2>
+                    <p class="text-xs text-gray-500">So sánh mã băm tính toán từ SQLite Off-chain với bản ghi bất biến trên Smart Contract On-chain</p>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Mã bản ghi (Record ID):</label>
-                    <input type="text" id="verify-record-id" value="TREE-001" placeholder="VD: TREE-001 hoặc CARE-1"
-                        class="w-full px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-leaf">
+                    <label class="block text-xs font-bold text-gray-700 mb-1.5">Mã bản ghi (Record ID):</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-barcode absolute left-3 top-3 text-gray-400 text-xs"></i>
+                        <input type="text" id="verify-record-id" value="TREE-001" placeholder="VD: TREE-001 hoặc INC-1"
+                            class="w-full pl-8 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono font-bold focus:bg-white focus:ring-2 focus:ring-leaf focus:border-leaf transition">
+                    </div>
                 </div>
+
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Mã băm hiện thời cần đối soát (Tùy
-                        chọn):</label>
-                    <input type="text" id="verify-current-hash" placeholder="Để trống nếu muốn tra cứu trực tiếp"
-                        class="w-full px-3 py-2 border rounded text-sm font-mono text-xs focus:ring-2 focus:ring-leaf">
+                    <label class="block text-xs font-bold text-gray-700 mb-1.5">Mã băm hiện thời cần đối soát:</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-hashtag absolute left-3 top-3 text-gray-400 text-xs"></i>
+                        <input type="text" id="verify-current-hash" placeholder="Để trống nếu muốn tra cứu trực tiếp"
+                            class="w-full pl-8 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono focus:bg-white focus:ring-2 focus:ring-leaf focus:border-leaf transition">
+                    </div>
                 </div>
+
                 <div class="flex items-end">
-                    <button onclick="runVerification()"
-                        class="w-full bg-leaf hover:bg-forest text-white font-medium py-2 px-4 rounded text-sm transition flex items-center justify-center space-x-2">
+                    <button onclick="runVerification()" id="btn-run-verify"
+                        class="w-full bg-gradient-to-r from-forest to-leaf hover:from-leaf hover:to-forest text-white font-extrabold py-2.5 px-4 rounded-xl text-xs shadow-md shadow-forest/20 transition transform active:scale-98 flex items-center justify-center space-x-2">
                         <i class="fa-solid fa-magnifying-glass"></i>
-                        <span>Thực Hiện Xác Minh</span>
+                        <span>Thực Hiện Xác Minh On-chain</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Kết quả kiểm toán -->
-            <div id="verify-result" class="mt-6 hidden p-4 rounded-lg border">
-                <!-- Nội dung kết quả render bằng JS bên dưới -->
+            <!-- Khối quét Laser khi bấm xác minh -->
+            <div id="scanner-box" class="mt-6 p-6 rounded-2xl bg-gray-900 text-white relative overflow-hidden hidden">
+                <div class="scanner-beam"></div>
+                <div class="flex items-center justify-center space-x-3 text-emerald-400 font-mono text-xs">
+                    <i class="fa-solid fa-satellite-dish fa-spin text-base"></i>
+                    <span>ĐANG QUÉT VÀ TRUY VẤN MÃ BĂM TỪ SMART CONTRACT EVM...</span>
+                </div>
+            </div>
+
+            <!-- Kết quả kiểm toán hiển thị sau khi quét -->
+            <div id="verify-result" class="mt-6 hidden">
+                <!-- Sẽ render động qua Javascript -->
             </div>
         </section>
 
-        <!-- Section A18: SỔ CÁI BLOCKCHAIN EXPLORER -->
-        <section class="bg-white rounded-xl shadow p-6 border border-gray-200">
-            <div class="flex justify-between items-center mb-4 border-b pb-3">
+        <!-- SECTION A18: SỔ CÁI BLOCKCHAIN EXPLORER -->
+        <section class="glass-card rounded-2xl p-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5 border-b border-gray-100 pb-4">
                 <div class="flex items-center space-x-3">
-                    <i class="fa-solid fa-cubes text-leaf text-2xl"></i>
+                    <div class="w-9 h-9 rounded-xl bg-leaf/10 text-leaf flex items-center justify-center">
+                        <i class="fa-solid fa-cubes text-xl"></i>
+                    </div>
                     <div>
-                        <h2 class="text-lg font-bold text-forest">A18 — Blockchain Activity Explorer</h2>
-                        <p class="text-xs text-gray-500">Danh sách các bản ghi hồ sơ cây xanh & nhật ký hiện trường đã
-                            được neo trên chuỗi khối</p>
+                        <h2 class="text-base font-extrabold text-forest">A18 — Blockchain Activity Explorer</h2>
+                        <p class="text-xs text-gray-500">Danh sách các bản ghi hồ sơ cây xanh & nhật ký hiện trường đã được neo trên chuỗi khối</p>
                     </div>
                 </div>
+
                 <button onclick="loadExplorerData()"
-                    class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded flex items-center space-x-1">
-                    <i class="fa-solid fa-rotate"></i>
-                    <span>Làm mới</span>
+                    class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl flex items-center space-x-1.5 font-semibold transition active:scale-95">
+                    <i class="fa-solid fa-rotate text-gray-500"></i>
+                    <span>Làm mới sổ cái</span>
                 </button>
             </div>
 
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto rounded-xl border border-gray-100">
                 <table class="w-full text-left text-xs border-collapse">
                     <thead>
-                        <tr class="bg-gray-50 border-b text-gray-600 font-semibold">
-                            <th class="p-3">Mã Bản Ghi</th>
-                            <th class="p-3">Phân Loại</th>
-                            <th class="p-3">Mã Băm SHA-256 (On-chain)</th>
-                            <th class="p-3">Thời Điểm Ghi</th>
-                            <th class="p-3">Ví Ký Số (Recorder)</th>
-                            <th class="p-3 text-center">Thao Tác</th>
+                        <tr class="bg-gray-50/80 border-b text-gray-600 font-bold uppercase tracking-wider text-[11px]">
+                            <th class="p-3.5">Mã Bản Ghi</th>
+                            <th class="p-3.5">Phân Loại</th>
+                            <th class="p-3.5">Mã Băm SHA-256 (On-chain)</th>
+                            <th class="p-3.5">Thời Điểm Ghi</th>
+                            <th class="p-3.5">Ví Ký Số (Recorder)</th>
+                            <th class="p-3.5 text-center">Thao Tác</th>
                         </tr>
                     </thead>
-                    <tbody id="explorer-tbody">
+                    <tbody id="explorer-tbody" class="divide-y divide-gray-100">
                         <tr>
-                            <td colspan="6" class="p-4 text-center text-gray-400">Đang tải dữ liệu từ Smart Contract...
+                            <td colspan="6" class="p-6 text-center text-gray-400">
+                                <i class="fa-solid fa-spinner fa-spin mr-2 text-leaf text-base"></i> Đang tải dữ liệu từ Smart Contract...
                             </td>
                         </tr>
                     </tbody>
@@ -127,13 +207,12 @@
     <script>
         const API_BASE = '/api/blockchain';
 
-        // 1. Tự động kiểm tra kết nối khi tải trang
         window.addEventListener('DOMContentLoaded', () => {
             checkNetwork();
             loadExplorerData();
         });
 
-        async function fetchWithTimeout(url, options = {}, timeoutMs = 3000) {
+        async function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
             const controller = new AbortController();
             const id = setTimeout(() => controller.abort(), timeoutMs);
             try {
@@ -148,116 +227,149 @@
 
         async function checkNetwork() {
             try {
-                const res = await fetchWithTimeout(`${API_BASE}/status`, {}, 3000);
+                const res = await fetchWithTimeout(`${API_BASE}/status`);
                 const data = await res.json();
+                const badge = document.getElementById('network-status');
                 if (data.success && data.network.status === 'CONNECTED') {
-                    document.getElementById('network-status').innerText = `Block: #${data.network.blockNumber} | Local EVM Online`;
-                    document.getElementById('network-status').className = 'text-xs font-mono bg-green-700 px-2 py-1 rounded text-white';
+                    badge.innerText = `Block #${data.network.blockNumber} • Smart Contract Ready`;
+                    badge.className = 'text-xs font-mono text-emerald-300 font-bold';
                 } else {
-                    document.getElementById('network-status').innerText = 'Chưa bật Hardhat Node (Port 8545)';
-                    document.getElementById('network-status').className = 'text-xs font-mono bg-amber-700 px-2 py-1 rounded text-white';
+                    badge.innerText = 'Node: Chưa kết nối';
+                    badge.className = 'text-xs font-mono text-red-400';
                 }
-            } catch (e) {
-                document.getElementById('network-status').innerText = 'Chưa bật Hardhat Node (Port 8545)';
-                document.getElementById('network-status').className = 'text-xs font-mono bg-amber-700 px-2 py-1 rounded text-white';
+            } catch (err) {
+                const badge = document.getElementById('network-status');
+                badge.innerText = 'Node: Mất kết nối';
+                badge.className = 'text-xs font-mono text-red-400';
             }
         }
 
-        // 2. Chức năng Xác minh A19
         async function runVerification() {
             const recordId = document.getElementById('verify-record-id').value.trim();
             const currentHash = document.getElementById('verify-current-hash').value.trim();
             const resultBox = document.getElementById('verify-result');
+            const scannerBox = document.getElementById('scanner-box');
+            const btn = document.getElementById('btn-run-verify');
 
             if (!recordId) {
-                alert('Vui lòng nhập Mã bản ghi (VD: TREE-001)');
+                alert('Vui lòng nhập Mã bản ghi cần kiểm toán');
                 return;
             }
 
-            resultBox.classList.remove('hidden');
-            resultBox.className = 'mt-6 p-4 rounded-lg border bg-gray-50 text-gray-500';
-            resultBox.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Đang đọc dữ liệu từ Smart Contract...';
+            // Bật hiệu ứng quét Laser
+            resultBox.classList.add('hidden');
+            scannerBox.classList.remove('hidden');
+            btn.disabled = true;
+
+            // Chờ quét laser 700ms để tạo hiệu ứng công nghệ cao
+            await new Promise(r => setTimeout(r, 700));
 
             try {
-                const url = currentHash ? `${API_BASE}/verify/${recordId}?currentHash=${currentHash}` : `${API_BASE}/verify/${recordId}`;
+                let url = `${API_BASE}/verify/${recordId}`;
+                if (currentHash) {
+                    url += `?currentHash=${encodeURIComponent(currentHash)}`;
+                }
+
                 const res = await fetchWithTimeout(url, {}, 5000);
                 const data = await res.json();
 
+                scannerBox.classList.add('hidden');
+                btn.disabled = false;
+                resultBox.classList.remove('hidden');
+
                 if (!data.success) {
-                    resultBox.className = 'mt-6 p-4 rounded-lg border border-red-300 bg-red-50 text-red-700';
-                    resultBox.innerHTML = `<strong><i class="fa-solid fa-triangle-exclamation mr-1"></i> Không tìm thấy:</strong> ${data.message}`;
+                    resultBox.innerHTML = `
+                        <div class="p-4 rounded-xl border border-red-200 bg-red-50 text-red-700 flex items-center space-x-2 text-xs">
+                            <i class="fa-solid fa-triangle-exclamation text-base"></i>
+                            <span>${data.message || 'Không tìm thấy bản ghi này trên Smart Contract.'}</span>
+                        </div>
+                    `;
                     return;
                 }
 
-                const rec = data.data || data;
+                const rec = data.record;
                 const isMatch = rec.isValid;
 
-                resultBox.className = isMatch
-                    ? 'mt-6 p-4 rounded-lg border border-green-300 bg-green-50 text-green-900'
-                    : 'mt-6 p-4 rounded-lg border border-red-400 bg-red-50 text-red-900';
-
                 resultBox.innerHTML = `
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <div class="flex items-center space-x-2 font-bold text-base mb-1">
-                                ${isMatch ? '<i class="fa-solid fa-circle-check text-green-600 text-lg"></i><span class="text-green-800">BẢN GHI NGUYÊN VẸN 100% (VERIFIED VALID)</span>' : '<i class="fa-solid fa-circle-xmark text-red-600 text-lg"></i><span class="text-red-800">CẢNH BÁO: DỮ LIỆU ĐÃ BỊ SỬA ĐỔI (HASH MISMATCH)</span>'}
+                    <div class="p-5 rounded-2xl border transition-all duration-300 ${isMatch ? 'bg-gradient-to-br from-emerald-50 via-white to-green-50 border-emerald-300 shadow-lg shadow-emerald-500/10' : 'bg-gradient-to-br from-red-50 via-white to-rose-50 border-red-300 shadow-lg shadow-red-500/10'}">
+                        
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 border-b pb-3">
+                            <div>
+                                <div class="flex items-center space-x-2 font-black text-sm sm:text-base">
+                                    ${isMatch 
+                                        ? '<i class="fa-solid fa-circle-check text-emerald-600 text-xl"></i><span class="text-emerald-900 tracking-tight">BẢN GHI NGUYÊN VẸN 100% (VERIFIED VALID)</span>' 
+                                        : '<i class="fa-solid fa-triangle-exclamation text-red-600 text-xl animate-bounce"></i><span class="text-red-900 tracking-tight">CẢNH BÁO: DỮ LIỆU ĐÃ BỊ SỬA ĐỔI (HASH MISMATCH)</span>'}
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">
+                                    ${isMatch 
+                                        ? 'Dữ liệu off-chain trùng khớp tuyệt đối với dấu vân tay bất biến được ký gửi trên Smart Contract.' 
+                                        : 'Mã băm hiện thời của bản ghi không khớp với mã băm gốc đã lưu trên sổ cái chuỗi! Phát hiện hành vi sửa lén dữ liệu.'}
+                                </p>
                             </div>
-                            <p class="text-xs text-gray-600 mb-3">${isMatch ? 'Dữ liệu off-chain trùng khớp hoàn toàn với dấu vân tay bất biến được ký gửi trên Blockchain.' : 'Mã băm hiện thời của bản ghi không khớp với mã băm gốc đã lưu trên chuỗi!'}</p>
+                            <span class="px-3 py-1 rounded-xl font-mono text-xs font-bold ${isMatch ? 'bg-emerald-200 text-emerald-900' : 'bg-red-200 text-red-900'}">
+                                ${rec.recordId}
+                            </span>
                         </div>
-                        <span class="text-xs px-2 py-1 rounded font-mono ${isMatch ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}">${rec.recordId}</span>
-                    </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs bg-white p-3 rounded border font-mono">
-                        <div>
-                            <span class="text-gray-500 block">Mã băm lưu trữ trên Blockchain:</span>
-                            <span class="text-blue-700 font-semibold break-all">${rec.storedHash}</span>
-                        </div>
-                        <div>
-                            <span class="text-gray-500 block">Mã băm đối soát gửi vào:</span>
-                            <span class="${isMatch ? 'text-green-700' : 'text-red-600 font-bold'} break-all">${rec.currentHash || 'Chưa cung cấp'}</span>
-                        </div>
-                        <div class="mt-2 text-gray-500">
-                            <span>Thời điểm ký gửi:</span> <span class="text-gray-800 font-semibold">${rec.dateFormatted}</span>
-                        </div>
-                        <div class="mt-2 text-gray-500">
-                            <span>Địa chỉ ví người ký (Recorder):</span> <span class="text-gray-800 font-semibold break-all">${rec.recorder}</span>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs bg-white/90 p-4 rounded-xl border font-mono">
+                            <div>
+                                <span class="text-gray-500 block text-[11px] mb-0.5">Mã băm lưu trữ trên Blockchain:</span>
+                                <span class="text-blue-700 font-bold break-all bg-blue-50 p-1.5 rounded block border border-blue-200">${rec.storedHash}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500 block text-[11px] mb-0.5">Mã băm đối soát gửi vào:</span>
+                                <span class="${isMatch ? 'text-emerald-700 font-bold bg-emerald-50 border-emerald-200' : 'text-red-600 font-bold bg-red-50 border-red-300'} break-all p-1.5 rounded block border">
+                                    ${rec.currentHash || 'Chưa cung cấp'}
+                                </span>
+                            </div>
+                            <div class="pt-2 text-gray-600 flex items-center">
+                                <i class="fa-regular fa-clock mr-1.5 text-leaf"></i>
+                                <span>Thời điểm ký gửi:</span> <span class="text-gray-900 font-bold ml-1">${rec.dateFormatted}</span>
+                            </div>
+                            <div class="pt-2 text-gray-600 flex items-center">
+                                <i class="fa-solid fa-wallet mr-1.5 text-leaf"></i>
+                                <span>Ví người ký:</span> <span class="text-gray-900 font-bold ml-1 break-all">${rec.recorder}</span>
+                            </div>
                         </div>
                     </div>
                 `;
             } catch (err) {
-                resultBox.className = 'mt-6 p-4 rounded-lg border border-red-300 bg-red-50 text-red-700';
-                resultBox.innerHTML = `Lỗi kết nối API: ${err.message}`;
+                scannerBox.classList.add('hidden');
+                btn.disabled = false;
+                resultBox.classList.remove('hidden');
+                resultBox.innerHTML = `<div class="p-4 rounded-xl border border-red-300 bg-red-50 text-red-700 text-xs">Lỗi kết nối API: ${err.message}</div>`;
             }
         }
 
-        // 3. Tải danh sách A18 Explorer
         async function loadExplorerData() {
             const tbody = document.getElementById('explorer-tbody');
-            tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Đang truy vấn sổ cái...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2 text-leaf text-base"></i> Đang truy vấn sổ cái...</td></tr>';
 
             try {
                 const res = await fetchWithTimeout(`${API_BASE}/explorer`, {}, 5000);
                 const data = await res.json();
 
                 if (!data.success || !data.records || data.records.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-400">Chưa có bản ghi nào được neo trên Blockchain local.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-gray-400">Chưa có bản ghi nào được neo trên Blockchain local.</td></tr>';
                     return;
                 }
 
                 tbody.innerHTML = data.records.map(r => `
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="p-3 font-semibold text-forest">${r.recordId}</td>
-                        <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-800 font-medium">${r.recordType}</span></td>
-                        <td class="p-3 font-mono text-[11px] text-gray-600 break-all max-w-xs">${r.dataHash}</td>
-                        <td class="p-3 text-gray-500 text-[11px]">${r.dateFormatted}</td>
-                        <td class="p-3 font-mono text-[11px] text-gray-500 break-all max-w-[120px]">${r.recorder}</td>
-                        <td class="p-3 text-center">
-                            <button onclick="checkThisRecord('${r.recordId}', '${r.dataHash}')" class="text-xs text-leaf hover:underline font-medium">Kiểm toán</button>
+                    <tr class="hover:bg-emerald-50/40 transition">
+                        <td class="p-3.5 font-mono font-bold text-forest">${r.recordId}</td>
+                        <td class="p-3.5"><span class="px-2 py-0.5 rounded text-[10px] bg-blue-50 text-blue-800 font-bold border border-blue-200">${r.recordType}</span></td>
+                        <td class="p-3.5 font-mono text-[11px] text-gray-600 break-all max-w-xs">${r.dataHash}</td>
+                        <td class="p-3.5 text-gray-500 text-[11px]">${r.dateFormatted}</td>
+                        <td class="p-3.5 font-mono text-[11px] text-gray-500 break-all max-w-[120px]">${r.recorder}</td>
+                        <td class="p-3.5 text-center">
+                            <button onclick="checkThisRecord('${r.recordId}', '${r.dataHash}')" class="text-xs bg-leaf/10 hover:bg-leaf text-leaf hover:text-white font-bold px-2.5 py-1 rounded-lg transition">
+                                <i class="fa-solid fa-magnifying-glass mr-1"></i>Kiểm toán
+                            </button>
                         </td>
                     </tr>
                 `).join('');
             } catch (err) {
-                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Lỗi tải sổ cái: ${err.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500">Lỗi tải sổ cái: ${err.message}</td></tr>`;
             }
         }
 
@@ -267,7 +379,7 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
             setTimeout(() => {
                 runVerification();
-            }, 100);
+            }, 250);
         }
     </script>
 </body>

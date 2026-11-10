@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UrbanTree — Hồ Sơ Cây Xanh Công Cộng (P01/P02)</title>
+    <title>UrbanTree — Hồ Sơ Cây Xanh Công Cộng (P01/P02/P03)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script>
@@ -13,126 +13,352 @@
                     colors: {
                         forest: '#174B36',
                         leaf: '#347A50',
+                        mint: '#4C956C',
                         vangogh: '#F3E8B2',
                         canvas: '#F6F5EC'
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'scan': 'scan 2s linear infinite',
+                        'float': 'float 3s ease-in-out infinite'
+                    },
+                    keyframes: {
+                        scan: {
+                            '0%': { transform: 'translateY(-100%)' },
+                            '100%': { transform: 'translateY(1000%)' }
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-4px)' }
+                        }
                     }
                 }
             }
         }
     </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(180deg, #F0F4ED 0%, #F6F5EC 40%, #EBF3EA 100%);
+            background-attachment: fixed;
+        }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Glassmorphism Card Depth */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(52, 122, 80, 0.12);
+            box-shadow: 0 10px 25px -5px rgba(23, 75, 54, 0.08), 0 8px 10px -6px rgba(23, 75, 54, 0.05);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .glass-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 32px -8px rgba(23, 75, 54, 0.14);
+            border-color: rgba(52, 122, 80, 0.25);
+        }
+
+        /* Boarding Pass Notches */
+        .ticket-cutout-left {
+            position: absolute;
+            left: -12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: #F6F5EC;
+            box-shadow: inset -2px 0 3px rgba(0,0,0,0.06);
+        }
+        .ticket-cutout-right {
+            position: absolute;
+            right: -12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: #F6F5EC;
+            box-shadow: inset 2px 0 3px rgba(0,0,0,0.06);
+        }
+        
+        /* Barcode emulation */
+        .barcode-strip {
+            background: repeating-linear-gradient(
+                90deg,
+                #1e293b,
+                #1e293b 2px,
+                transparent 2px,
+                transparent 4px,
+                #1e293b 4px,
+                #1e293b 7px,
+                transparent 7px,
+                transparent 9px
+            );
+            height: 38px;
+            width: 100%;
+        }
+    </style>
 </head>
-<body class="bg-canvas text-gray-800 min-h-screen pb-12">
-    <!-- Header điện thoại dành cho người dân -->
-    <header class="bg-forest text-white py-4 px-4 sticky top-0 z-50 shadow">
+<body class="text-gray-800 min-h-screen pb-14 selection:bg-leaf selection:text-white">
+
+    <!-- Header điện thoại công nghệ cao -->
+    <header class="bg-forest/95 backdrop-blur-md text-white py-3 px-4 sticky top-0 z-40 shadow-lg border-b border-vangogh/20">
         <div class="max-w-md mx-auto flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-                <i class="fa-solid fa-tree text-vangogh text-xl"></i>
-                <span class="font-bold tracking-wide text-sm">HỒ SƠ CÂY XANH ĐÔ THỊ</span>
+            <div class="flex items-center space-x-2.5">
+                <div class="w-8 h-8 rounded-xl bg-leaf flex items-center justify-center shadow-inner">
+                    <i class="fa-solid fa-tree text-vangogh text-base"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold tracking-tight text-xs uppercase leading-tight">Hồ Sơ Cây Xanh Đô Thị</h1>
+                    <p class="text-[10px] text-vangogh/80 flex items-center">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-pulse"></span>
+                        Định danh QR • Blockchain EVM
+                    </p>
+                </div>
             </div>
-            <a href="/verifier" class="text-[11px] bg-leaf text-white px-2.5 py-1 rounded hover:bg-emerald-700 flex items-center space-x-1">
-                <i class="fa-solid fa-shield-halved"></i>
+            <a href="/verifier" class="text-[11px] font-semibold bg-white/10 hover:bg-white/20 text-white px-2.5 py-1.5 rounded-xl border border-white/15 backdrop-blur-sm transition flex items-center space-x-1.5">
+                <i class="fa-solid fa-shield-halved text-emerald-300"></i>
                 <span>Cổng Xác Minh</span>
             </a>
         </div>
     </header>
 
     <main class="max-w-md mx-auto px-4 mt-4 space-y-4">
-        <!-- 1. THẺ HỒ SƠ CÂY XANH (P01) -->
-        <div id="tree-card" class="bg-white rounded-2xl shadow p-5 border border-gray-100">
+
+        <!-- 1. THẺ HỒ SƠ CÂY XANH (P01) CÔNG NGHỆ CAO -->
+        <div id="tree-card" class="glass-card rounded-2xl p-5 relative overflow-hidden">
+            <!-- Dải sáng mờ trang trí góc -->
+            <div class="absolute -top-12 -right-12 w-32 h-32 bg-emerald-300/20 rounded-full blur-2xl pointer-events-none"></div>
+
             <div class="flex justify-between items-start mb-3">
                 <div>
-                    <span id="tree-code" class="text-xs font-mono bg-green-100 text-leaf font-bold px-2 py-0.5 rounded">TREE-001</span>
-                    <h1 id="tree-species" class="text-xl font-bold text-forest mt-1">Cây Bàng Đài Loan</h1>
+                    <div class="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-lg bg-leaf/10 border border-leaf/25 text-forest font-mono font-bold text-xs">
+                        <i class="fa-solid fa-qrcode text-[10px] text-leaf"></i>
+                        <span id="tree-code">TREE-001</span>
+                    </div>
+                    <h2 id="tree-species" class="text-xl font-extrabold text-forest mt-1.5 tracking-tight">Cây Bàng Đài Loan</h2>
                 </div>
-                <span id="tree-status" class="text-xs bg-green-50 text-green-700 font-semibold px-2 py-1 rounded-full border border-green-200">
-                    <i class="fa-solid fa-heart-pulse mr-1"></i>Tốt
-                </span>
+
+                <div class="flex flex-col items-end">
+                    <span id="tree-status" class="inline-flex items-center text-xs bg-emerald-50 text-emerald-800 font-semibold px-2.5 py-1 rounded-full border border-emerald-200 shadow-sm">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-ping"></span>
+                        <i class="fa-solid fa-heart-pulse mr-1 text-emerald-600"></i>Tốt
+                    </span>
+                </div>
             </div>
 
-            <p id="tree-location" class="text-xs text-gray-600 mb-4 flex items-center">
-                <i class="fa-solid fa-location-dot text-red-500 mr-1.5 text-sm"></i>Công viên 23/9, Q.1, TP.HCM
+            <p id="tree-location" class="text-xs text-gray-600 mb-4 flex items-center font-medium">
+                <i class="fa-solid fa-location-dot text-red-500 mr-1.5 text-sm drop-shadow-sm"></i>Công viên 23/9, Q.1, TP.HCM
             </p>
 
-            <div class="grid grid-cols-2 gap-3 text-xs bg-gray-50 p-3 rounded-xl border border-gray-100 mb-4">
-                <div>
-                    <span class="text-gray-500 block">Năm trồng:</span>
-                    <span id="tree-planted" class="font-semibold text-gray-800">15/01/2023</span>
+            <!-- Khối thông số sinh thái & đo lường -->
+            <div class="grid grid-cols-2 gap-2.5 text-xs bg-gradient-to-br from-emerald-50/70 to-gray-50/70 p-3.5 rounded-xl border border-emerald-100/80 mb-4">
+                <div class="space-y-0.5">
+                    <span class="text-gray-500 text-[11px] block">Năm trồng:</span>
+                    <span id="tree-planted" class="font-bold text-gray-800 flex items-center">
+                        <i class="fa-regular fa-calendar-check mr-1 text-leaf"></i>15/01/2023
+                    </span>
                 </div>
-                <div>
-                    <span class="text-gray-500 block">Hấp thụ CO2 ước tính:</span>
-                    <span class="font-semibold text-leaf">~22 kg/năm</span>
+                <div class="space-y-0.5">
+                    <span class="text-gray-500 text-[11px] block">Lượng hấp thụ CO₂:</span>
+                    <span class="font-bold text-leaf flex items-center">
+                        <i class="fa-solid fa-seedling mr-1"></i>~22 kg/năm
+                    </span>
                 </div>
-                <div class="col-span-2 pt-1 border-t border-gray-200 flex justify-between">
-                    <span class="text-gray-500">Tọa độ GPS:</span>
-                    <span id="tree-gps" class="font-mono text-gray-700">10.7684, 106.6934</span>
+                <div class="col-span-2 pt-2 border-t border-emerald-100/60 flex justify-between items-center text-[11px]">
+                    <span class="text-gray-500 flex items-center">
+                        <i class="fa-solid fa-crosshairs mr-1 text-gray-400"></i>Tọa độ GPS:
+                    </span>
+                    <span id="tree-gps" class="font-mono font-semibold text-gray-700 bg-white px-2 py-0.5 rounded border border-gray-200 shadow-2xs">10.7684, 106.6934</span>
                 </div>
             </div>
 
-            <!-- Mã băm bảo chứng Blockchain -->
-            <div class="bg-amber-50/60 p-3 rounded-xl border border-amber-200 text-xs">
-                <div class="flex items-center justify-between text-amber-900 font-semibold mb-1">
-                    <span class="flex items-center"><i class="fa-solid fa-link mr-1.5"></i>Bảo chứng Blockchain</span>
-                    <span class="text-[10px] bg-green-600 text-white px-1.5 py-0.5 rounded">On-chain</span>
+            <!-- Khối Mã băm bảo chứng Blockchain có hiệu ứng Radar Pulse -->
+            <div class="relative bg-gradient-to-r from-emerald-950 via-[#133324] to-[#0d281c] p-3.5 rounded-xl text-white shadow-md border border-emerald-600/30">
+                <div class="flex items-center justify-between mb-1.5">
+                    <div class="flex items-center space-x-1.5 text-vangogh font-bold text-xs">
+                        <i class="fa-solid fa-link text-emerald-400"></i>
+                        <span>Bảo Chứng Smart Contract</span>
+                    </div>
+                    <!-- Badge Radar Pulse -->
+                    <div class="flex items-center space-x-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full text-[10px] font-mono">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                        </span>
+                        <span class="font-semibold tracking-wider">ON-CHAIN</span>
+                    </div>
                 </div>
-                <p class="text-[10px] text-gray-600 font-mono break-all" id="tree-hash">c27c5cf9b764e51e6ee1c7b5faad054317efd44e92fa91b0be3f75e533901b70</p>
+                <p class="text-[10px] text-emerald-200/80 font-mono break-all leading-relaxed bg-black/30 p-2 rounded-lg border border-emerald-500/20" id="tree-hash">
+                    c27c5cf9b764e51e6ee1c7b5faad054317efd44e92fa91b0be3f75e533901b70
+                </p>
+                <div class="mt-2 flex justify-between items-center text-[10px] text-emerald-300/70">
+                    <span>Chuẩn: SHA-256 Canonical</span>
+                    <span class="text-vangogh font-medium flex items-center hover:underline cursor-pointer" onclick="window.location.href='/verifier'">
+                        Đối soát tính toàn vẹn <i class="fa-solid fa-arrow-right ml-1"></i>
+                    </span>
+                </div>
             </div>
         </div>
 
-        <!-- 2. NÚT CHUYỂN NHANH ĐỔI CÂY KHÁC ĐỂ TEST -->
+        <!-- 2. NÚT CHUYỂN NHANH ĐỔI CÂY (TƯƠNG TÁC TEST) -->
         <div class="flex space-x-2 text-xs">
-            <button onclick="loadTree('TREE-001')" class="flex-1 bg-white border border-leaf text-leaf py-1.5 rounded-lg font-medium hover:bg-green-50">Xem Cây 001</button>
-            <button onclick="loadTree('TREE-002')" class="flex-1 bg-white border border-leaf text-leaf py-1.5 rounded-lg font-medium hover:bg-green-50">Xem Cây 002</button>
-            <button onclick="loadTree('TREE-003')" class="flex-1 bg-white border border-leaf text-leaf py-1.5 rounded-lg font-medium hover:bg-green-50">Xem Cây 003</button>
+            <button onclick="loadTree('TREE-001')" class="tree-btn flex-1 bg-white hover:bg-emerald-50 border border-leaf/40 text-forest py-2 rounded-xl font-semibold shadow-xs transition active:scale-95 flex items-center justify-center space-x-1" data-code="TREE-001">
+                <i class="fa-solid fa-tree text-leaf text-xs"></i>
+                <span>Cây 001</span>
+            </button>
+            <button onclick="loadTree('TREE-002')" class="tree-btn flex-1 bg-white hover:bg-emerald-50 border border-gray-200 text-gray-700 py-2 rounded-xl font-semibold shadow-xs transition active:scale-95 flex items-center justify-center space-x-1" data-code="TREE-002">
+                <i class="fa-solid fa-tree text-gray-400 text-xs"></i>
+                <span>Cây 002</span>
+            </button>
+            <button onclick="loadTree('TREE-003')" class="tree-btn flex-1 bg-white hover:bg-emerald-50 border border-gray-200 text-gray-700 py-2 rounded-xl font-semibold shadow-xs transition active:scale-95 flex items-center justify-center space-x-1" data-code="TREE-003">
+                <i class="fa-solid fa-tree text-gray-400 text-xs"></i>
+                <span>Cây 003</span>
+            </button>
         </div>
 
         <!-- 3. FORM BÁO CÁO SỰ CỐ DÀNH CHO NGƯỜI DÂN (P02) -->
-        <div class="bg-white rounded-2xl shadow p-5 border border-gray-100">
-            <div class="flex items-center space-x-2 mb-3 text-red-600 font-bold text-sm">
-                <i class="fa-solid fa-triangle-exclamation text-base"></i>
+        <div class="glass-card rounded-2xl p-5 border border-red-200/50 relative overflow-hidden">
+            <div class="flex items-center space-x-2 mb-2 text-red-600 font-extrabold text-sm">
+                <div class="w-7 h-7 rounded-lg bg-red-100 flex items-center justify-center">
+                    <i class="fa-solid fa-triangle-exclamation text-base animate-bounce"></i>
+                </div>
                 <span>Phản Ánh Sự Cố Cây Xanh (P02)</span>
             </div>
-            <p class="text-xs text-gray-500 mb-4">Gặp cành sà nguy hiểm, nghiêng đổ sau bão? Gửi ngay để đội cơ động ứng cứu trong 60 phút.</p>
+            <p class="text-[11px] text-gray-500 mb-4 leading-normal">
+                Gặp cành sà nguy hiểm, rễ nứt đường hoặc nghiêng đổ sau mưa bão? Gửi phản ánh tức thì để Đội cơ động tiếp cận trong <b>60 phút</b>.
+            </p>
 
-            <form id="incident-form" onsubmit="submitIncident(event)" class="space-y-3 text-xs">
+            <form id="incident-form" onsubmit="submitIncident(event)" class="space-y-3.5 text-xs">
                 <div>
-                    <label class="block font-semibold text-gray-700 mb-1">Họ tên người phản ánh:</label>
-                    <input type="text" id="inc-name" required placeholder="VD: Nguyễn Văn A" class="w-full px-3 py-2 border rounded-lg focus:ring-1 focus:ring-leaf">
+                    <label class="block font-bold text-gray-700 mb-1">Họ tên người phản ánh:</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user absolute left-3 top-3 text-gray-400 text-xs"></i>
+                        <input type="text" id="inc-name" required placeholder="VD: Nguyễn Văn A" class="w-full pl-8 pr-3 py-2.5 bg-gray-50/70 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-leaf focus:border-leaf transition">
+                    </div>
                 </div>
                 <div>
-                    <label class="block font-semibold text-gray-700 mb-1">Số điện thoại liên hệ:</label>
-                    <input type="tel" id="inc-phone" required placeholder="VD: 0912345678" class="w-full px-3 py-2 border rounded-lg focus:ring-1 focus:ring-leaf">
+                    <label class="block font-bold text-gray-700 mb-1">Số điện thoại tiếp nhận cứu hộ:</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-phone absolute left-3 top-3 text-gray-400 text-xs"></i>
+                        <input type="tel" id="inc-phone" required placeholder="VD: 0912 345 678" class="w-full pl-8 pr-3 py-2.5 bg-gray-50/70 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-leaf focus:border-leaf transition">
+                    </div>
                 </div>
                 <div>
-                    <label class="block font-semibold text-gray-700 mb-1">Mức độ khẩn cấp:</label>
-                    <select id="inc-severity" class="w-full px-3 py-2 border rounded-lg focus:ring-1 focus:ring-leaf">
-                        <option value="Trung bình">Trung bình (Cành khô, rụng lá nhiều)</option>
-                        <option value="Cao">Cao (Nghiêng nhẹ, che khuất tầm nhìn xe)</option>
-                        <option value="Khẩn cấp">Khẩn cấp (Sắp gãy, sà vào lưới điện, nguy cơ đổ)</option>
-                    </select>
+                    <label class="block font-bold text-gray-700 mb-1">Mức độ nguy hiểm / khẩn cấp:</label>
+                    <div class="relative">
+                        <select id="inc-severity" class="w-full px-3 py-2.5 bg-gray-50/70 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-leaf focus:border-leaf transition font-medium">
+                            <option value="Trung bình">🟡 Trung bình (Cành khô, rụng nhiều lá)</option>
+                            <option value="Cao">🟠 Cao (Nghiêng nhẹ, che khuất tầm nhìn xe)</option>
+                            <option value="Khẩn cấp" selected>🔴 Khẩn cấp (Cành sắp gãy đè dây điện, nguy cơ đổ)</option>
+                        </select>
+                    </div>
                 </div>
                 <div>
-                    <label class="block font-semibold text-gray-700 mb-1">Mô tả chi tiết sự cố:</label>
-                    <textarea id="inc-desc" rows="3" required placeholder="Mô tả hiện trạng thực tế..." class="w-full px-3 py-2 border rounded-lg focus:ring-1 focus:ring-leaf"></textarea>
+                    <label class="block font-bold text-gray-700 mb-1">Mô tả hiện trạng thực tế:</label>
+                    <textarea id="inc-desc" rows="3" required placeholder="Mô tả cụ thể để đội cứu hộ chuẩn bị xe cẩu và máy cưa..." class="w-full px-3 py-2.5 bg-gray-50/70 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-leaf focus:border-leaf transition"></textarea>
                 </div>
 
-                <button type="submit" id="btn-submit-inc" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl shadow transition flex items-center justify-center space-x-2">
+                <button type="submit" id="btn-submit-inc" class="w-full bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-extrabold py-3 rounded-xl shadow-lg shadow-red-600/30 transition transform active:scale-98 flex items-center justify-center space-x-2 text-sm">
                     <i class="fa-solid fa-paper-plane"></i>
-                    <span>Gửi Báo Cáo Ngay</span>
+                    <span>Gửi Báo Cáo Cứu Hộ Ngay</span>
                 </button>
             </form>
-
-            <div id="inc-success" class="mt-4 hidden p-3 rounded-xl bg-green-50 border border-green-200 text-green-800 text-xs"></div>
         </div>
     </main>
 
+    <!-- 4. MODAL VÉ CỨU HỘ DẠNG BOARDING PASS (P03) ĐỈNH CAO -->
+    <div id="ticket-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden relative transform transition-all scale-95 duration-300 border border-emerald-500/20" id="ticket-content">
+            
+            <!-- Phần đầu vé cứu hộ -->
+            <div class="bg-gradient-to-r from-forest to-leaf text-white p-5 text-center relative">
+                <div class="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-white/20 text-vangogh text-[11px] font-bold mb-2">
+                    <i class="fa-solid fa-shield-heart mr-1"></i>VÉ TIẾP NHẬN CỨU HỘ ĐÔ THỊ (P03)
+                </div>
+                <h3 class="text-2xl font-black font-mono tracking-wider text-vangogh" id="ticket-id">#INC-8821</h3>
+                <p class="text-xs text-white/80 mt-1">Đội Cơ Động Ứng Cứu Khẩn Cấp UrbanTree</p>
+
+                <!-- Vết khuyết 2 bên (Boarding pass cutout) -->
+                <div class="ticket-cutout-left"></div>
+                <div class="ticket-cutout-right"></div>
+            </div>
+
+            <!-- Đường răng cưa phân cách -->
+            <div class="border-b-2 border-dashed border-gray-200 relative my-0"></div>
+
+            <!-- Thân vé thông tin -->
+            <div class="p-5 space-y-4 bg-white text-xs">
+                
+                <!-- Đồng hồ đếm ngược SLA 60 phút -->
+                <div class="bg-amber-50 rounded-2xl p-3 border border-amber-200 flex items-center justify-between">
+                    <div>
+                        <span class="text-[10px] text-amber-800 font-bold uppercase block">Mục tiêu tiếp cận hiện trường:</span>
+                        <div class="text-xl font-black font-mono text-amber-900 mt-0.5 flex items-center">
+                            <i class="fa-regular fa-clock mr-1.5 animate-spin text-base text-amber-600"></i>
+                            <span id="countdown-timer">00:59:58</span>
+                        </div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full bg-red-100 text-red-700 text-[10px] font-bold border border-red-200">
+                        Ưu tiên: Khẩn cấp
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 text-gray-600">
+                    <div>
+                        <span class="text-[10px] text-gray-400 block">Mã cây định vị:</span>
+                        <span class="font-bold text-forest font-mono" id="ticket-tree-code">TREE-001</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-gray-400 block">Thời gian gửi:</span>
+                        <span class="font-bold text-gray-800" id="ticket-time">Vừa xong</span>
+                    </div>
+                    <div class="col-span-2">
+                        <span class="text-[10px] text-gray-400 block">Người báo & SĐT:</span>
+                        <span class="font-bold text-gray-800" id="ticket-reporter">Nguyễn Văn A (0912345678)</span>
+                    </div>
+                </div>
+
+                <!-- Giả lập mã vạch Barcode số hiệu vé -->
+                <div class="pt-2 border-t border-gray-100 text-center">
+                    <div class="barcode-strip mx-auto rounded"></div>
+                    <span class="text-[9px] font-mono text-gray-400 tracking-widest mt-1 block">UT-DISPATCH-VERIFIED-HASH</span>
+                </div>
+
+                <div class="flex space-x-2 pt-1">
+                    <button onclick="closeTicketModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl font-bold transition">
+                        Đóng
+                    </button>
+                    <a href="/admin" class="flex-1 bg-forest hover:bg-leaf text-white py-2.5 rounded-xl font-bold text-center transition flex items-center justify-center space-x-1 shadow-md">
+                        <i class="fa-solid fa-truck-fast"></i>
+                        <span>Xem Admin</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentTreeId = 1;
+        let countdownInterval = null;
 
         window.addEventListener('DOMContentLoaded', () => {
             loadTree('TREE-001');
         });
 
         async function loadTree(codeOrId) {
+            // Update active style button
+            document.querySelectorAll('.tree-btn').forEach(btn => {
+                if (btn.getAttribute('data-code') === codeOrId) {
+                    btn.className = 'tree-btn flex-1 bg-emerald-50 border-2 border-leaf text-forest py-2 rounded-xl font-bold shadow-sm transition flex items-center justify-center space-x-1 ring-2 ring-leaf/20';
+                } else {
+                    btn.className = 'tree-btn flex-1 bg-white hover:bg-emerald-50 border border-gray-200 text-gray-700 py-2 rounded-xl font-semibold shadow-2xs transition flex items-center justify-center space-x-1';
+                }
+            });
+
             try {
                 const res = await fetch(`/api/trees/${codeOrId}`);
                 const data = await res.json();
@@ -141,31 +367,35 @@
                     currentTreeId = tree.id;
                     document.getElementById('tree-code').innerText = tree.tree_code;
                     document.getElementById('tree-species').innerText = tree.species;
-                    document.getElementById('tree-location').innerHTML = `<i class="fa-solid fa-location-dot text-red-500 mr-1.5 text-sm"></i>${tree.location_name}`;
-                    document.getElementById('tree-planted').innerText = tree.planted_date;
-                    document.getElementById('tree-status').innerHTML = `<i class="fa-solid fa-heart-pulse mr-1"></i>${tree.health_status}`;
+                    document.getElementById('tree-location').innerHTML = `<i class="fa-solid fa-location-dot text-red-500 mr-1.5 text-sm drop-shadow-sm"></i>${tree.location_name}`;
+                    document.getElementById('tree-planted').innerHTML = `<i class="fa-regular fa-calendar-check mr-1 text-leaf"></i>${tree.planted_date}`;
+                    document.getElementById('tree-status').innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-ping"></span><i class="fa-solid fa-heart-pulse mr-1 text-emerald-600"></i>${tree.health_status}`;
                     document.getElementById('tree-gps').innerText = `${tree.latitude}, ${tree.longitude}`;
                     document.getElementById('tree-hash').innerText = tree.data_hash || 'c27c5cf9b764e51e6ee1c7b5faad054317efd44e92fa91b0be3f75e533901b70';
                 }
             } catch (err) {
-                console.error(err);
+                console.error('Lỗi tải cây:', err);
             }
         }
 
         async function submitIncident(e) {
             e.preventDefault();
             const btn = document.getElementById('btn-submit-inc');
-            const alertBox = document.getElementById('inc-success');
 
             btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Đang gửi...';
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Đang điều phối hệ thống...';
+
+            const name = document.getElementById('inc-name').value;
+            const phone = document.getElementById('inc-phone').value;
+            const severity = document.getElementById('inc-severity').value;
+            const desc = document.getElementById('inc-desc').value;
 
             const payload = {
                 tree_id: currentTreeId,
-                reporter_name: document.getElementById('inc-name').value,
-                reporter_phone: document.getElementById('inc-phone').value,
-                severity: document.getElementById('inc-severity').value,
-                description: document.getElementById('inc-desc').value
+                reporter_name: name,
+                reporter_phone: phone,
+                severity: severity,
+                description: desc
             };
 
             try {
@@ -176,25 +406,46 @@
                 });
                 const data = await res.json();
 
-                alertBox.classList.remove('hidden');
                 if (data.success) {
-                    alertBox.className = 'mt-4 p-3 rounded-xl bg-green-50 border border-green-200 text-green-800 text-xs';
-                    alertBox.innerHTML = `<strong><i class="fa-solid fa-circle-check mr-1"></i> Đã tiếp nhận sự cố:</strong> Mã vé cứu hộ của bạn là <b>#INC-${data.incident_id || '01'}</b>. Đội cơ động đang điều phối tiếp cận hiện trường.`;
+                    const incId = data.incident_id || data.data?.id || Math.floor(1000 + Math.random() * 9000);
+                    showTicketModal(incId, name, phone);
                     document.getElementById('incident-form').reset();
                 } else {
-                    alertBox.className = 'mt-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs';
-                    alertBox.innerHTML = `Lỗi: ${data.message}`;
+                    alert(`Lỗi: ${data.message}`);
                 }
             } catch (err) {
-                alertBox.classList.remove('hidden');
-                alertBox.className = 'mt-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs';
-                alertBox.innerHTML = `Lỗi gửi dữ liệu: ${err.message}`;
+                alert(`Lỗi gửi dữ liệu: ${err.message}`);
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-1"></i> Gửi Báo Cáo Ngay';
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-1.5"></i> Gửi Báo Cáo Cứu Hộ Ngay';
             }
+        }
+
+        function showTicketModal(incId, name, phone) {
+            document.getElementById('ticket-id').innerText = `#INC-${incId}`;
+            document.getElementById('ticket-tree-code').innerText = document.getElementById('tree-code').innerText;
+            document.getElementById('ticket-reporter').innerText = `${name} (${phone})`;
+            document.getElementById('ticket-time').innerText = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+            const modal = document.getElementById('ticket-modal');
+            modal.classList.remove('hidden');
+
+            // Countdown 60 minutes
+            let secondsLeft = 3599;
+            clearInterval(countdownInterval);
+            countdownInterval = setInterval(() => {
+                const m = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
+                const s = (secondsLeft % 60).toString().padStart(2, '0');
+                document.getElementById('countdown-timer').innerText = `00:${m}:${s}`;
+                if (secondsLeft <= 0) clearInterval(countdownInterval);
+                secondsLeft--;
+            }, 1000);
+        }
+
+        function closeTicketModal() {
+            document.getElementById('ticket-modal').classList.add('hidden');
+            clearInterval(countdownInterval);
         }
     </script>
 </body>
 </html>
-

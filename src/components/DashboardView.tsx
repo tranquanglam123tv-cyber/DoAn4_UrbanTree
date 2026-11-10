@@ -36,11 +36,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const healthyPercent = stats.totalTrees > 0 ? Math.round((stats.healthyTrees / stats.totalTrees) * 100) : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Top Banner / Welcome */}
-      <div className="bg-gradient-to-r from-[#174B36] to-[#347A50] rounded-2xl p-6 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-[#174B36] to-[#347A50] rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4 card-interactive">
         <div>
-          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/10 text-xs text-[#F3E8B2] font-medium mb-2">
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/10 text-xs text-[#F3E8B2] font-medium mb-2 border border-white/10">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
             <span>Đô thị thông minh</span>
             <span>·</span>
             <span>Hạ tầng Cây xanh TP.HCM</span>
@@ -54,14 +55,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <button
             onClick={onOpenAddTree}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-[#F3E8B2] text-[#174B36] hover:bg-[#eae0a5] text-xs font-semibold rounded-lg transition-colors shadow-xs"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-[#F3E8B2] text-[#174B36] hover:bg-[#eae0a5] text-xs font-semibold rounded-lg transition-all shadow-xs active:scale-95"
           >
             <Plus className="w-4 h-4" />
             <span>Thêm cây mới</span>
           </button>
           <button
             onClick={() => onOpenCareModal()}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-lg transition-colors backdrop-blur-xs border border-white/20"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-lg transition-all backdrop-blur-xs border border-white/20 active:scale-95"
           >
             <ClipboardList className="w-4 h-4" />
             <span>Ghi chăm sóc</span>
@@ -71,7 +72,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
-        <div className="bg-white p-4 rounded-xl border border-[#E0EBDD] shadow-2xs">
+        <div className="bg-white p-4 rounded-xl border border-[#E0EBDD] shadow-xs card-interactive">
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-medium">Tổng cây xanh</span>
             <Trees className="w-4 h-4 text-[#174B36]" />
@@ -80,7 +81,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="text-[11px] text-slate-500 mt-1">Đã cấp mã QR định danh</div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-[#E0EBDD] shadow-2xs">
+        <div className="bg-white p-4 rounded-xl border border-[#E0EBDD] shadow-xs card-interactive">
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-medium">Tỷ lệ xanh tốt</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -89,7 +90,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="text-[11px] text-emerald-600 font-medium mt-1">{stats.healthyTrees} cây sinh trưởng tốt</div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-[#E0EBDD] shadow-2xs">
+        <div className="bg-white p-4 rounded-xl border border-[#E0EBDD] shadow-xs card-interactive">
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-medium">Cây cần chăm sóc</span>
             <AlertTriangle className="w-4 h-4 text-amber-500" />
@@ -98,7 +99,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="text-[11px] text-amber-600 font-medium mt-1">Kém hoặc nguy cấp</div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-[#E0EBDD] shadow-2xs">
+        <div className="bg-white p-4 rounded-xl border border-[#E0EBDD] shadow-xs card-interactive">
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-medium">Sự cố đang xử lý</span>
             <AlertTriangle className="w-4 h-4 text-red-500" />
@@ -107,13 +108,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="text-[11px] text-slate-500 mt-1">Từ phản ánh của người dân</div>
         </div>
 
-        <div className="col-span-2 lg:col-span-1 bg-white p-4 rounded-xl border border-[#E0EBDD] shadow-2xs">
+        <div className="col-span-2 lg:col-span-1 bg-white p-4 rounded-xl border border-[#E0EBDD] shadow-xs card-interactive">
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-medium">Bản ghi Blockchain</span>
             <ShieldCheck className="w-4 h-4 text-[#347A50]" />
           </div>
           <div className="text-2xl font-bold text-[#174B36] tabular-nums">{stats.totalAnchors}</div>
-          <div className="text-[11px] text-[#347A50] font-medium mt-1">100% bảo chứng SHA-256</div>
+          <div className="text-[11px] text-[#347A50] font-medium mt-1 flex items-center">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-ping"></span>
+            100% bảo chứng SHA-256
+          </div>
         </div>
       </div>
 

@@ -71,6 +71,26 @@ function hashIncidentReport(incident) {
 }
 
 /**
+ * 4. Băm Đánh giá Cảnh báo Rủi ro Nguy hiểm Gemini AI (AI_ASSESSMENT)
+ * Cú pháp: `${tree_id}|${assessment_type}|${risk_level}|${score}|${created_at}`
+ * @param {Object} assessment { tree_id, assessment_type, risk_level, score, created_at }
+ * @returns {string} Chuỗi 64 ký tự Hex chữ thường
+ */
+function hashAiAssessment(assessment) {
+    if (!assessment) {
+        throw new Error('hashService: Thông tin đánh giá AI không được để trống');
+    }
+    const treeId = assessment.tree_id || '';
+    const assessmentType = (assessment.assessment_type || 'RISK').trim();
+    const riskLevel = (assessment.risk_level || '').trim();
+    const score = Number(assessment.score || 0).toFixed(1);
+    const createdAt = (assessment.created_at || '').trim();
+
+    const rawString = `${treeId}|${assessmentType}|${riskLevel}|${score}|${createdAt}`;
+    return crypto.createHash('sha256').update(rawString).digest('hex');
+}
+
+/**
  * Hàm băm chuỗi văn bản tự do SHA-256
  * @param {string} text
  * @returns {string} 64 ký tự Hex
@@ -83,5 +103,6 @@ module.exports = {
     hashTreeProfile,
     hashCareLog,
     hashIncidentReport,
+    hashAiAssessment,
     hashGenericString
 };
