@@ -146,11 +146,11 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
   return (
     <div className="space-y-5">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-[#174B36] flex items-center gap-2">
-            <AlertTriangle className="w-6 h-6 text-amber-500" />
-            <span>Quản lý Tiếp nhận & Xử lý Sự cố Cây xanh</span>
+          <h1 className="text-lg sm:text-xl font-bold text-[#174B36] flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500 shrink-0" />
+            <span className="leading-snug">Quản lý Tiếp nhận & Xử lý Sự cố Cây xanh</span>
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
             Quy trình tiếp nhận phản ánh, phân công đội ngũ kỹ thuật, lưu vết lịch sử bất biến và bảo chứng kết quả giải quyết.
@@ -158,7 +158,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
         </div>
 
         {/* Tab switchers */}
-        <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 border border-slate-200 self-start sm:self-auto text-xs">
+        <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 border border-slate-200 text-xs overflow-x-auto max-w-full scrollbar-none">
           {currentUser.role !== 'CITIZEN' && (
             <button
               onClick={() => setActiveSubTab('admin')}

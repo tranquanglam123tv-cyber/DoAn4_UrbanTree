@@ -1,4 +1,4 @@
-﻿# PowerShell Script: Khoi chay UrbanTree va tao link public truc tiep
+# PowerShell Script: Khoi chay UrbanTree va tao link public truc tiep
 Write-Host "========================================================" -ForegroundColor Green
 Write-Host "  🌿 URBANTREE - KHOI CHAY VA TAO LINK CHIA SE TRUC TUYEN" -ForegroundColor Green
 Write-Host "========================================================" -ForegroundColor Green

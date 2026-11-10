@@ -52,20 +52,20 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E0EBDD] transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-4">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E0EBDD] transition-colors w-full overflow-hidden">
+      <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-14 sm:h-16 gap-1.5 sm:gap-4">
           {/* Brand */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
               onClick={() => setActiveTab(currentUser.role === 'CITIZEN' ? 'incidents' : 'dashboard')}
-              className="flex items-center gap-2.5 text-left group focus:outline-none"
+              className="flex items-center gap-2 text-left group focus:outline-none"
             >
-              <div className="w-10 h-10 rounded-xl bg-[#174B36] flex items-center justify-center text-[#F3E8B2] shadow-sm transition-transform group-hover:scale-105">
-                <Trees className="w-6 h-6" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#174B36] flex items-center justify-center text-[#F3E8B2] shadow-sm transition-transform group-hover:scale-105">
+                <Trees className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <span className="text-lg font-bold tracking-tight text-[#174B36] flex items-center gap-1.5">
+                <span className="text-base sm:text-lg font-bold tracking-tight text-[#174B36] flex items-center gap-1.5">
                   UrbanTree
                 </span>
                 <span className="hidden sm:block text-[11px] text-[#4C956C] font-medium leading-none">
@@ -157,12 +157,12 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
 
           {/* Action Zone: QR Scanner, Persona Switcher, Reset */}
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             {/* Quick QR Scanner button */}
             <button
               onClick={onOpenQrScanner}
               title="Quét hoặc tra cứu mã QR cây"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E0EBDD] text-[#174B36] hover:bg-[#d0dfcc] text-xs font-semibold rounded-lg transition-colors shadow-2xs whitespace-nowrap"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 bg-[#E0EBDD] text-[#174B36] hover:bg-[#d0dfcc] text-xs font-semibold rounded-lg transition-colors shadow-2xs whitespace-nowrap"
             >
               <QrCode className="w-4 h-4" />
               <span className="hidden sm:inline">Quét QR</span>
@@ -170,13 +170,13 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Persona Switcher Dropdown */}
             <div className="relative group">
-              <button className="flex items-center gap-2 pl-2.5 pr-2 py-1.5 bg-[#F6F5EC] border border-[#E0EBDD] rounded-lg text-xs font-medium text-[#174B36] hover:border-[#347A50] transition-colors">
-                <UserCheck className="w-3.5 h-3.5 text-[#347A50]" />
-                <span className="max-w-[120px] truncate">{currentUser.fullName}</span>
-                <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-[#174B36] text-[#F3E8B2]">
+              <button className="flex items-center gap-1 sm:gap-2 px-2 sm:pl-2.5 sm:pr-2 py-1.5 bg-[#F6F5EC] border border-[#E0EBDD] rounded-lg text-xs font-medium text-[#174B36] hover:border-[#347A50] transition-colors">
+                <UserCheck className="w-3.5 h-3.5 text-[#347A50] shrink-0" />
+                <span className="hidden md:inline max-w-[100px] truncate">{currentUser.fullName}</span>
+                <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-[#174B36] text-[#F3E8B2] shrink-0">
                   {currentUser.role}
                 </span>
-                <ChevronDown className="w-3 h-3 text-[#174B36]/60" />
+                <ChevronDown className="w-3 h-3 text-[#174B36]/60 shrink-0" />
               </button>
 
               <div className="absolute right-0 mt-1 w-56 bg-white border border-[#E0EBDD] rounded-xl shadow-lg p-1.5 hidden group-hover:block group-focus-within:block z-50">
@@ -234,7 +234,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Mobile & Tablet secondary navigation */}
-        <div className="lg:hidden flex items-center gap-1 overflow-x-auto py-2 border-t border-[#E0EBDD]/60">
+        <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto py-2 border-t border-[#E0EBDD]/60 px-1 scrollbar-none">
           {currentUser.role !== 'CITIZEN' && (
             <>
               <button
