@@ -16,8 +16,22 @@ const aiRoutes = require('./routes/aiRoutes');
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Middlewares
-app.use(cors());
+// Middlewares & CORS (Hỗ trợ Localhost, Mobile PWA & Cloudflare Tunnel *.trycloudflare.com)
+const allowedOriginRegex = /^(http:\/\/localhost(:\d+)?|http:\/\/127\.0\.0\.1(:\d+)?|https:\/\/.*\.trycloudflare\.com)$/;
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOriginRegex.test(origin)) {
+      callback(null, true);
+    } else {
+      // Trong môi trường testing/IoT, cho phép linh hoạt để tránh chặn tunnel domain
+      callback(null, true);
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+}));
+app.options('*', cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

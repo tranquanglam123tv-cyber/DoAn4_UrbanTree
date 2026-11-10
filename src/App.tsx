@@ -17,6 +17,7 @@ import { TreeFormModal } from './components/TreeFormModal';
 import { CareFormModal } from './components/CareFormModal';
 import { QRScannerModal } from './components/QRScannerModal';
 import { PublicTreeModal } from './components/PublicTreeModal';
+import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { storage } from './db/storage';
 import { Tree, User } from './types';
 
@@ -248,6 +249,9 @@ export default function App() {
           onReportIncident={handleReportIncidentForTree}
         />
       )}
+
+      {/* 📱 PWA Native Install Banner */}
+      <PwaInstallBanner />
     </div>
   );
 }
