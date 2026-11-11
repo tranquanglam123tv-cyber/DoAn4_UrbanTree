@@ -11,6 +11,8 @@ import {
   UserCheck,
   ChevronDown,
   Sparkles,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { Role, User } from '../types';
 import { storage } from '../db/storage';
@@ -22,6 +24,8 @@ interface HeaderProps {
   onUserChange: (user: User) => void;
   onOpenQrScanner: () => void;
   onResetSeed: () => void;
+  isDark?: boolean;
+  onToggleTheme?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -31,6 +35,8 @@ export const Header: React.FC<HeaderProps> = ({
   onUserChange,
   onOpenQrScanner,
   onResetSeed,
+  isDark,
+  onToggleTheme,
 }) => {
   const users = storage.getUsers();
 
@@ -223,6 +229,21 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               </div>
             </div>
+
+            {/* Light / Dark Mode Toggle Button */}
+            {onToggleTheme && (
+              <button
+                onClick={onToggleTheme}
+                title={isDark ? 'Chuyển sang Giao diện Sáng (Light Mode)' : 'Chuyển sang Giao diện Tối (Dark Mode)'}
+                className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors flex items-center justify-center border border-slate-200/80"
+              >
+                {isDark ? (
+                  <Sun className="w-3.5 h-3.5 text-amber-400" />
+                ) : (
+                  <Moon className="w-3.5 h-3.5 text-slate-600" />
+                )}
+              </button>
+            )}
 
             {/* Reset Seed button */}
             <button

@@ -30,6 +30,24 @@ gsap.registerPlugin(ScrollTrigger);
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [currentUser, setCurrentUser] = useState<User>(storage.getActiveUser());
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    return localStorage.getItem('urbantree_theme') === 'dark';
+  });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('urbantree_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('urbantree_theme', 'light');
+    }
+  }, [isDark]);
+
+  const toggleTheme = () => {
+    setIsDark((prev) => !prev);
+    showToast(!isDark ? 'Đã bật Chế độ Tối (Dark Mode)' : 'Đã chuyển về Chế độ Sáng (Light Mode)');
+  };
 
   // Modals state
   const [selectedTreeForDetail, setSelectedTreeForDetail] = useState<Tree | null>(null);
@@ -137,6 +155,8 @@ export default function App() {
         onUserChange={handleUserChange}
         onOpenQrScanner={() => setIsQrScannerOpen(true)}
         onResetSeed={handleResetSeed}
+        isDark={isDark}
+        onToggleTheme={toggleTheme}
       />
 
       {/* Main Content Area */}

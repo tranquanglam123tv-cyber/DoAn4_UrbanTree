@@ -17,6 +17,19 @@
     --color-text-body: #475569;
   }
 
+  /* Dark Theme Palette Tokens (Cyber Botanical Eco-Tech) */
+  html.dark, .dark {
+    --color-body: #070D0A;
+    --color-surface: #0E1712;
+    --color-surface-translucent: rgba(14, 23, 18, 0.88);
+    --color-border-glass: rgba(255, 255, 255, 0.08);
+    --color-border-emerald: rgba(16, 185, 129, 0.25);
+    --color-emerald-primary: #10B981;
+    --color-emerald-neon: #00FF9D;
+    --color-text-title: #F1F5F9;
+    --color-text-body: #94A3B8;
+  }
+
   html, body {
     overflow-x: hidden;
     width: 100%;
@@ -245,6 +258,74 @@
 .card-interactive:hover {
   transform: translateY(-2px);
   box-shadow: 0 14px 28px -5px rgba(5, 150, 105, 0.1), 0 10px 10px -5px rgba(15, 23, 42, 0.03);
+}
+
+/* Dark Mode overrides */
+html.dark, .dark {
+  color-scheme: dark;
+}
+
+html.dark body, .dark body {
+  background-color: #070D0A !important;
+  color: #94A3B8 !important;
+}
+
+html.dark #root, .dark #root {
+  background-color: #070D0A !important;
+}
+
+html.dark .bento-card, .dark .bento-card {
+  background-color: rgba(14, 23, 18, 0.85) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark .glass-panel, .dark .glass-panel {
+  background: rgba(14, 23, 18, 0.88) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html.dark header, .dark header {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html.dark header > div:first-child, .dark header > div:first-child {
+  background-color: rgba(10, 18, 14, 0.85) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html.dark footer, .dark footer {
+  background-color: #0A120E !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html.dark .text-slate-900, .dark .text-slate-900 {
+  color: #F8FAFC !important;
+}
+
+html.dark .text-slate-800, .dark .text-slate-800 {
+  color: #F1F5F9 !important;
+}
+
+html.dark .text-slate-700, .dark .text-slate-700 {
+  color: #CBD5E1 !important;
+}
+
+html.dark .text-slate-500, .dark .text-slate-500 {
+  color: #94A3B8 !important;
+}
+
+html.dark .bg-white, .dark .bg-white {
+  background-color: #0E1712 !important;
+}
+
+html.dark .bg-slate-50, .dark .bg-slate-50 {
+  background-color: #09100C !important;
+}
+
+html.dark .border-slate-200, .dark .border-slate-200,
+html.dark .border-slate-100, .dark .border-slate-100 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 /* Leaflet map polish */

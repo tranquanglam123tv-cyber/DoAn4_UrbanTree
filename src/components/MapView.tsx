@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import {
   Trees,
   AlertTriangle,
@@ -56,6 +57,11 @@ export const MapView: React.FC<MapViewProps> = ({
       const layerGroup = L.layerGroup().addTo(map);
       markersLayerRef.current = layerGroup;
       mapInstanceRef.current = map;
+
+      // Force recalculation of map container dimensions (fixes grey map bug)
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 250);
     }
 
     return () => {
@@ -194,6 +200,13 @@ export const MapView: React.FC<MapViewProps> = ({
 
         layer.addLayer(marker);
       });
+    }
+
+    // Force map tile redraw
+    if (mapInstanceRef.current) {
+      setTimeout(() => {
+        mapInstanceRef.current?.invalidateSize();
+      }, 200);
     }
   }, [trees, incidents, showTrees, showIncidents, selectedHealth]);
 
