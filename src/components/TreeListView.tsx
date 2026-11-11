@@ -100,15 +100,15 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="p-3 bg-white rounded-xl border border-[#E0EBDD] shadow-2xs flex flex-wrap items-center gap-3">
+      <div className="p-3 bento-card flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[220px]">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Tìm theo mã cây (TREE-001), tên, hoặc địa chỉ..."
-            className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:border-[#347A50] focus:ring-1 focus:ring-[#347A50]"
+            className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-full focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-slate-50/50"
           />
         </div>
 
@@ -120,7 +120,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
-            className="px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg bg-white"
+            className="px-3 py-1.5 text-xs border border-slate-200 rounded-full bg-white text-slate-700"
           >
             <option value="ALL">Tất cả các loài</option>
             {treeTypes.map((t) => (
@@ -136,7 +136,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
           <select
             value={selectedHealth}
             onChange={(e) => setSelectedHealth(e.target.value)}
-            className="px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg bg-white"
+            className="px-3 py-1.5 text-xs border border-slate-200 rounded-full bg-white text-slate-700"
           >
             <option value="ALL">Tất cả trạng thái</option>
             <option value="GOOD">Tốt (GOOD)</option>
@@ -146,7 +146,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
             <option value="DEAD">Chết khô (DEAD)</option>
           </select>
 
-          <span className="text-xs text-slate-400 font-mono pl-2">
+          <span className="text-xs text-emerald-700 font-mono font-semibold pl-2">
             {filteredTrees.length}/{trees.length} cây
           </span>
         </div>
@@ -154,120 +154,125 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
 
       {/* Main Trees Display */}
       {filteredTrees.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-xl border border-dashed border-slate-200 text-slate-400 text-xs">
+        <div className="p-12 text-center bento-card border-dashed text-slate-400 text-xs">
           Không tìm thấy cây xanh nào phù hợp với bộ lọc tìm kiếm.
         </div>
       ) : viewMode === 'grid' ? (
-        /* Grid Cards View */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        /* Grid Cards View (Bento Style) */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredTrees.map((tree) => {
             const treeType = treeTypes.find((t) => t.id === tree.treeTypeId);
             return (
               <div
                 key={tree.id}
-                className="bg-white rounded-xl border border-[#E0EBDD] overflow-hidden shadow-2xs hover:shadow-md hover:border-[#347A50] transition-all flex flex-col justify-between group"
+                className="bento-card overflow-hidden flex flex-col justify-between group cursor-pointer"
+                onClick={() => onSelectTree(tree)}
               >
                 <div>
                   {/* Card Image Banner */}
-                  <div className="h-36 bg-slate-100 relative overflow-hidden">
+                  <div className="h-40 bg-slate-100 relative overflow-hidden">
                     <img
                       src={tree.imageUrl || 'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=600&q=80'}
                       alt={tree.displayName}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded bg-[#174B36]/90 backdrop-blur-xs text-[#F3E8B2] font-mono text-xs font-bold shadow-2xs">
+                    <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-300 font-mono text-xs font-bold shadow-md">
                       {tree.publicCode}
                     </div>
-
-                    <div className="absolute top-2.5 right-2.5">
+                    <div className="absolute top-3 right-3">
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full shadow-2xs ${
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm backdrop-blur-md ${
                           tree.healthStatus === 'GOOD'
-                            ? 'bg-emerald-500 text-white'
+                            ? 'bg-emerald-500/90 text-white'
                             : tree.healthStatus === 'FAIR'
-                            ? 'bg-slate-700 text-white'
+                            ? 'bg-slate-700/80 text-white'
                             : tree.healthStatus === 'POOR'
-                            ? 'bg-amber-500 text-white'
-                            : 'bg-red-600 text-white'
+                            ? 'bg-amber-500/90 text-white'
+                            : 'bg-rose-600/90 text-white'
                         }`}
                       >
                         {tree.healthStatus}
                       </span>
                     </div>
-
-                    <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[11px] text-white drop-shadow-md">
-                      <span className="bg-black/40 px-2 py-0.5 rounded backdrop-blur-xs">
-                        {treeType?.name}
-                      </span>
-                      <span className="bg-black/40 px-2 py-0.5 rounded backdrop-blur-xs font-mono">
-                        Trồng: {tree.plantedAt}
-                      </span>
-                    </div>
                   </div>
 
-                  {/* Card Content */}
-                  <div className="p-4 space-y-2.5">
+                  {/* Card Body */}
+                  <div className="p-5 space-y-3">
                     <div>
-                      <h3
-                        onClick={() => onSelectTree(tree)}
-                        className="text-sm font-bold text-slate-900 group-hover:text-[#174B36] cursor-pointer transition-colors"
-                      >
+                      <h3 className="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
                         {tree.displayName}
                       </h3>
-                      <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3.5 h-3.5 text-[#347A50] shrink-0" />
+                      <div className="text-xs text-emerald-700 font-medium italic mt-0.5">
+                        {treeType?.scientificName || 'Thực vật đô thị'}
+                      </div>
+                      <div className="text-xs text-slate-500 flex items-center gap-1.5 mt-2">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                         <span className="truncate">{tree.address}</span>
-                      </p>
+                      </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] text-slate-500 font-mono">
-                      <span>ĐK: {tree.diameterCm || 30}cm · Cao: {tree.heightM || 8}m</span>
-                      <div className="flex items-center gap-1 text-[#347A50] font-semibold">
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        <span>ANCHORED</span>
+                    <div className="w-full h-px bg-slate-100" />
+
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                      <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                        <div className="text-[10px] text-slate-400">Chiều cao</div>
+                        <div className="font-bold text-slate-800">{tree.heightMeters} m</div>
+                      </div>
+                      <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                        <div className="text-[10px] text-slate-400">Đường kính</div>
+                        <div className="font-bold text-slate-800">{tree.diameterCm} cm</div>
+                      </div>
+                      <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                        <div className="text-[10px] text-slate-400">Tuổi ước tính</div>
+                        <div className="font-bold text-slate-800">{tree.ageYears} năm</div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Card Actions Footer */}
-                <div className="px-4 py-2.5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between gap-1.5 text-xs">
+                {/* Card Footer Actions */}
+                <div className="px-5 py-3.5 bg-slate-50/80 border-t border-slate-100/90 flex items-center justify-between gap-2 text-xs">
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => onOpenQrModal(tree)}
-                      title="Mã QR định danh"
-                      className="p-1.5 text-[#174B36] hover:bg-[#E0EBDD] rounded-lg transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenQrModal(tree);
+                      }}
+                      title="Xem mã QR kim loại"
+                      className="p-1.5 rounded-full hover:bg-emerald-100 text-slate-600 hover:text-emerald-800 transition-colors"
                     >
                       <QrCode className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => onOpenPublicView(tree)}
-                      title="Xem trang công khai"
-                      className="p-1.5 text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenPublicView(tree);
+                      }}
+                      title="Xem cổng công khai"
+                      className="p-1.5 rounded-full hover:bg-emerald-100 text-slate-600 hover:text-emerald-800 transition-colors"
                     >
                       <ExternalLink className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => onOpenEditTree(tree)}
-                      title="Sửa thông tin"
-                      className="p-1.5 text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
-                    >
-                      <Edit className="w-4 h-4" />
                     </button>
                   </div>
 
                   <div className="flex items-center gap-1.5">
                     <button
-                      onClick={() => onOpenCareModal(tree.id)}
-                      className="px-2.5 py-1 text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-md font-medium text-[11px]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenCareModal(tree.id);
+                      }}
+                      className="px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold text-[11px] border border-emerald-200/60 transition-colors"
                     >
                       Chăm sóc
                     </button>
                     <button
-                      onClick={() => onSelectTree(tree)}
-                      className="px-2.5 py-1 bg-[#174B36] hover:bg-[#347A50] text-white rounded-md font-semibold text-[11px]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenEditTree(tree);
+                      }}
+                      className="p-1.5 rounded-full hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors"
                     >
-                      Chi tiết
+                      <Edit className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>

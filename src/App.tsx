@@ -4,6 +4,9 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import Lenis from 'lenis';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Header } from './components/Header';
 import { DashboardView } from './components/DashboardView';
 import { TreeListView } from './components/TreeListView';
@@ -18,8 +21,11 @@ import { CareFormModal } from './components/CareFormModal';
 import { QRScannerModal } from './components/QRScannerModal';
 import { PublicTreeModal } from './components/PublicTreeModal';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
+import { SporeBackground } from './components/common/SporeBackground';
 import { storage } from './db/storage';
 import { Tree, User } from './types';
+
+gsap.registerPlugin(ScrollTrigger);
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -43,6 +49,29 @@ export default function App() {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   };
+
+  // Automark Lenis Smooth Scroll Engine
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: 'vertical',
+      smoothWheel: true,
+    });
+
+    lenis.on('scroll', ScrollTrigger.update);
+
+    const ticker = (time: number) => {
+      lenis.raf(time * 1000);
+    };
+    gsap.ticker.add(ticker);
+    gsap.ticker.lagSmoothing(0);
+
+    return () => {
+      gsap.ticker.remove(ticker);
+      lenis.destroy();
+    };
+  }, []);
 
   // Check URL hash for direct QR code scanning link (e.g. #tree-TREE-001)
   useEffect(() => {
@@ -89,7 +118,10 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAF8] flex flex-col text-[#1E2922]">
+    <div className="min-h-screen bg-[#F8FAF9] flex flex-col text-[#0F172A] relative selection:bg-emerald-100 selection:text-emerald-900">
+      {/* Ambient Botanical Spore Canvas Particles (Automark Light) */}
+      <SporeBackground />
+
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-5 right-5 z-50 bg-[#174B36] text-white px-4 py-2.5 rounded-xl shadow-lg border border-[#347A50] text-xs font-medium animate-in fade-in slide-in-from-bottom-2 duration-200">

@@ -148,22 +148,24 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg sm:text-xl font-bold text-[#174B36] flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500 shrink-0" />
-            <span className="leading-snug">Quản lý Tiếp nhận & Xử lý Sự cố Cây xanh</span>
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <span className="leading-snug">Quản lý Tiếp nhận &amp; Xử lý Sự cố Cây xanh</span>
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
             Quy trình tiếp nhận phản ánh, phân công đội ngũ kỹ thuật, lưu vết lịch sử bất biến và bảo chứng kết quả giải quyết.
           </p>
         </div>
 
-        {/* Tab switchers */}
-        <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 border border-slate-200 text-xs overflow-x-auto max-w-full scrollbar-none">
+        {/* Tab switchers (Pill Tabs) */}
+        <div className="bg-slate-100/80 p-1 rounded-full flex items-center gap-1 border border-slate-200/80 text-xs overflow-x-auto max-w-full scrollbar-none">
           {currentUser.role !== 'CITIZEN' && (
             <button
               onClick={() => setActiveSubTab('admin')}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                activeSubTab === 'admin' ? 'bg-white text-[#174B36] shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+              className={`px-3.5 py-1.5 rounded-full font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                activeSubTab === 'admin' ? 'bg-emerald-600 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Điều phối Sự cố (Admin)
@@ -171,16 +173,16 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
           )}
           <button
             onClick={() => setActiveSubTab('public_report')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
-              activeSubTab === 'public_report' ? 'bg-white text-[#174B36] shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+            className={`px-3.5 py-1.5 rounded-full font-semibold transition-all whitespace-nowrap cursor-pointer ${
+              activeSubTab === 'public_report' ? 'bg-emerald-600 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             Cổng Phản ánh Người dân
           </button>
           <button
             onClick={() => setActiveSubTab('public_lookup')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
-              activeSubTab === 'public_lookup' ? 'bg-white text-[#174B36] shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+            className={`px-3.5 py-1.5 rounded-full font-semibold transition-all whitespace-nowrap cursor-pointer ${
+              activeSubTab === 'public_lookup' ? 'bg-emerald-600 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             Tra cứu theo Mã

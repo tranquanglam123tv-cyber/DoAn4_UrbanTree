@@ -1,15 +1,15 @@
-﻿# UrbanTree - PowerShell Runner
+# UrbanTree - PowerShell Runner
 Write-Host "========================================================" -ForegroundColor Green
 Write-Host "  🌿 URBANTREE - KHOI DONG HE THONG (PORT 5001 & 3000)" -ForegroundColor Green
 Write-Host "========================================================" -ForegroundColor Green
 
 # 1. Khoi dong Backend
 Write-Host "[1/2] Dang bat Backend Server (Port 5001)..." -ForegroundColor Cyan
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PSScriptRoot\backend'; npm start"
+Start-Process powershell -ArgumentList "-NoExit","-Command","cd $PSScriptRoot\backend; npm start"
 
 # 2. Khoi dong Frontend
 Write-Host "[2/2] Dang bat Frontend Vite (Port 3000)..." -ForegroundColor Cyan
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PSScriptRoot'; npm run dev"
+Start-Process powershell -ArgumentList "-NoExit","-Command","cd $PSScriptRoot; npm run dev"
 
 # 3. Cho 3 giay de server san sang
 Start-Sleep -Seconds 3

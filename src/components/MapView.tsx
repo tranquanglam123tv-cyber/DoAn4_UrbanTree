@@ -200,37 +200,39 @@ export const MapView: React.FC<MapViewProps> = ({
   return (
     <div className="space-y-4">
       {/* Top Map Control Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-[#E0EBDD] shadow-2xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 bento-card p-4">
         <div>
-          <h1 className="text-base font-bold text-[#174B36] flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-[#347A50]" />
-            <span>Bản đồ Số Cây xanh & Điểm nóng Sự cố</span>
+          <h1 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-200/60 flex items-center justify-center text-emerald-700">
+              <MapPin className="w-4 h-4" />
+            </div>
+            <span>Bản đồ Số Cây xanh &amp; Điểm nóng Sự cố GIS</span>
           </h1>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 mt-0.5">
             Tọa độ GPS chuẩn xác từ cơ sở dữ liệu và vị trí phản ánh thời gian thực của người dân.
           </p>
         </div>
 
         {/* Filter Controls */}
-        <div className="flex flex-wrap items-center gap-3 text-xs">
-          <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
+        <div className="flex flex-wrap items-center gap-2.5 text-xs">
+          <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
             <input
               type="checkbox"
               checked={showTrees}
               onChange={(e) => setShowTrees(e.target.checked)}
-              className="rounded text-[#174B36] focus:ring-[#347A50]"
+              className="rounded text-emerald-600 focus:ring-emerald-500"
             />
-            <span>Cây xanh ({trees.length})</span>
+            <span className="font-semibold text-emerald-800">Cây xanh ({trees.length})</span>
           </label>
 
-          <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
+          <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 bg-rose-50 px-3 py-1.5 rounded-full border border-rose-200">
             <input
               type="checkbox"
               checked={showIncidents}
               onChange={(e) => setShowIncidents(e.target.checked)}
-              className="rounded text-red-600 focus:ring-red-500"
+              className="rounded text-rose-600 focus:ring-rose-500"
             />
-            <span>Sự cố đang xử lý ({incidents.filter((i) => i.status !== 'RESOLVED').length})</span>
+            <span className="font-semibold text-rose-800">Sự cố ({incidents.filter((i) => i.status !== 'RESOLVED').length})</span>
           </label>
 
           <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
@@ -238,7 +240,7 @@ export const MapView: React.FC<MapViewProps> = ({
             <select
               value={selectedHealth}
               onChange={(e) => setSelectedHealth(e.target.value)}
-              className="px-2 py-1 text-xs border border-slate-200 rounded-md bg-white"
+              className="px-2.5 py-1 text-xs border border-slate-200 rounded-full bg-white text-slate-700"
             >
               <option value="ALL">Tất cả</option>
               <option value="GOOD">Tốt</option>
@@ -251,16 +253,17 @@ export const MapView: React.FC<MapViewProps> = ({
       </div>
 
       {/* Map Container Layout */}
-      <div className="relative rounded-2xl overflow-hidden border border-[#E0EBDD] shadow-sm h-[600px] bg-slate-100">
+      <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 shadow-lg shadow-slate-900/5 h-[620px] bg-slate-100">
         <div ref={mapContainerRef} className="w-full h-full z-10" />
 
         {/* Legend Overlay */}
-        <div className="absolute bottom-4 left-4 z-20 bg-white/95 backdrop-blur-md p-3 rounded-xl border border-slate-200 shadow-md text-xs space-y-1.5 pointer-events-auto">
-          <div className="font-bold text-[#174B36] text-[11px] uppercase tracking-wider mb-1">
-            Chú giải bản đồ
+        <div className="absolute bottom-4 left-4 z-20 bg-white/95 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200/90 shadow-xl text-xs space-y-2 pointer-events-auto">
+          <div className="font-bold text-slate-900 text-[11px] uppercase tracking-wider mb-1 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span>Chú giải bản đồ GIS</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" />
+            <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block shadow-xs" />
             <span className="text-slate-700">Sinh trưởng tốt (GOOD)</span>
           </div>
           <div className="flex items-center gap-2">
@@ -272,10 +275,10 @@ export const MapView: React.FC<MapViewProps> = ({
             <span className="text-slate-700">Kém / Cần tỉa cành (POOR)</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />
+            <span className="w-3 h-3 rounded-full bg-red-500 inline-block shadow-xs" />
             <span className="text-slate-700">Nguy cấp / Nghiêng (CRITICAL)</span>
           </div>
-          <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+          <div className="flex items-center gap-2 pt-1.5 border-t border-slate-100">
             <span className="w-3 h-3 rounded bg-red-600 inline-block" />
             <span className="text-red-700 font-semibold">Điểm nóng sự cố</span>
           </div>

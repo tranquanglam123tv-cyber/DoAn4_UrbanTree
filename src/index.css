@@ -4,6 +4,17 @@
   :root {
     --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+
+    /* Light Theme Palette Tokens (Nordic Botanical Glass) */
+    --color-body: #F8FAF9;
+    --color-surface: #FFFFFF;
+    --color-surface-translucent: rgba(255, 255, 255, 0.85);
+    --color-border-glass: rgba(226, 232, 240, 0.85);
+    --color-border-emerald: rgba(167, 243, 208, 0.7);
+    --color-emerald-primary: #059669;
+    --color-emerald-neon: #10B981;
+    --color-text-title: #0F172A;
+    --color-text-body: #475569;
   }
 
   html, body {
@@ -12,6 +23,8 @@
     max-width: 100%;
     margin: 0;
     padding: 0;
+    background-color: var(--color-body);
+    color: var(--color-text-body);
     -webkit-text-size-adjust: 100%;
   }
 
@@ -24,6 +37,7 @@
     width: 100%;
     max-width: 100%;
     min-height: 100vh;
+    background-color: var(--color-body);
   }
 
   code, pre, .font-mono {
@@ -47,6 +61,106 @@
   background: #94a3b8;
 }
 
+/* ========================================================
+   AUTOMARK HUD CORNER-DOT TAGLINE BADGE (LIGHT MODE)
+   ======================================================== */
+.hero-badge-anim {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 22px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #A7F3D0;
+  box-shadow: 0 4px 16px -3px rgba(5, 150, 105, 0.12);
+  backdrop-filter: blur(12px);
+}
+
+.hero-badge-anim .badge-content {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #047857;
+  opacity: 0;
+  animation: reveal-badge-content 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+}
+
+.hero-badge-anim .rect-container {
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+}
+
+.hero-badge-anim .rectangle {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  background-color: #059669;
+  border-radius: 1px;
+  opacity: 0;
+}
+
+.hero-badge-anim .rectangle.tl {
+  top: 0;
+  left: 0;
+  transform: translate(-50%, -50%);
+  animation: bounce-dot 0.5s cubic-bezier(0.56, 0.02, 0.03, 1.46) 0.1s forwards;
+}
+
+.hero-badge-anim .rectangle.bl {
+  bottom: 0;
+  left: 0;
+  transform: translate(-50%, 50%);
+  animation: bounce-dot 0.5s cubic-bezier(0.56, 0.02, 0.03, 1.46) 0.2s forwards;
+}
+
+.hero-badge-anim .rectangle.br {
+  bottom: 0;
+  right: 0;
+  transform: translate(50%, 50%);
+  animation: bounce-dot 0.5s cubic-bezier(0.56, 0.02, 0.03, 1.46) 0.3s forwards;
+}
+
+.hero-badge-anim .rectangle.tr {
+  top: 0;
+  right: 0;
+  transform: translate(50%, -50%);
+  animation: bounce-dot 0.5s cubic-bezier(0.56, 0.02, 0.03, 1.46) 0.4s forwards;
+}
+
+@keyframes bounce-dot {
+  0% { opacity: 0; transform: scale(0); filter: blur(3px); }
+  60% { opacity: 1; transform: scale(1.4); filter: blur(0); }
+  100% { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+
+@keyframes reveal-badge-content {
+  0% { opacity: 0; transform: translateY(8px); filter: blur(6px); }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+/* Perspective & 3D Tilt Utilities */
+.perspective-1200 {
+  perspective: 1200px;
+}
+
+/* Bento Card Hover Elevation */
+.bento-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 28px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
+}
+
+.bento-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(52, 211, 153, 0.6);
+  box-shadow: 0 20px 35px -10px rgba(5, 150, 105, 0.1), 0 0 1px rgba(5, 150, 105, 0.2);
+}
+
 /* Micro-interaction & Animation Keyframes */
 @keyframes fadeInUp {
   from {
@@ -61,10 +175,10 @@
 
 @keyframes pulseGlow {
   0%, 100% {
-    box-shadow: 0 0 10px rgba(52, 122, 80, 0.2);
+    box-shadow: 0 0 10px rgba(5, 150, 105, 0.2);
   }
   50% {
-    box-shadow: 0 0 25px rgba(52, 122, 80, 0.5), 0 0 10px rgba(243, 232, 178, 0.4);
+    box-shadow: 0 0 25px rgba(5, 150, 105, 0.4), 0 0 10px rgba(16, 185, 129, 0.3);
   }
 }
 
@@ -116,11 +230,11 @@
 
 /* Card Hover Elevation & Glassmorphism */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(23, 75, 54, 0.08);
-  box-shadow: 0 4px 20px -2px rgba(23, 75, 54, 0.05);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -130,7 +244,7 @@
 
 .card-interactive:hover {
   transform: translateY(-2px);
-  box-shadow: 0 14px 28px -5px rgba(23, 75, 54, 0.1), 0 10px 10px -5px rgba(23, 75, 54, 0.04);
+  box-shadow: 0 14px 28px -5px rgba(5, 150, 105, 0.1), 0 10px 10px -5px rgba(15, 23, 42, 0.03);
 }
 
 /* Leaflet map polish */
@@ -139,9 +253,10 @@
   z-index: 10;
 }
 .leaflet-popup-content-wrapper {
-  border-radius: 12px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  border-radius: 14px;
+  box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.12);
   padding: 4px;
+  border: 1px solid #E2E8F0;
 }
 .leaflet-popup-content {
   margin: 10px 12px;
@@ -161,7 +276,6 @@
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
   }
-  
   header {
     padding-top: max(0.5rem, env(safe-area-inset-top));
   }
