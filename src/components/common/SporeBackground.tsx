@@ -1,6 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 
-export const SporeBackground: React.FC = () => {
+interface SporeBackgroundProps {
+  isDark?: boolean;
+}
+
+export const SporeBackground: React.FC<SporeBackgroundProps> = ({ isDark = false }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -20,9 +24,11 @@ export const SporeBackground: React.FC = () => {
     };
     window.addEventListener('resize', onResize);
 
-    // Bảng màu phấn hoa & diệp lục nổi bật dịu dàng trên nền sáng #F8FAF9
-    const colors = ['#059669', '#10B981', '#34D399', '#FBBF24', '#6EE7B7'];
-    const totalParticles = window.innerWidth < 768 ? 25 : 110;
+    // Hạt phấn hoa & neon glow
+    const colors = isDark
+      ? ['#00FF9D', '#10B981', '#34D399', '#6EE7B7', '#A7F3D0']
+      : ['#059669', '#10B981', '#34D399', '#FBBF24', '#6EE7B7'];
+    const totalParticles = window.innerWidth < 768 ? 30 : 120;
 
     class Particle {
       x = Math.random() * w;
@@ -72,7 +78,7 @@ export const SporeBackground: React.FC = () => {
       window.removeEventListener('resize', onResize);
       cancelAnimationFrame(animId);
     };
-  }, []);
+  }, [isDark]);
 
   return (
     <canvas

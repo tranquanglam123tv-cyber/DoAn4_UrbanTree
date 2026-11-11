@@ -265,23 +265,20 @@ html.dark, .dark {
   color-scheme: dark;
 }
 
-html.dark body, .dark body {
-  background-color: #070D0A !important;
-  color: #94A3B8 !important;
-}
-
-html.dark #root, .dark #root {
-  background-color: #070D0A !important;
+html.dark, html.dark body, html.dark #root, .dark, .dark body, .dark #root {
+  background-color: #060B08 !important;
+  color: #CBD5E1 !important;
 }
 
 html.dark .bento-card, .dark .bento-card {
-  background-color: rgba(14, 23, 18, 0.85) !important;
+  background: rgba(13, 22, 17, 0.88) !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
   color: #F1F5F9 !important;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5) !important;
 }
 
 html.dark .glass-panel, .dark .glass-panel {
-  background: rgba(14, 23, 18, 0.88) !important;
+  background: rgba(13, 22, 17, 0.9) !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
@@ -290,15 +287,17 @@ html.dark header, .dark header {
 }
 
 html.dark header > div:first-child, .dark header > div:first-child {
-  background-color: rgba(10, 18, 14, 0.85) !important;
+  background: rgba(10, 18, 14, 0.85) !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 html.dark footer, .dark footer {
-  background-color: #0A120E !important;
+  background-color: #070D0A !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #64748B !important;
 }
 
+/* Typography in Dark Mode */
 html.dark .text-slate-900, .dark .text-slate-900 {
   color: #F8FAFC !important;
 }
@@ -308,24 +307,54 @@ html.dark .text-slate-800, .dark .text-slate-800 {
 }
 
 html.dark .text-slate-700, .dark .text-slate-700 {
-  color: #CBD5E1 !important;
+  color: #E2E8F0 !important;
 }
 
-html.dark .text-slate-500, .dark .text-slate-500 {
+html.dark .text-slate-600, .dark .text-slate-600 {
   color: #94A3B8 !important;
 }
 
+html.dark .text-slate-500, .dark .text-slate-500 {
+  color: #64748B !important;
+}
+
+html.dark .text-slate-400, .dark .text-slate-400 {
+  color: #475569 !important;
+}
+
+/* Backgrounds & Panels in Dark Mode */
 html.dark .bg-white, .dark .bg-white {
-  background-color: #0E1712 !important;
+  background-color: #0D1611 !important;
+  color: #E2E8F0 !important;
 }
 
 html.dark .bg-slate-50, .dark .bg-slate-50 {
   background-color: #09100C !important;
 }
 
+html.dark .bg-slate-100, .dark .bg-slate-100 {
+  background-color: #131F18 !important;
+}
+
 html.dark .border-slate-200, .dark .border-slate-200,
 html.dark .border-slate-100, .dark .border-slate-100 {
   border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* HUD Badge in Dark Mode */
+html.dark .hero-badge-anim, .dark .hero-badge-anim {
+  background: rgba(13, 22, 17, 0.9) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  box-shadow: 0 0 20px rgba(0, 255, 157, 0.15) !important;
+}
+
+html.dark .hero-badge-anim .badge-content, .dark .hero-badge-anim .badge-content {
+  color: #34D399 !important;
+}
+
+html.dark .hero-badge-anim .rectangle, .dark .hero-badge-anim .rectangle {
+  background-color: #00FF9D !important;
+  box-shadow: 0 0 8px #00FF9D !important;
 }
 
 /* Leaflet map polish */

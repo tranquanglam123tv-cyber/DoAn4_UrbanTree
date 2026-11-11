@@ -136,9 +136,11 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAF9] flex flex-col text-[#0F172A] relative selection:bg-emerald-100 selection:text-emerald-900">
-      {/* Ambient Botanical Spore Canvas Particles (Automark Light) */}
-      <SporeBackground />
+    <div className={`min-h-screen flex flex-col relative transition-colors duration-200 ${
+      isDark ? 'dark bg-[#060B08] text-[#E2E8F0]' : 'bg-[#F8FAF9] text-[#0F172A]'
+    } selection:bg-emerald-500 selection:text-white`}>
+      {/* Ambient Botanical Spore Canvas Particles (Automark) */}
+      <SporeBackground isDark={isDark} />
 
       {/* Toast Notification */}
       {toastMessage && (
