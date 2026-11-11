@@ -61,7 +61,7 @@ export const TreeQrModal: React.FC<TreeQrModalProps> = ({ tree, onClose, onOpenP
         <div className="p-6 text-center space-y-4">
           <div className="p-5 border-2 border-dashed border-[#347A50]/40 rounded-2xl bg-[#F8FAF8] space-y-3 print:border-solid">
             <div className="text-[11px] font-bold tracking-widest text-[#174B36] uppercase">
-              UBND TP. HỒ CHÍ MINH · QUẢN LÝ CÂY XANH
+              UBND TP. CẦN THƠ · QUẢN LÝ CÂY XANH ĐÔ THỊ
             </div>
 
             {/* QR Image */}

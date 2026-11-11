@@ -41,10 +41,10 @@ export const MapView: React.FC<MapViewProps> = ({
     if (!mapContainerRef.current) return;
 
     if (!mapInstanceRef.current) {
-      // Initialize map centered at HCMC District 1
+      // Initialize map centered at Can Tho City (Ninh Kieu Wharf)
       const map = L.map(mapContainerRef.current, {
-        center: [10.776, 106.698],
-        zoom: 14,
+        center: [10.0345, 105.7882],
+        zoom: 15,
         zoomControl: true,
       });
 

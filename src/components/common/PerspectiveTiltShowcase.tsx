@@ -12,66 +12,96 @@ interface PerspectiveTiltShowcaseProps {
 
 export const PerspectiveTiltShowcase: React.FC<PerspectiveTiltShowcaseProps> = ({
   children,
-  urlBarText = 'urbantree.saigon.gov.vn/gis/live-radar',
-  badgeText = 'RADAR TRỰC TIẾP',
+  urlBarText = 'urbantree.cantho.gov.vn/gis/live-radar',
+  badgeText = 'RADAR TRỰC TIẾP GIS',
 }) => {
-  const showcaseRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const el = showcaseRef.current;
-    if (!el) return;
+    const el = cardRef.current;
+    const triggerEl = containerRef.current;
+    if (!el || !triggerEl) return;
+
+    // Refresh ScrollTrigger to calculate accurate layout metrics
+    const timer = setTimeout(() => {
+      ScrollTrigger.refresh();
+    }, 300);
 
     const mm = gsap.matchMedia();
 
-    // Màn hình Desktop (>= 1280px)
-    mm.add('(min-width: 1280px)', () => {
-      gsap.set(el, { scale: 0.84, rotationX: 12, top: -140 });
-      gsap.to(el, {
-        scrollTrigger: {
-          trigger: el,
-          start: '15% 95%',
-          end: '0% 30%',
-          scrub: 1.2, // Damping quán tính cực mượt
-        },
-        scale: 1,
-        rotationX: 0,
-        top: 0,
-        ease: 'power2.out',
+    // Desktop (>= 1024px)
+    mm.add('(min-width: 1024px)', () => {
+      gsap.set(el, {
+        transformPerspective: 1200,
+        transformOrigin: '50% 10%',
+        rotationX: 16,
+        scale: 0.85,
+        y: -40,
       });
-    });
 
-    // Màn hình Mobile/Tablet (< 1280px)
-    mm.add('(max-width: 1279px)', () => {
-      gsap.set(el, { scale: 0.88, rotationX: 15 });
       gsap.to(el, {
         scrollTrigger: {
-          trigger: el,
-          start: '15% 95%',
-          end: '0% 35%',
+          trigger: triggerEl,
+          start: 'top 85%',
+          end: 'top 20%',
           scrub: 1.2,
+          invalidateOnRefresh: true,
         },
-        scale: 1,
         rotationX: 0,
+        scale: 1,
+        y: 0,
         ease: 'power2.out',
       });
     });
 
-    return () => mm.revert();
+    // Mobile / Tablet (< 1024px)
+    mm.add('(max-width: 1023px)', () => {
+      gsap.set(el, {
+        transformPerspective: 1000,
+        transformOrigin: '50% 10%',
+        rotationX: 12,
+        scale: 0.9,
+      });
+
+      gsap.to(el, {
+        scrollTrigger: {
+          trigger: triggerEl,
+          start: 'top 90%',
+          end: 'top 30%',
+          scrub: 1.2,
+          invalidateOnRefresh: true,
+        },
+        rotationX: 0,
+        scale: 1,
+        ease: 'power2.out',
+      });
+    });
+
+    return () => {
+      clearTimeout(timer);
+      mm.revert();
+    };
   }, []);
 
   return (
     <div
-      style={{ perspective: '1200px' }}
-      className="w-full flex justify-center py-6 px-2 sm:px-4 overflow-hidden"
+      ref={containerRef}
+      style={{ perspective: '1400px' }}
+      className="w-full flex justify-center py-6 sm:py-10 px-1 sm:px-4 overflow-visible"
     >
       <div
-        ref={showcaseRef}
+        ref={cardRef}
         data-gsap-video-showcase
-        className="relative w-full max-w-7xl rounded-[32px] sm:rounded-[40px] bg-white border border-slate-200/90 p-2 sm:p-4 shadow-2xl shadow-emerald-950/8"
-        style={{ transformStyle: 'preserve-3d' }}
+        className="relative w-full max-w-7xl rounded-[32px] sm:rounded-[40px] bg-white border border-slate-200/90 p-2 sm:p-4 shadow-2xl shadow-emerald-950/10 will-change-transform"
+        style={{
+          transformStyle: 'preserve-3d',
+          transform: 'perspective(1400px) rotateX(16deg) scale(0.85)',
+          transformOrigin: '50% 10%',
+        }}
       >
         {/* Thanh điều khiển Radar trung tâm */}
-        <div className="flex items-center justify-between px-4 sm:px-5 py-2.5 sm:py-3.5 mb-2 sm:mb-3 bg-slate-50/90 rounded-2xl border border-slate-200/60">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-2.5 sm:py-3 mb-2 sm:mb-3 bg-slate-50/90 rounded-2xl border border-slate-200/60">
           <div className="flex items-center gap-2">
             <span className="w-2.5 sm:w-3 h-2.5 sm:h-3 rounded-full bg-rose-400" />
             <span className="w-2.5 sm:w-3 h-2.5 sm:h-3 rounded-full bg-amber-400" />
@@ -94,4 +124,3 @@ export const PerspectiveTiltShowcase: React.FC<PerspectiveTiltShowcaseProps> = (
     </div>
   );
 };
-

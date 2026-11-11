@@ -100,9 +100,9 @@ export const INITIAL_TREES: Tree[] = [
     publicCode: 'TREE-001',
     treeTypeId: 'type-bang',
     displayName: 'Cây Bàng Đài Loan #01',
-    address: 'Công viên Tao Đàn, Đường Trương Định, Phường Bến Thành, Quận 1',
-    latitude: 10.773829,
-    longitude: 106.691741,
+    address: 'Công viên Lưu Hữu Phước, Đại lộ Hòa Bình, Phường An Lạc, Quận Ninh Kiều, Cần Thơ',
+    latitude: 10.036829,
+    longitude: 105.782541,
     plantedAt: '2021-03-15',
     healthStatus: 'GOOD',
     diameterCm: 28,
@@ -117,9 +117,9 @@ export const INITIAL_TREES: Tree[] = [
     publicCode: 'TREE-002',
     treeTypeId: 'type-me',
     displayName: 'Cây Me Tây Cổ Thụ #02',
-    address: 'Đại lộ Lê Duẩn, Đối diện Dinh Độc Lập, Phường Bến Nghé, Quận 1',
-    latitude: 10.778215,
-    longitude: 106.69612,
+    address: 'Bến Ninh Kiều, Đường Hai Bà Trưng, Phường Tân An, Quận Ninh Kiều, Cần Thơ',
+    latitude: 10.034515,
+    longitude: 105.78822,
     plantedAt: '2012-06-20',
     healthStatus: 'FAIR',
     diameterCm: 72,
@@ -134,9 +134,9 @@ export const INITIAL_TREES: Tree[] = [
     publicCode: 'TREE-003',
     treeTypeId: 'type-sao',
     displayName: 'Cây Sao Đen Đại Mộc #03',
-    address: 'Góc đường Pasteur - Nguyễn Đình Chiểu, Phường Võ Thị Sáu, Quận 3',
-    latitude: 10.78451,
-    longitude: 106.68915,
+    address: 'Đại học Cần Thơ (Khu II), Đường 3/2, Phường Xuân Khánh, Quận Ninh Kiều, Cần Thơ',
+    latitude: 10.031251,
+    longitude: 105.76915,
     plantedAt: '2008-04-10',
     healthStatus: 'POOR',
     diameterCm: 85,
@@ -151,9 +151,9 @@ export const INITIAL_TREES: Tree[] = [
     publicCode: 'TREE-004',
     treeTypeId: 'type-gianghuong',
     displayName: 'Cây Giáng Hương Tuyến Phố #04',
-    address: 'Công viên Bến Bạch Đằng, Đường Tôn Đức Thắng, Phường Bến Nghé, Quận 1',
-    latitude: 10.77192,
-    longitude: 106.70543,
+    address: 'Công viên Sông Hậu, Đường Lê Lợi, Phường Cái Khế, Quận Ninh Kiều, Cần Thơ',
+    latitude: 10.04652,
+    longitude: 105.79153,
     plantedAt: '2022-09-02',
     healthStatus: 'GOOD',
     diameterCm: 32,
@@ -168,9 +168,9 @@ export const INITIAL_TREES: Tree[] = [
     publicCode: 'TREE-005',
     treeTypeId: 'type-chuongvang',
     displayName: 'Cây Chuông Vàng Cảnh Quan #05',
-    address: 'Phố đi bộ Nguyễn Huệ, Phường Bến Nghé, Quận 1',
-    latitude: 10.7745,
-    longitude: 106.7032,
+    address: 'Cầu Đi Bộ Ninh Kiều (Cầu Tình Yêu), Phường Tân An, Quận Ninh Kiều, Cần Thơ',
+    latitude: 10.0328,
+    longitude: 105.7895,
     plantedAt: '2023-01-18',
     healthStatus: 'GOOD',
     diameterCm: 22,
@@ -185,9 +185,9 @@ export const INITIAL_TREES: Tree[] = [
     publicCode: 'TREE-006',
     treeTypeId: 'type-me',
     displayName: 'Cây Me Tây Góc Phố #06',
-    address: 'Quảng trường Nhà hát Thành phố, Phường Bến Nghé, Quận 1',
-    latitude: 10.77685,
-    longitude: 106.70312,
+    address: 'Đường 30 Tháng 4 (Gần Vincom Plaza Xuân Khánh), Quận Ninh Kiều, Cần Thơ',
+    latitude: 10.02885,
+    longitude: 105.77612,
     plantedAt: '2015-11-20',
     healthStatus: 'CRITICAL',
     diameterCm: 64,
@@ -245,10 +245,10 @@ export const INITIAL_INCIDENTS: Incident[] = [
     treeId: 'tree-003',
     reporterName: 'Nguyễn Văn An',
     reporterPhone: '0903847291',
-    description: 'Cành cây lớn phía trên vỉa hè có vết nứt dài và lá héo khô, nguy cơ gãy đổ trúng người đi bộ.',
-    latitude: 10.78451,
-    longitude: 106.68915,
-    address: 'Góc đường Pasteur - Nguyễn Đình Chiểu, Q.3',
+    description: 'Cành cây lớn phía trên vỉa hè trước cổng ĐH Cần Thơ có vết nứt dài và lá héo khô, nguy cơ gãy đổ trúng sinh viên.',
+    latitude: 10.031251,
+    longitude: 105.76915,
+    address: 'Trước cổng ĐH Cần Thơ (Khu II), Đường 3/2, Xuân Khánh, Cần Thơ',
     severity: 'HIGH',
     status: 'IN_PROGRESS',
     assignedToUserId: 'user-staff-2',
@@ -263,10 +263,10 @@ export const INITIAL_INCIDENTS: Incident[] = [
     treeId: 'tree-006',
     reporterName: 'Trần Thị Mai',
     reporterPhone: '0918234910',
-    description: 'Sau đợt mưa dông chiều qua, cây có hiện tượng nghiêng khoảng 15 độ về phía đường đi, gốc trồi rễ.',
-    latitude: 10.77685,
-    longitude: 106.70312,
-    address: 'Quảng trường Nhà hát Thành phố, Q.1',
+    description: 'Sau đợt mưa dông chiều qua tại đường 30/4, cây me tây nghiêng 15 độ về phía lòng đường, rễ trồi nứt vỉa hè.',
+    latitude: 10.02885,
+    longitude: 105.77612,
+    address: 'Đường 30 Tháng 4 (Gần Vincom Plaza), Quận Ninh Kiều, Cần Thơ',
     severity: 'CRITICAL',
     status: 'RECEIVED',
     assignedToUserId: null,
@@ -280,10 +280,10 @@ export const INITIAL_INCIDENTS: Incident[] = [
     treeId: 'tree-001',
     reporterName: 'Hoàng Minh Đức',
     reporterPhone: '0983112233',
-    description: 'Phát hiện tổ mối đất lớn bám quanh vỏ gốc cây bàng gần lối đi thể dục công viên.',
-    latitude: 10.773829,
-    longitude: 106.691741,
-    address: 'Công viên Tao Đàn, Q.1',
+    description: 'Phát hiện tổ mối đất lớn bám quanh vỏ gốc cây bàng trong công viên Lưu Hữu Phước gần sân tập thể dục.',
+    latitude: 10.036829,
+    longitude: 105.782541,
+    address: 'Công viên Lưu Hữu Phước, Đại lộ Hòa Bình, Ninh Kiều, Cần Thơ',
     severity: 'MEDIUM',
     status: 'RESOLVED',
     assignedToUserId: 'user-staff-1',
@@ -695,8 +695,9 @@ class StorageService {
     actorName: string;
     note: string;
     assignedToUserId?: string | null;
+    imageUrl?: string;
   }): Promise<Incident> {
-    const { incidentId, newStatus, actorUserId, actorName, note, assignedToUserId } = params;
+    const { incidentId, newStatus, actorUserId, actorName, note, assignedToUserId, imageUrl } = params;
     const index = this.incidents.findIndex((i) => i.id === incidentId);
     if (index === -1) throw new Error('Incident not found');
 
@@ -706,6 +707,9 @@ class StorageService {
 
     incident.status = newStatus;
     incident.updatedAt = now;
+    if (imageUrl) {
+      incident.imageUrl = imageUrl;
+    }
 
     if (assignedToUserId !== undefined) {
       incident.assignedToUserId = assignedToUserId;
@@ -724,6 +728,7 @@ class StorageService {
       const { hash, canonicalJson } = computeRecordHash('INCIDENT_RESOLUTION', incident, {
         resolvedBy: actorUserId,
         note,
+        imageUrl: imageUrl || incident.imageUrl,
       });
 
       const receipt = await blockchainService.anchorRecord({
@@ -747,6 +752,7 @@ class StorageService {
       oldStatus,
       newStatus,
       note,
+      imageUrl,
       createdAt: now,
     });
 

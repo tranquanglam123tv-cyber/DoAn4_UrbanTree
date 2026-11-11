@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Trees, MapPin, Check, ShieldCheck } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, Trees, MapPin, Check, ShieldCheck, Camera, Upload, Image as ImageIcon } from 'lucide-react';
 import { Tree, TreeHealthStatus } from '../types';
 import { storage } from '../db/storage';
 
@@ -18,15 +18,35 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, onClose, onS
   const [displayName, setDisplayName] = useState(tree?.displayName || '');
   const [treeTypeId, setTreeTypeId] = useState(tree?.treeTypeId || treeTypes[0]?.id || '');
   const [address, setAddress] = useState(tree?.address || '');
-  const [latitude, setLatitude] = useState(tree?.latitude || 10.776);
-  const [longitude, setLongitude] = useState(tree?.longitude || 106.699);
+  const [latitude, setLatitude] = useState(tree?.latitude || 10.0345);
+  const [longitude, setLongitude] = useState(tree?.longitude || 105.7882);
   const [plantedAt, setPlantedAt] = useState(tree?.plantedAt || '2023-01-01');
   const [healthStatus, setHealthStatus] = useState<TreeHealthStatus>(tree?.healthStatus || 'GOOD');
   const [diameterCm, setDiameterCm] = useState(tree?.diameterCm || 30);
   const [heightM, setHeightM] = useState(tree?.heightM || 8);
   const [imageUrl, setImageUrl] = useState(tree?.imageUrl || '');
+  const [imagePreview, setImagePreview] = useState<string | null>(tree?.imageUrl || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Kích thước ảnh thực địa tối đa 5MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        setImageUrl(base64);
+        setImagePreview(base64);
+        setError(null);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +62,11 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, onClose, onS
     }
     if (!address.trim()) {
       setError('Vui lòng nhập địa chỉ vị trí cây');
+      return;
+    }
+
+    if (!imageUrl && !imagePreview) {
+      setError('Vui lòng chụp ảnh hoặc tải ảnh thực địa của cây để lưu hồ sơ');
       return;
     }
 
@@ -207,35 +232,42 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, onClose, onS
               </div>
             </div>
 
-            {/* Presets */}
+            {/* Presets Cần Thơ */}
             <div className="flex flex-wrap gap-1.5 pt-1">
               <button
                 type="button"
-                onClick={() => handleLocationPreset(10.773829, 106.691741, 'Công viên Tao Đàn, Quận 1')}
+                onClick={() => handleLocationPreset(10.036829, 105.782541, 'Công viên Lưu Hữu Phước, Đại lộ Hòa Bình, Ninh Kiều')}
                 className="px-2 py-0.5 bg-white border border-slate-200 rounded text-[10px] text-slate-600 hover:border-[#347A50]"
               >
-                Tao Đàn
+                Lưu Hữu Phước
               </button>
               <button
                 type="button"
-                onClick={() => handleLocationPreset(10.778215, 106.69612, 'Đại lộ Lê Duẩn, Quận 1')}
+                onClick={() => handleLocationPreset(10.034515, 105.78822, 'Bến Ninh Kiều, Đường Hai Bà Trưng, Tân An')}
                 className="px-2 py-0.5 bg-white border border-slate-200 rounded text-[10px] text-slate-600 hover:border-[#347A50]"
               >
-                Lê Duẩn
+                Bến Ninh Kiều
               </button>
               <button
                 type="button"
-                onClick={() => handleLocationPreset(10.77192, 106.70543, 'Bến Bạch Đằng, Quận 1')}
+                onClick={() => handleLocationPreset(10.04652, 105.79153, 'Công viên Sông Hậu, Đường Lê Lợi, Cái Khế')}
                 className="px-2 py-0.5 bg-white border border-slate-200 rounded text-[10px] text-slate-600 hover:border-[#347A50]"
               >
-                Bạch Đằng
+                Công viên Sông Hậu
               </button>
               <button
                 type="button"
-                onClick={() => handleLocationPreset(10.78451, 106.68915, 'Đường Pasteur, Quận 3')}
+                onClick={() => handleLocationPreset(10.031251, 105.76915, 'ĐH Cần Thơ Khu II, Đường 3/2, Xuân Khánh')}
                 className="px-2 py-0.5 bg-white border border-slate-200 rounded text-[10px] text-slate-600 hover:border-[#347A50]"
               >
-                Pasteur Q.3
+                ĐH Cần Thơ (Khu II)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLocationPreset(10.0328, 105.7895, 'Cầu Đi Bộ Ninh Kiều, Tân An, Ninh Kiều')}
+                className="px-2 py-0.5 bg-white border border-slate-200 rounded text-[10px] text-slate-600 hover:border-[#347A50]"
+              >
+                Cầu Đi Bộ
               </button>
             </div>
           </div>
@@ -278,25 +310,91 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, onClose, onS
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Ngày/Năm trồng</label>
-              <input
-                type="date"
-                value={plantedAt}
-                onChange={(e) => setPlantedAt(e.target.value)}
-                className="w-full px-2 py-2 border border-slate-200 rounded-lg"
-              />
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Ngày/Năm trồng</label>
+            <input
+              type="date"
+              value={plantedAt}
+              onChange={(e) => setPlantedAt(e.target.value)}
+              className="w-full px-2 py-2 border border-slate-200 rounded-lg text-xs"
+            />
+          </div>
+
+          {/* Photo field */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block font-semibold text-slate-700">
+                Hình ảnh thực địa cây xanh <span className="text-red-500">*</span>
+              </label>
+              <span className="text-[10px] text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                Bắt buộc chụp thực tế
+              </span>
             </div>
 
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">URL hình ảnh cây</label>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              capture="environment"
+              onChange={handleImageFileChange}
+              className="hidden"
+            />
+
+            {imagePreview ? (
+              <div className="relative rounded-xl overflow-hidden border border-emerald-300 bg-slate-900 group aspect-video max-h-44 flex items-center justify-center">
+                <img
+                  src={imagePreview}
+                  alt="Ảnh cây xanh"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-3 py-1.5 bg-white text-slate-800 rounded-lg text-xs font-semibold shadow flex items-center gap-1.5 hover:bg-slate-100"
+                  >
+                    <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Chụp / Đổi ảnh khác</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImagePreview(null);
+                      setImageUrl('');
+                    }}
+                    className="px-2.5 py-1.5 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700"
+                  >
+                    Xóa
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-emerald-300 hover:border-emerald-500 bg-emerald-50/40 hover:bg-emerald-50/80 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-colors text-center"
+              >
+                <div className="p-2.5 bg-white rounded-full shadow-xs text-emerald-600 mb-2 border border-emerald-100">
+                  <Camera className="w-5 h-5" />
+                </div>
+                <div className="text-xs font-bold text-emerald-900">
+                  Chụp ảnh cây từ Camera điện thoại / máy tính
+                </div>
+                <div className="text-[11px] text-slate-500 mt-0.5">
+                  hoặc bấm để tải tệp ảnh từ thiết bị
+                </div>
+              </div>
+            )}
+
+            <div className="mt-2">
               <input
                 type="url"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="https://images.unsplash.com/..."
-                className="w-full px-2 py-2 border border-slate-200 rounded-lg"
+                value={imageUrl.startsWith('data:') ? '' : imageUrl}
+                onChange={(e) => {
+                  setImageUrl(e.target.value);
+                  setImagePreview(e.target.value || null);
+                }}
+                placeholder="Hoặc dán URL ảnh trực tuyến (https://...)"
+                className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-[11px] text-slate-600"
               />
             </div>
           </div>

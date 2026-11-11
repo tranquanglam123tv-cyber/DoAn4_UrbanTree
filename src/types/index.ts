@@ -113,6 +113,7 @@ export interface IncidentUpdate {
   oldStatus: IncidentStatus;
   newStatus: IncidentStatus;
   note: string;
+  imageUrl?: string;
   createdAt: string;
 }
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   AlertTriangle,
   Plus,
@@ -12,6 +12,9 @@ import {
   ExternalLink,
   ChevronRight,
   Filter,
+  Camera,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { storage } from '../db/storage';
 import { Incident, IncidentSeverity, IncidentStatus, IncidentUpdate, User } from '../types';
@@ -51,7 +54,10 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
   const [newStatus, setNewStatus] = useState<IncidentStatus>('ASSIGNED');
   const [assignStaffId, setAssignStaffId] = useState<string>('');
   const [transitionNote, setTransitionNote] = useState('');
+  const [transitionImageUrl, setTransitionImageUrl] = useState('');
+  const [transitionImagePreview, setTransitionImagePreview] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const statusPhotoInputRef = useRef<HTMLInputElement | null>(null);
 
   // Citizen submission form state
   const [reportTreeId, setReportTreeId] = useState<string>('');
@@ -60,7 +66,10 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
   const [reportSeverity, setReportSeverity] = useState<IncidentSeverity>('MEDIUM');
   const [reporterName, setReporterName] = useState('');
   const [reporterPhone, setReporterPhone] = useState('');
+  const [reportImageUrl, setReportImageUrl] = useState('');
+  const [reportImagePreview, setReportImagePreview] = useState<string | null>(null);
   const [reportSuccessCode, setReportSuccessCode] = useState<string | null>(null);
+  const citizenPhotoInputRef = useRef<HTMLInputElement | null>(null);
 
   // Citizen lookup state
   const [lookupCode, setLookupCode] = useState('');
@@ -94,10 +103,13 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
         actorName: `${currentUser.fullName} (${currentUser.role})`,
         note: transitionNote.trim(),
         assignedToUserId: assignStaffId || undefined,
+        imageUrl: transitionImageUrl || transitionImagePreview || undefined,
       });
 
       setSelectedIncident(updated);
       setTransitionNote('');
+      setTransitionImageUrl('');
+      setTransitionImagePreview(null);
     } finally {
       setIsUpdating(false);
     }
@@ -111,9 +123,9 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
     }
 
     const matchedTree = reportTreeId ? trees.find((t) => t.id === reportTreeId) : null;
-    const lat = matchedTree ? matchedTree.latitude : 10.77685;
-    const lng = matchedTree ? matchedTree.longitude : 106.70312;
-    const addr = reportAddress.trim() || matchedTree?.address || 'Quận 1, TP.HCM';
+    const lat = matchedTree ? matchedTree.latitude : 10.0345;
+    const lng = matchedTree ? matchedTree.longitude : 105.7882;
+    const addr = reportAddress.trim() || matchedTree?.address || 'Quận Ninh Kiều, Cần Thơ';
 
     const newInc = await storage.createIncident({
       treeId: reportTreeId || null,
@@ -122,13 +134,16 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
       latitude: lat,
       longitude: lng,
       severity: reportSeverity,
-      reporterName: reporterName.trim() || 'Người dân ẩn danh',
+      imageUrl: reportImageUrl || reportImagePreview || undefined,
+      reporterName: reporterName.trim() || 'Người dân Cần Thơ',
       reporterPhone: reporterPhone.trim(),
     });
 
     setReportSuccessCode(newInc.publicCode);
     setReportDesc('');
     setReportAddress('');
+    setReportImageUrl('');
+    setReportImagePreview(null);
   };
 
   const handleCitizenLookup = (e: React.FormEvent) => {
@@ -391,6 +406,76 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                       />
                     </div>
 
+                    {/* Ảnh chụp hiện trường xử lý thực địa */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[11px] font-semibold text-slate-600">
+                          Ảnh chụp hiện trường xử lý:
+                        </label>
+                        <span className="text-[10px] text-emerald-700 font-medium bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                          Minh chứng thực tế
+                        </span>
+                      </div>
+
+                      <input
+                        type="file"
+                        ref={statusPhotoInputRef}
+                        accept="image/*"
+                        capture="environment"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              const base64 = reader.result as string;
+                              setTransitionImageUrl(base64);
+                              setTransitionImagePreview(base64);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        className="hidden"
+                      />
+
+                      {transitionImagePreview ? (
+                        <div className="relative rounded-lg overflow-hidden border border-emerald-300 max-h-28 group flex items-center justify-center bg-slate-900">
+                          <img
+                            src={transitionImagePreview}
+                            alt="Ảnh xử lý"
+                            className="w-full h-28 object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => statusPhotoInputRef.current?.click()}
+                              className="px-2 py-1 bg-white text-slate-800 rounded text-[10px] font-semibold"
+                            >
+                              Đổi ảnh
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTransitionImagePreview(null);
+                                setTransitionImageUrl('');
+                              }}
+                              className="px-2 py-1 bg-red-600 text-white rounded text-[10px] font-semibold"
+                            >
+                              Xóa
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => statusPhotoInputRef.current?.click()}
+                          className="w-full py-1.5 border border-dashed border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50 rounded-lg flex items-center justify-center gap-1.5 text-[11px] text-emerald-800 font-medium"
+                        >
+                          <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Chụp / Tải ảnh xử lý sự cố</span>
+                        </button>
+                      )}
+                    </div>
+
                     <button
                       type="submit"
                       disabled={isUpdating}
@@ -531,9 +616,87 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                   type="text"
                   value={reportAddress}
                   onChange={(e) => setReportAddress(e.target.value)}
-                  placeholder="Ví dụ: Vỉa hè trước số 12 Trương Định, P. Bến Thành, Q.1"
+                  placeholder="Ví dụ: Vỉa hè trước cổng ĐH Cần Thơ, Đường 3/2, Xuân Khánh, Ninh Kiều"
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg"
                 />
+              </div>
+
+              {/* Citizen Photo capture */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-slate-700">
+                    Ảnh chụp thực tế hiện trường sự cố
+                  </label>
+                  <span className="text-[10px] text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Khuyến khích chụp để xử lý nhanh
+                  </span>
+                </div>
+
+                <input
+                  type="file"
+                  ref={citizenPhotoInputRef}
+                  accept="image/*"
+                  capture="environment"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        const base64 = reader.result as string;
+                        setReportImageUrl(base64);
+                        setReportImagePreview(base64);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="hidden"
+                />
+
+                {reportImagePreview ? (
+                  <div className="relative rounded-xl overflow-hidden border border-emerald-300 bg-slate-900 group aspect-video max-h-40 flex items-center justify-center">
+                    <img
+                      src={reportImagePreview}
+                      alt="Ảnh sự cố"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => citizenPhotoInputRef.current?.click()}
+                        className="px-3 py-1.5 bg-white text-slate-800 rounded-lg text-xs font-semibold shadow hover:bg-slate-100"
+                      >
+                        Chụp / Chọn ảnh khác
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReportImagePreview(null);
+                          setReportImageUrl('');
+                        }}
+                        className="px-2.5 py-1.5 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700"
+                      >
+                        Xóa
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => citizenPhotoInputRef.current?.click()}
+                    className="border-2 border-dashed border-emerald-200 hover:border-emerald-400 bg-emerald-50/30 hover:bg-emerald-50/60 rounded-xl p-3 flex items-center justify-center gap-2.5 cursor-pointer transition-colors"
+                  >
+                    <div className="p-2 bg-white rounded-full shadow-xs text-emerald-600 border border-emerald-100">
+                      <Camera className="w-4 h-4" />
+                    </div>
+                    <div className="text-left">
+                      <div className="text-xs font-bold text-emerald-900">
+                        Chụp ảnh hiện trường từ máy ảnh
+                      </div>
+                      <div className="text-[10px] text-slate-500">
+                        hoặc bấm để tải ảnh từ thư viện thiết bị
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
