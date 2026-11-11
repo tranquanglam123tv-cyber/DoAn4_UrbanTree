@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "start": "powershell -ExecutionPolicy Bypass -File ./run.ps1",
     "dev": "vite --port=3000 --host=0.0.0.0",
     "backend": "npm start --prefix backend",
     "backend:dev": "npm run dev --prefix backend",
