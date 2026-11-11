@@ -235,12 +235,18 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 onClick={onToggleTheme}
                 title={isDark ? 'Chuyển sang Giao diện Sáng (Light Mode)' : 'Chuyển sang Giao diện Tối (Dark Mode)'}
-                className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors flex items-center justify-center border border-slate-200/80"
+                className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-amber-400 rounded-full transition-colors flex items-center gap-1.5 border border-slate-300 dark:border-slate-600 shadow-xs cursor-pointer text-xs font-semibold"
               >
                 {isDark ? (
-                  <Sun className="w-3.5 h-3.5 text-amber-400" />
+                  <>
+                    <Sun className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="hidden sm:inline text-[11px] text-amber-300">Sáng</span>
+                  </>
                 ) : (
-                  <Moon className="w-3.5 h-3.5 text-slate-600" />
+                  <>
+                    <Moon className="w-3.5 h-3.5 text-slate-700" />
+                    <span className="hidden sm:inline text-[11px] text-slate-700">Tối</span>
+                  </>
                 )}
               </button>
             )}
