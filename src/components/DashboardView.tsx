@@ -94,8 +94,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* 🚀 AUTOMARK 3D PERSPECTIVE SCROLL TILT SHOWCASE (TỪ NẰM SANG ĐỨNG) */}
       <PerspectiveTiltShowcase
-        urlBarText="urbantree.saigon.gov.vn/gis/live-radar"
-        badgeText="RADAR TRỰC TIẾP GIS"
+        urlBarText="urbantree.cantho.gov.vn/gis/live-radar"
+        badgeText="RADAR TRỰC TIẾP GIS CẦN THƠ"
       >
         <div className="relative min-h-[360px] sm:min-h-[460px] p-4 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 bg-gradient-to-br from-emerald-50/70 via-teal-50/30 to-slate-50">
           {/* Background Map Visual Simulation */}
@@ -105,7 +105,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="relative z-10 w-full md:w-80 bento-card p-5 space-y-4">
             <div className="flex items-center justify-between">
               <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                CÂY CỔ THỤ CẤP 1
+                CÂY CỔ THỤ ĐÔ THỊ
               </span>
               <span className="font-mono text-xs font-bold text-emerald-700">
                 {sampleTree ? sampleTree.publicCode : '#TREE-001'}
@@ -114,10 +114,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             <div>
               <div className="text-base sm:text-lg font-bold text-slate-900">
-                {sampleTree ? sampleTree.displayName : 'Dầu Rái (Dipterocarpus)'}
+                {sampleTree ? sampleTree.displayName : 'Cây Bàng Đài Loan #01'}
               </div>
               <div className="text-xs text-slate-500 truncate">
-                {sampleTree ? sampleTree.address : 'Số 14 Công Xã Paris, Bến Nghé, Quận 1, TP.HCM'}
+                {sampleTree ? sampleTree.address : 'Công viên Lưu Hữu Phước, Q. Ninh Kiều, Cần Thơ'}
               </div>
             </div>
 
@@ -125,13 +125,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             <div className="grid grid-cols-3 gap-2 text-center">
               <div>
-                <div className="text-[10px] text-slate-400">Tuổi cây</div>
-                <div className="text-xs sm:text-sm font-bold text-slate-900">128 năm</div>
+                <div className="text-[10px] text-slate-400">Năm trồng</div>
+                <div className="text-xs sm:text-sm font-bold text-slate-900">
+                  {sampleTree ? sampleTree.plantedAt : '2021'}
+                </div>
               </div>
               <div>
                 <div className="text-[10px] text-slate-400">Chiều cao</div>
                 <div className="text-xs sm:text-sm font-bold text-slate-900">
-                  {sampleTree ? `${sampleTree.heightMeters} m` : '24.5 m'}
+                  {sampleTree ? `${sampleTree.heightM} m` : '7.5 m'}
                 </div>
               </div>
               <div>

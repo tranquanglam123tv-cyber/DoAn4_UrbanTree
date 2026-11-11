@@ -34,17 +34,17 @@ export const PerspectiveTiltShowcase: React.FC<PerspectiveTiltShowcaseProps> = (
     mm.add('(min-width: 1024px)', () => {
       gsap.set(el, {
         transformPerspective: 1200,
-        transformOrigin: '50% 10%',
-        rotationX: 16,
-        scale: 0.85,
-        y: -40,
+        transformOrigin: '50% 15%',
+        rotationX: 32, // Tăng độ ngửa nằm rõ rệt
+        scale: 0.82,
+        y: -60,
       });
 
       gsap.to(el, {
         scrollTrigger: {
           trigger: triggerEl,
           start: 'top 85%',
-          end: 'top 20%',
+          end: 'top 25%',
           scrub: 1.2,
           invalidateOnRefresh: true,
         },
@@ -59,9 +59,10 @@ export const PerspectiveTiltShowcase: React.FC<PerspectiveTiltShowcaseProps> = (
     mm.add('(max-width: 1023px)', () => {
       gsap.set(el, {
         transformPerspective: 1000,
-        transformOrigin: '50% 10%',
-        rotationX: 12,
-        scale: 0.9,
+        transformOrigin: '50% 15%',
+        rotationX: 24, // Tăng độ ngửa cho mobile
+        scale: 0.86,
+        y: -30,
       });
 
       gsap.to(el, {
@@ -74,6 +75,7 @@ export const PerspectiveTiltShowcase: React.FC<PerspectiveTiltShowcaseProps> = (
         },
         rotationX: 0,
         scale: 1,
+        y: 0,
         ease: 'power2.out',
       });
     });
@@ -93,11 +95,11 @@ export const PerspectiveTiltShowcase: React.FC<PerspectiveTiltShowcaseProps> = (
       <div
         ref={cardRef}
         data-gsap-video-showcase
-        className="relative w-full max-w-7xl rounded-[32px] sm:rounded-[40px] bg-white border border-slate-200/90 p-2 sm:p-4 shadow-2xl shadow-emerald-950/10 will-change-transform"
+        className="relative w-full max-w-7xl rounded-[32px] sm:rounded-[40px] bg-white border border-slate-200/90 p-2 sm:p-4 shadow-2xl shadow-emerald-950/15 will-change-transform"
         style={{
           transformStyle: 'preserve-3d',
-          transform: 'perspective(1400px) rotateX(16deg) scale(0.85)',
-          transformOrigin: '50% 10%',
+          transform: 'perspective(1400px) rotateX(32deg) scale(0.82) translateY(-60px)',
+          transformOrigin: '50% 15%',
         }}
       >
         {/* Thanh điều khiển Radar trung tâm */}
