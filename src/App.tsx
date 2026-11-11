@@ -267,9 +267,18 @@ export default function App() {
 
       {isQrScannerOpen && (
         <QRScannerModal
+          currentUser={currentUser}
           onClose={() => setIsQrScannerOpen(false)}
-          onTreeScanned={(tree) => {
-            setPublicTreeModalTree(tree);
+          onTreeScanned={(tree, role) => {
+            if (role === 'ADMIN' || role === 'STAFF') {
+              // Admin & Staff: Mở thẳng hồ sơ quản lý thực địa (ghi nhật ký, sửa, kiểm chứng On-chain)
+              setSelectedTreeForDetail(tree);
+              showToast(`Đã nhận diện QR [${tree.publicCode}] cho ${role}: Mở hồ sơ quản trị.`);
+            } else {
+              // Citizen: Mở cổng tra cứu công cộng (xem lai lịch & báo cáo sự cố)
+              setPublicTreeModalTree(tree);
+              showToast(`Đã quét QR [${tree.publicCode}]: Mở thông tin công khai & báo cáo sự cố.`);
+            }
           }}
         />
       )}
@@ -277,8 +286,12 @@ export default function App() {
       {publicTreeModalTree && (
         <PublicTreeModal
           tree={publicTreeModalTree}
+          currentUser={currentUser}
           onClose={() => setPublicTreeModalTree(null)}
           onReportIncident={handleReportIncidentForTree}
+          onOpenManagement={(tree) => {
+            setSelectedTreeForDetail(tree);
+          }}
         />
       )}
 

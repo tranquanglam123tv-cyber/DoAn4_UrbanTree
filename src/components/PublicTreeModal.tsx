@@ -16,12 +16,16 @@ interface PublicTreeModalProps {
   tree: Tree | null;
   onClose: () => void;
   onReportIncident: (tree: Tree) => void;
+  onOpenManagement?: (tree: Tree) => void;
+  currentUser?: { role: string; fullName: string };
 }
 
 export const PublicTreeModal: React.FC<PublicTreeModalProps> = ({
   tree,
   onClose,
   onReportIncident,
+  onOpenManagement,
+  currentUser,
 }) => {
   if (!tree) return null;
 
@@ -131,8 +135,21 @@ export const PublicTreeModal: React.FC<PublicTreeModalProps> = ({
           </div>
         </div>
 
-        {/* Footer Prominent CTA */}
-        <div className="p-4 bg-slate-50 border-t border-slate-100 shrink-0">
+        {/* Footer Actions */}
+        <div className="p-4 bg-slate-50 border-t border-slate-100 shrink-0 space-y-2">
+          {currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'STAFF') && onOpenManagement && (
+            <button
+              onClick={() => {
+                onOpenManagement(tree);
+                onClose();
+              }}
+              className="w-full py-2.5 bg-[#174B36] hover:bg-[#347A50] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-colors shadow-sm"
+            >
+              <Trees className="w-4 h-4" />
+              <span>Chuyển sang Bảng điều khiển Quản lý ({currentUser.role})</span>
+            </button>
+          )}
+
           <button
             onClick={() => {
               onReportIncident(tree);

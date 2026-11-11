@@ -5,11 +5,13 @@ import { storage } from '../db/storage';
 import { Tree } from '../types';
 
 interface QRScannerModalProps {
+  currentUser?: { role: string; fullName: string };
   onClose: () => void;
-  onTreeScanned: (tree: Tree) => void;
+  onTreeScanned: (tree: Tree, userRole?: string) => void;
 }
 
-export const QRScannerModal: React.FC<QRScannerModalProps> = ({ onClose, onTreeScanned }) => {
+export const QRScannerModal: React.FC<QRScannerModalProps> = ({ currentUser, onClose, onTreeScanned }) => {
+  const activeUser = currentUser || storage.getActiveUser();
   const trees = storage.getTrees();
   const [manualCode, setManualCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +53,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ onClose, onTreeS
       setScannedSuccess(tree.publicCode);
       stopCamera();
       setTimeout(() => {
-        onTreeScanned(tree);
+        onTreeScanned(tree, activeUser.role);
         onClose();
       }, 700);
       return true;
@@ -190,7 +192,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ onClose, onTreeS
   // Chọn cây mẫu demo nhanh
   const handleSelectDemoTree = (tree: Tree) => {
     stopCamera();
-    onTreeScanned(tree);
+    onTreeScanned(tree, activeUser.role);
     onClose();
   };
 
@@ -205,7 +207,18 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ onClose, onTreeS
             </div>
             <div>
               <h2 className="text-sm font-bold text-[#174B36]">Quét Mã QR Cây xanh</h2>
-              <p className="text-[11px] text-slate-500">Mở hồ sơ kiểm chứng On-chain</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[10px] text-slate-500">Đang quét với tư cách:</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                  activeUser.role === 'ADMIN'
+                    ? 'bg-purple-100 text-purple-800'
+                    : activeUser.role === 'STAFF'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-blue-100 text-blue-800'
+                }`}>
+                  {activeUser.role === 'ADMIN' ? '👑 Quản trị viên (ADMIN)' : activeUser.role === 'STAFF' ? '🛠️ Nhân viên (STAFF)' : '👤 Người dân (CITIZEN)'}
+                </span>
+              </div>
             </div>
           </div>
           <button 
