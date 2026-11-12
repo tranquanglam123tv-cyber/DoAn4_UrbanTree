@@ -558,22 +558,22 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER BAR */}
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-gradient-to-r from-emerald-50/50 via-transparent to-transparent dark:from-[#091a11] dark:via-[#0c1812] shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-[#00FF9D] flex items-center justify-center font-bold border border-emerald-200 dark:border-emerald-500/40 shadow-xs">
+        <div className="px-6 py-3.5 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-gradient-to-r from-emerald-50/60 via-transparent to-transparent dark:from-[#091a11] dark:via-[#0c1812] shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-[#00FF9D] flex items-center justify-center font-bold border border-emerald-200 dark:border-emerald-500/40 shadow-xs shrink-0">
               <Users className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                  Quản Lý Nhân Sự, Đội Ngũ Kỹ Thuật Viên & Phân Quyền
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight whitespace-nowrap">
+                  Quản Lý Nhân Sự & Phân Quyền KTV
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-[#00FF9D] dark:border dark:border-emerald-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-[#00FF9D] dark:border dark:border-emerald-500/30 shrink-0">
                   ADMIN ONLY
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                Điều phối địa bàn, giao lệnh công tác thực địa, chuyển phòng ban và kiểm soát phân quyền vận hành GIS 4.0
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                Điều phối địa bàn, giao lệnh thực địa, chuyển tổ đội & kiểm soát phân quyền vận hành GIS 4.0
               </p>
             </div>
           </div>
@@ -581,42 +581,49 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0 ml-2"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* QUICK KPI STRIP */}
-        <div className="px-6 py-2.5 bg-slate-50/80 dark:bg-[#07120b] border-b border-slate-100 dark:border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-3 text-slate-600 dark:text-slate-400 shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span>Kỹ thuật viên: <strong className="text-slate-900 dark:text-slate-100 font-mono text-sm">{staffCount}</strong> ca trực</span>
+        <div className="px-6 py-2 bg-slate-50/90 dark:bg-[#07120b] border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 overflow-x-auto scrollbar-none text-[11px] shrink-0">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200/70 dark:border-slate-800 shadow-2xs whitespace-nowrap shrink-0">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="text-slate-500 dark:text-slate-400">Kỹ thuật viên:</span>
+            <span className="font-bold font-mono text-xs text-slate-800 dark:text-slate-100">{staffCount} ca trực</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-            <span>Đang công tác hiện trường: <strong className="text-amber-600 dark:text-amber-400 font-mono text-sm">{onMissionCount}</strong> KTV</span>
+
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/50 shadow-2xs whitespace-nowrap shrink-0">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            <span className="text-amber-700 dark:text-amber-300">Đang hiện trường:</span>
+            <span className="font-bold font-mono text-xs text-amber-800 dark:text-amber-400">{onMissionCount} KTV</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-purple-500" />
-            <span>Quản trị viên: <strong className="text-slate-900 dark:text-slate-100 font-mono text-sm">{adminCount}</strong></span>
+
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200/70 dark:border-slate-800 shadow-2xs whitespace-nowrap shrink-0">
+            <span className="w-2 h-2 rounded-full bg-purple-500" />
+            <span className="text-slate-500 dark:text-slate-400">Quản trị viên:</span>
+            <span className="font-bold font-mono text-xs text-slate-800 dark:text-slate-100">{adminCount}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-blue-500" />
-            <span>Cư dân & CTV: <strong className="text-slate-900 dark:text-slate-100 font-mono text-sm">{citizenCount}</strong></span>
+
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200/70 dark:border-slate-800 shadow-2xs whitespace-nowrap shrink-0">
+            <span className="w-2 h-2 rounded-full bg-blue-500" />
+            <span className="text-slate-500 dark:text-slate-400">Cư dân & CTV:</span>
+            <span className="font-bold font-mono text-xs text-slate-800 dark:text-slate-100">{citizenCount}</span>
           </div>
         </div>
 
         {/* SUB-TABS NAVIGATION */}
-        <div className="px-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4 bg-white dark:bg-[#0c1812] shrink-0">
-          <div className="flex items-center gap-1 -mb-px">
+        <div className="px-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 bg-white dark:bg-[#0c1812] shrink-0">
+          <div className="flex items-center gap-2 -mb-px">
             <button
               type="button"
               onClick={() => {
                 setActiveSubTab('list');
                 setIsEditing(false);
               }}
-              className={`py-3 px-3.5 font-bold border-b-2 text-xs transition-all flex items-center gap-2 cursor-pointer ${
+              className={`py-3 px-3 font-bold border-b-2 text-xs transition-all flex items-center gap-2 cursor-pointer ${
                 activeSubTab === 'list'
                   ? 'border-emerald-600 text-emerald-800 dark:border-[#00FF9D] dark:text-[#00FF9D]'
                   : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
@@ -632,14 +639,14 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                 setActiveSubTab('import_file');
                 setIsEditing(false);
               }}
-              className={`py-3 px-3.5 font-bold border-b-2 text-xs transition-all flex items-center gap-2 cursor-pointer ${
+              className={`py-3 px-3 font-bold border-b-2 text-xs transition-all flex items-center gap-2 cursor-pointer ${
                 activeSubTab === 'import_file'
                   ? 'border-emerald-600 text-emerald-800 dark:border-[#00FF9D] dark:text-[#00FF9D]'
                   : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>Nhập Nhân Viên Bằng File Excel / CSV</span>
+              <span>Nhập File Excel / CSV</span>
             </button>
           </div>
 
@@ -647,7 +654,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
             <button
               type="button"
               onClick={handleOpenAdd}
-              className="h-8 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-all active:scale-95"
+              className="h-8 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-all active:scale-95 text-xs shrink-0"
             >
               <UserPlus className="w-3.5 h-3.5" />
               <span>+ Thêm Nhân Viên Mới</span>
@@ -1104,29 +1111,38 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
             /* ================= BẢNG DANH SÁCH NHÂN VIÊN & BỘ LỌC ================= */
             <div className="space-y-3.5">
               {/* BỘ LỌC ĐA CHIỀU (MULTI-DIMENSIONAL FILTERS) */}
-              <div className="p-3 rounded-2xl bg-slate-50/80 dark:bg-[#07130b] border border-slate-200/80 dark:border-slate-800 space-y-2.5">
+              <div className="p-3 rounded-2xl bg-slate-50/90 dark:bg-[#07130b] border border-slate-200/80 dark:border-slate-800 space-y-2.5 shadow-xs">
                 {/* Search Bar + Role Pills */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
                   <div className="relative flex-1">
                     <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
                     <input
                       type="text"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Tìm kiếm theo Tên, Username (@...), Mã KTV, Số điện thoại, Chức vụ..."
-                      className="w-full pl-9 pr-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 text-xs shadow-2xs"
+                      placeholder="Tìm theo Tên, Username (@...), Mã KTV, SĐT, Chức vụ..."
+                      className="w-full pl-9 pr-8 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 text-xs shadow-2xs focus:outline-none focus:ring-1.5 focus:ring-emerald-500 transition-all placeholder:text-slate-400"
                     />
+                    {search && (
+                      <button
+                        type="button"
+                        onClick={() => setSearch('')}
+                        className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
 
                   {/* Role filter buttons */}
-                  <div className="flex items-center gap-1 bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xs">
+                  <div className="flex items-center gap-1 bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700/80 shadow-2xs shrink-0 overflow-x-auto scrollbar-none">
                     <button
                       type="button"
                       onClick={() => setFilterRole('ALL')}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                         filterRole === 'ALL'
                           ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
                       }`}
                     >
                       Tất cả ({users.length})
@@ -1134,50 +1150,53 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setFilterRole('STAFF')}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                         filterRole === 'STAFF'
                           ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
                       }`}
                     >
-                      👷 KTV ({staffCount})
+                      <span>👷</span>
+                      <span>KTV ({staffCount})</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setFilterRole('ADMIN')}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                         filterRole === 'ADMIN'
                           ? 'bg-purple-600 text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
                       }`}
                     >
-                      👮 Admin ({adminCount})
+                      <span>👮</span>
+                      <span>Admin ({adminCount})</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setFilterRole('CITIZEN')}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                         filterRole === 'CITIZEN'
                           ? 'bg-blue-600 text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
                       }`}
                     >
-                      👤 Cư dân ({citizenCount})
+                      <span>👤</span>
+                      <span>Cư dân ({citizenCount})</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Sub-Filters: District, Department, Status */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-slate-200/60 dark:border-slate-800/60 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1.5 border-t border-slate-200/70 dark:border-slate-800/70 text-xs">
                   {/* Địa bàn */}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-slate-400 shrink-0 font-medium text-[11px]">Địa bàn:</span>
+                  <div className="relative">
+                    <MapPin className="w-3.5 h-3.5 absolute left-3 top-2.5 text-emerald-600 dark:text-[#00FF9D] pointer-events-none" />
                     <select
                       value={filterDistrict}
                       onChange={(e) => setFilterDistrict(e.target.value)}
-                      className="w-full px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs"
+                      className="w-full pl-8 pr-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-medium shadow-2xs cursor-pointer focus:outline-none focus:ring-1.5 focus:ring-emerald-500 transition-all truncate"
                     >
-                      <option value="ALL">Toàn TP. Cần Thơ (Tất cả)</option>
+                      <option value="ALL">Địa bàn: Toàn TP. Cần Thơ (Tất cả)</option>
                       <option value="Ninh Kiều">Quận Ninh Kiều</option>
                       <option value="Bình Thủy">Quận Bình Thủy</option>
                       <option value="Cái Răng">Quận Cái Răng</option>
@@ -1187,14 +1206,14 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                   </div>
 
                   {/* Tổ đội / Phòng ban */}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-slate-400 shrink-0 font-medium text-[11px]">Tổ đội:</span>
+                  <div className="relative">
+                    <Building2 className="w-3.5 h-3.5 absolute left-3 top-2.5 text-blue-600 dark:text-blue-400 pointer-events-none" />
                     <select
                       value={filterDepartment}
                       onChange={(e) => setFilterDepartment(e.target.value)}
-                      className="w-full px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs truncate"
+                      className="w-full pl-8 pr-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-medium shadow-2xs truncate cursor-pointer focus:outline-none focus:ring-1.5 focus:ring-emerald-500 transition-all"
                     >
-                      <option value="ALL">Tất cả tổ đội & phòng ban</option>
+                      <option value="ALL">Tổ đội: Tất cả tổ đội & phòng ban</option>
                       {TEAMS.map((t) => (
                         <option key={t} value={t}>
                           {t}
@@ -1204,14 +1223,14 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                   </div>
 
                   {/* Trạng thái công tác */}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-slate-400 shrink-0 font-medium text-[11px]">Trạng thái:</span>
+                  <div className="relative">
+                    <Activity className="w-3.5 h-3.5 absolute left-3 top-2.5 text-amber-600 dark:text-amber-400 pointer-events-none" />
                     <select
                       value={filterStatus}
                       onChange={(e) => setFilterStatus(e.target.value)}
-                      className="w-full px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs"
+                      className="w-full pl-8 pr-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-medium shadow-2xs cursor-pointer focus:outline-none focus:ring-1.5 focus:ring-emerald-500 transition-all truncate"
                     >
-                      <option value="ALL">Tất cả trạng thái</option>
+                      <option value="ALL">Trạng thái: Tất cả trạng thái</option>
                       <option value="ACTIVE">🟢 Sẵn sàng trực chiến</option>
                       <option value="ON_MISSION">🟡 Đang đi công tác hiện trường</option>
                       <option value="ON_LEAVE">⚪ Nghỉ phép</option>
@@ -1219,6 +1238,29 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                     </select>
                   </div>
                 </div>
+
+                {/* HÀNG TRẠNG THÁI BỘ LỌC NẾU CÓ FILTER ĐANG ÁP DỤNG */}
+                {(search || filterRole !== 'ALL' || filterDistrict !== 'ALL' || filterDepartment !== 'ALL' || filterStatus !== 'ALL') && (
+                  <div className="flex items-center justify-between pt-1 text-[11px] text-slate-500 dark:text-slate-400 px-1">
+                    <span>
+                      Đang lọc thấy <strong className="text-emerald-700 dark:text-[#00FF9D] font-mono">{filteredUsers.length}</strong> / {users.length} tài khoản
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearch('');
+                        setFilterRole('ALL');
+                        setFilterDistrict('ALL');
+                        setFilterDepartment('ALL');
+                        setFilterStatus('ALL');
+                      }}
+                      className="text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer flex items-center gap-1"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Xóa bộ lọc</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* BẢNG DANH SÁCH NHÂN SỰ */}
