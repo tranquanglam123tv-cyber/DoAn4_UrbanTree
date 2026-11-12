@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Trees,
   CheckCircle2,
@@ -31,10 +31,14 @@ import {
   Users,
   Shield,
   Zap,
+  LocateFixed,
+  Navigation,
 } from 'lucide-react';
 import { storage } from '../db/storage';
 import { blockchainService } from '../services/blockchainService';
 import { Tree, User } from '../types';
+import { calculateHaversineDistance, findNearestTree } from '../utils/treeUtils';
+import { CAN_THO_ZONES } from '../utils/zoneUtils';
 import { HudBadge } from './common/HudBadge';
 import { PerspectiveTiltShowcase } from './common/PerspectiveTiltShowcase';
 import { TreeGrowthShowcase } from './common/TreeGrowthShowcase';
@@ -65,8 +69,84 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
+  // 📍 GPS Live Radar States
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [isLocating, setIsLocating] = useState<boolean>(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
+  const [nearestTreeInfo, setNearestTreeInfo] = useState<{ tree: Tree; distanceM: number } | null>(null);
+  const [currentZoneName, setCurrentZoneName] = useState<string>('Quận Ninh Kiều (Trung tâm TP)');
+
+  // Auto trigger GPS detection on mount (or fallback gracefully to central Cần Thơ)
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setUserCoords({ lat, lng });
+
+          // Find nearest tree
+          const nearest = findNearestTree(lat, lng, trees);
+          if (nearest) setNearestTreeInfo(nearest);
+
+          // Identify zone
+          if (lat < 10.02) {
+            setCurrentZoneName('Quận Cái Răng (Cửa ngõ phía Nam)');
+          } else if (lat > 10.05) {
+            setCurrentZoneName('Quận Bình Thủy (Vùng Cảng & Sân bay)');
+          } else {
+            setCurrentZoneName('Quận Ninh Kiều (Đô thị Trung tâm)');
+          }
+        },
+        () => {
+          // If denied, fallback to Ninh Kiều coordinate center
+          const defaultLat = 10.0355;
+          const defaultLng = 105.7825;
+          setUserCoords({ lat: defaultLat, lng: defaultLng });
+          const nearest = findNearestTree(defaultLat, defaultLng, trees);
+          if (nearest) setNearestTreeInfo(nearest);
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 30000 }
+      );
+    }
+  }, [trees]);
+
+  const handleRefreshGps = () => {
+    if (!('geolocation' in navigator)) {
+      setGpsError('Trình duyệt không hỗ trợ định vị GPS');
+      return;
+    }
+    setIsLocating(true);
+    setGpsError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setIsLocating(false);
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setUserCoords({ lat, lng });
+
+        const nearest = findNearestTree(lat, lng, trees);
+        if (nearest) setNearestTreeInfo(nearest);
+
+        if (lat < 10.02) {
+          setCurrentZoneName('Quận Cái Răng (Cửa ngõ phía Nam)');
+        } else if (lat > 10.05) {
+          setCurrentZoneName('Quận Bình Thủy (Vùng Cảng & Sân bay)');
+        } else {
+          setCurrentZoneName('Quận Ninh Kiều (Đô thị Trung tâm)');
+        }
+      },
+      (err) => {
+        setIsLocating(false);
+        setGpsError('Không thể lấy tọa độ hiện tại: ' + err.message);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
+
   const healthyPercent = stats.totalTrees > 0 ? Math.round((stats.healthyTrees / stats.totalTrees) * 100) : 0;
-  const sampleTree = trees[0] || null;
+  // Use nearest tree if GPS located, otherwise fallback to first tree
+  const sampleTree = nearestTreeInfo ? nearestTreeInfo.tree : trees[0] || null;
 
   const faqs = [
     {
@@ -146,26 +226,42 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
       {/* 🚀 2. AUTOMARK 3D PERSPECTIVE SCROLL TILT SHOWCASE (TỪ NẰM SANG ĐỨNG) */}
       <PerspectiveTiltShowcase
-        urlBarText="urbantree.cantho.gov.vn/gis/live-radar"
-        badgeText="RADAR TRỰC TIẾP GIS CẦN THƠ"
+        urlBarText={userCoords ? `urbantree.cantho.gov.vn/gis/live-radar?lat=${userCoords.lat.toFixed(4)}&lng=${userCoords.lng.toFixed(4)}` : 'urbantree.cantho.gov.vn/gis/live-radar'}
+        badgeText={userCoords ? 'RADAR GPS ĐANG KẾT NỐI TRỰC TIẾP' : 'RADAR TRỰC TIẾP GIS CẦN THƠ'}
       >
         <div className="relative min-h-[380px] sm:min-h-[480px] p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row items-center justify-between gap-6 bg-gradient-to-br from-emerald-50/70 via-teal-50/30 to-slate-50 dark:from-[#091510] dark:via-[#0c1a14] dark:to-[#070e0a]">
           {/* Background Map Visual Simulation */}
           <div className="absolute inset-0 opacity-25 dark:opacity-20 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
 
-          {/* Left Hero Card - Quick Stats */}
+          {/* Left Hero Card - Quick Stats tự đổi theo Vùng GPS */}
           <div className="relative z-10 w-full lg:max-w-xs bg-white/95 dark:bg-[#0c1812]/95 backdrop-blur-md p-5 rounded-2xl border border-emerald-100 dark:border-emerald-500/20 shadow-xl dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] space-y-4 text-left shrink-0">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-3 w-3 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-              </span>
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">
-                Lưới GIS Công viên Cần Thơ
-              </span>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="flex h-3 w-3 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </span>
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">
+                  Lưới GIS Cần Thơ
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleRefreshGps}
+                disabled={isLocating}
+                title="Cập nhật lại GPS của tôi"
+                className="p-1 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 transition-colors cursor-pointer"
+              >
+                <LocateFixed className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin text-amber-500' : ''}`} />
+              </button>
             </div>
 
             <div className="space-y-1">
+              <div className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                <Navigation className="w-3 h-3 shrink-0" />
+                <span className="truncate">{currentZoneName}</span>
+              </div>
               <div className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
                 {stats.totalTrees}{' '}
                 <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Cây số hóa</span>
@@ -200,16 +296,16 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <TreeGrowthShowcase />
           </div>
 
-          {/* Right Hero Card - Sample Tree Tag */}
+          {/* Right Hero Card - Tự động đổi sang Cây gần vị trí GPS nhất */}
           {sampleTree && (
             <div className="relative z-10 w-full lg:max-w-xs bg-white/95 dark:bg-[#0c1812]/95 backdrop-blur-md p-4 rounded-2xl border border-emerald-100 dark:border-emerald-500/20 shadow-xl dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] text-left space-y-3 shrink-0 hidden md:block">
               <div className="flex items-center justify-between">
                 <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 text-[10px] font-mono font-bold border border-emerald-200 dark:border-emerald-500/30">
                   {sampleTree.publicCode}
                 </span>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                  <Activity className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                  Đang giám sát
+                <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/70 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                  <LocateFixed className="w-3 h-3 text-emerald-600 dark:text-emerald-400 animate-pulse" />
+                  {nearestTreeInfo ? `Cách bạn ~${nearestTreeInfo.distanceM}m` : 'Cây mẫu theo GPS'}
                 </span>
               </div>
 
@@ -233,9 +329,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
               <button
                 onClick={() => onSelectTree(sampleTree)}
-                className="w-full py-2 text-center text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg transition-colors cursor-pointer"
+                className="w-full py-2 text-center text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5"
               >
-                Tra cứu chi tiết cây ➔
+                <span>Tra cứu chi tiết cây này</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           )}

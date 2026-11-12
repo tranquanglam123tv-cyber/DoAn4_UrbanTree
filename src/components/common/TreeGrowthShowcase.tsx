@@ -159,6 +159,55 @@ export const TreeGrowthShowcase: React.FC = () => {
 
       {/* 🌿 Main Botanical Canvas: Beautiful Living Tree */}
       <div className="relative w-72 h-64 sm:w-80 sm:h-72 flex items-end justify-center overflow-visible">
+        {/* 🌟 HÀO QUANG MÀU XANH LAN TỎA RỘNG & ĐẬM ĐÀ RỰC RỠ VỪA ĐẸP (RỘNG HƠN, TÔN NỔI TÁN CÂY) */}
+        {/* Layer 1: Hào quang khí quyển lan tỏa diện rộng, vươn xa ra ngoài */}
+        <div
+          className="absolute pointer-events-none rounded-full"
+          style={{
+            top: `${canopyCenterPercent}%`,
+            left: '50%',
+            width: `${140 + foliageScale * 440}px`,
+            height: `${140 + foliageScale * 440}px`,
+            transform: 'translate(-50%, -50%)',
+            background:
+              'radial-gradient(circle, rgba(16,185,129,0.55) 0%, rgba(5,150,105,0.32) 38%, rgba(4,120,87,0.12) 65%, transparent 85%)',
+            filter: 'blur(36px)',
+            opacity: (0.45 + foliageScale * 0.45) * cycleOpacity,
+            transition: isPlaying ? 'none' : 'all 300ms ease-out',
+          }}
+        />
+
+        {/* Layer 2: Hào quang năng lượng lõi sáng tươi tắn ôm phía sau tán */}
+        <div
+          className="absolute pointer-events-none rounded-full"
+          style={{
+            top: `${canopyCenterPercent}%`,
+            left: '50%',
+            width: `${80 + foliageScale * 280}px`,
+            height: `${80 + foliageScale * 280}px`,
+            transform: 'translate(-50%, -50%)',
+            background:
+              'radial-gradient(circle, rgba(52,211,153,0.55) 0%, rgba(16,185,129,0.28) 45%, transparent 75%)',
+            filter: 'blur(20px)',
+            opacity: (0.35 + foliageScale * 0.35) * cycleOpacity,
+            transition: isPlaying ? 'none' : 'all 300ms ease-out',
+          }}
+        />
+
+        {/* Layer 3: Hào quang năng lượng đất mẹ dưới gốc cây (Soil Base Aura) */}
+        <div
+          className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full pointer-events-none"
+          style={{
+            width: `${90 + progress * 110}px`,
+            height: `${16 + progress * 22}px`,
+            background:
+              'radial-gradient(ellipse, rgba(16,185,129,0.5) 0%, rgba(4,120,87,0.22) 50%, transparent 80%)',
+            filter: 'blur(10px)',
+            opacity: (0.35 + progress * 0.45) * cycleOpacity,
+            transition: isPlaying ? 'none' : 'all 300ms ease-out',
+          }}
+        />
+
         {/* Floating eco-spores (active when tree is lush, with smooth lifecycle fade) */}
         {foliageScale > 0.3 && (
           <div
@@ -172,33 +221,32 @@ export const TreeGrowthShowcase: React.FC = () => {
           </div>
         )}
 
-        {/* 🎨 Scalable Vector Graphic (Living Tree Art) - Nét Vector Sắc Bén */}
+        {/* 🎨 Scalable Vector Graphic (Living Tree Art) */}
         <svg
           viewBox="0 0 320 280"
           className="w-full h-full relative z-10 overflow-visible"
-          style={{ shapeRendering: 'geometricPrecision' }}
         >
           <defs>
             {/* Organic Bark / Wood Trunk Gradient */}
-            <linearGradient id="barkGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <linearGradient id="barkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#854d0e" />
-              <stop offset="25%" stopColor="#633912" />
-              <stop offset="65%" stopColor="#452407" />
-              <stop offset="100%" stopColor="#291302" />
+              <stop offset="35%" stopColor="#542e0c" />
+              <stop offset="70%" stopColor="#3d1e03" />
+              <stop offset="100%" stopColor="#1f0f02" />
             </linearGradient>
 
             {/* Lush Canopy Deep Gradient */}
             <linearGradient id="canopyBackGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#044e37" />
-              <stop offset="50%" stopColor="#065f46" />
-              <stop offset="100%" stopColor="#047857" />
+              <stop offset="0%" stopColor="#064e3b" />
+              <stop offset="60%" stopColor="#047857" />
+              <stop offset="100%" stopColor="#059669" />
             </linearGradient>
 
             {/* Lush Canopy Front/Bright Gradient */}
             <linearGradient id="canopyFrontGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#34d399" />
-              <stop offset="45%" stopColor="#10b981" />
-              <stop offset="100%" stopColor="#059669" />
+              <stop offset="0%" stopColor="#6ee7b7" />
+              <stop offset="40%" stopColor="#10b981" />
+              <stop offset="100%" stopColor="#047857" />
             </linearGradient>
 
             {/* Leaflet Highlight */}
@@ -207,10 +255,30 @@ export const TreeGrowthShowcase: React.FC = () => {
               <stop offset="100%" stopColor="#34d399" />
             </linearGradient>
 
-            {/* Subtle Drop Shadow for Crisp Vector Leaves */}
-            <filter id="crispShadow" x="-10%" y="-10%" width="130%" height="130%">
-              <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#022c22" floodOpacity="0.45" />
+            {/* Glowing Root Glow */}
+            <filter id="glowEffect" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
             </filter>
+
+            {/* Ethereal Canopy Halo Filter (Làm mờ mềm mại, không đè vỡ hình ảnh) */}
+            <filter id="canopyBloom" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="8" />
+            </filter>
+
+            {/* Dynamic Canopy Background Halo Gradient inside SVG (Lan tỏa thoáng đãng & tươi sáng) */}
+            <radialGradient id="canopyAuraGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#6ee7b7" stopOpacity="0.75" />
+              <stop offset="35%" stopColor="#34d399" stopOpacity="0.55" />
+              <stop offset="68%" stopColor="#10b981" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="#047857" stopOpacity="0" />
+            </radialGradient>
+
+            <radialGradient id="coreAuraGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#a7f3d0" stopOpacity="0.8" />
+              <stop offset="40%" stopColor="#34d399" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#059669" stopOpacity="0" />
+            </radialGradient>
           </defs>
 
           {/* 🌟 Group chứa cây và hào quang với hiệu ứng mờ dần chuyển giao chu kỳ */}
@@ -227,7 +295,8 @@ export const TreeGrowthShowcase: React.FC = () => {
             <path d="M174 241 Q176 233 179 229 Q176 235 172 241 Z" fill="#059669" />
 
             {/* 2. UNDERGROUND ROOTS (Smoothly branching) */}
-            <g opacity={Math.max(0.3, 1.0 - progress * 0.6)}>
+            <g opacity={Math.max(0.25, 1.0 - progress * 0.6)}>
+              {/* Primary Taproot */}
               <path
                 d={`M160 245 Q158 ${245 + rootGrowth * 18} 156 ${245 + rootGrowth * 32}`}
                 stroke="#059669"
@@ -235,6 +304,7 @@ export const TreeGrowthShowcase: React.FC = () => {
                 fill="none"
                 strokeLinecap="round"
               />
+              {/* Left Lateral Root */}
               <path
                 d={`M160 246 Q145 ${246 + rootGrowth * 12} ${160 - rootGrowth * 36} ${246 + rootGrowth * 22}`}
                 stroke="#10b981"
@@ -242,6 +312,7 @@ export const TreeGrowthShowcase: React.FC = () => {
                 fill="none"
                 strokeLinecap="round"
               />
+              {/* Right Lateral Root */}
               <path
                 d={`M160 246 Q175 ${246 + rootGrowth * 12} ${160 + rootGrowth * 38} ${246 + rootGrowth * 20}`}
                 stroke="#10b981"
@@ -249,8 +320,9 @@ export const TreeGrowthShowcase: React.FC = () => {
                 fill="none"
                 strokeLinecap="round"
               />
+              {/* Golden seed embryo */}
               {seedFade > 0 && (
-                <circle cx="160" cy="245" r={4.5 * seedFade} fill="#f59e0b" />
+                <circle cx="160" cy="245" r={4.5 * seedFade} fill="#f59e0b" filter="url(#glowEffect)" />
               )}
             </g>
 
@@ -265,16 +337,12 @@ export const TreeGrowthShowcase: React.FC = () => {
               <path
                 d="M148 245 C150 210 146 175 152 140 C156 115 154 95 160 75 C166 95 164 115 168 140 C174 175 170 210 172 245 C165 244 155 244 148 245 Z"
                 fill="url(#barkGradient)"
-                stroke="#291302"
-                strokeWidth="1"
               />
 
               {/* Left Primary Branch */}
               <path
                 d={`M154 150 C140 135 125 125 ${160 - branchScale * 55} ${145 - branchScale * 25} C122 136 138 148 153 162 Z`}
                 fill="url(#barkGradient)"
-                stroke="#291302"
-                strokeWidth="0.8"
                 opacity={branchScale}
               />
 
@@ -282,8 +350,6 @@ export const TreeGrowthShowcase: React.FC = () => {
               <path
                 d={`M166 145 C180 130 196 122 ${160 + branchScale * 56} ${140 - branchScale * 22} C198 134 182 145 167 158 Z`}
                 fill="url(#barkGradient)"
-                stroke="#291302"
-                strokeWidth="0.8"
                 opacity={branchScale}
               />
 
@@ -307,6 +373,7 @@ export const TreeGrowthShowcase: React.FC = () => {
                     fill="#ffffff"
                     stroke="#059669"
                     strokeWidth="1.2"
+                    filter="url(#glowEffect)"
                   />
                   <rect x="156.5" y="182.5" width="3" height="3" fill="#064e3b" />
                   <rect x="160.5" y="182.5" width="3" height="3" fill="#064e3b" />
@@ -316,46 +383,65 @@ export const TreeGrowthShowcase: React.FC = () => {
               )}
             </g>
 
-            {/* 4. ALWAYS-LUSH GREEN FOLIAGE - Tán Lá Rõ Nét Sắc Sảo (Crisp Vector Clouds) */}
+            {/* 4. ALWAYS-LUSH GREEN FOLIAGE (Attaches directly to stem/branches and blooms seamlessly!) */}
             {foliageScale > 0 && (
               <g
                 style={{
+                  // Anchor position follows the top of the trunk as it rises
                   transformOrigin: `160px ${245 - trunkScaleY * 165}px`,
                   transform: `scale(${foliageScale})`,
                   opacity: foliageOpacity,
                 }}
               >
-                {/* Back Shadow Canopy Clouds (Lớp tán bóng đổ phía sau - có viền nét rõ) */}
-                <circle cx="160" cy="85" r="58" fill="url(#canopyBackGrad)" stroke="#022c22" strokeWidth="1.5" />
-                <circle cx="115" cy="115" r="48" fill="url(#canopyBackGrad)" stroke="#022c22" strokeWidth="1.5" />
-                <circle cx="205" cy="110" r="50" fill="url(#canopyBackGrad)" stroke="#022c22" strokeWidth="1.5" />
+                {/* 🌟 VÒNG HÀO QUANG LAN TỎA RỘNG & ĐẬM ĐÀ VỪA PHẢI SAU TÁN (RỘNG RÃI, KHÔNG CHE KHUẤT CÀNH LÁ) */}
+                <circle
+                  cx="160"
+                  cy="92"
+                  r="165"
+                  fill="url(#canopyAuraGrad)"
+                  filter="url(#canopyBloom)"
+                  opacity="0.65"
+                  className="pointer-events-none"
+                />
+                <circle
+                  cx="160"
+                  cy="92"
+                  r="120"
+                  fill="url(#coreAuraGrad)"
+                  filter="url(#canopyBloom)"
+                  opacity="0.7"
+                  className="pointer-events-none"
+                />
 
-                {/* Midtone Vibrant Foliage Clouds (Lớp tán xanh ngọc tươi sáng - xếp tầng rõ khối) */}
-                <g filter="url(#crispShadow)">
-                  <circle cx="140" cy="95" r="46" fill="url(#canopyFrontGrad)" stroke="#064e3b" strokeWidth="1.2" />
-                  <circle cx="180" cy="90" r="48" fill="url(#canopyFrontGrad)" stroke="#064e3b" strokeWidth="1.2" />
-                  <circle cx="160" cy="60" r="42" fill="url(#canopyFrontGrad)" stroke="#064e3b" strokeWidth="1.2" />
-                  <circle cx="105" cy="130" r="38" fill="url(#canopyFrontGrad)" stroke="#064e3b" strokeWidth="1.2" />
-                  <circle cx="215" cy="125" r="39" fill="url(#canopyFrontGrad)" stroke="#064e3b" strokeWidth="1.2" />
-                </g>
+                {/* Back Shadow Canopy Clouds */}
+                <circle cx="160" cy="85" r="58" fill="url(#canopyBackGrad)" opacity="0.95" />
+                <circle cx="115" cy="115" r="48" fill="url(#canopyBackGrad)" opacity="0.92" />
+                <circle cx="205" cy="110" r="50" fill="url(#canopyBackGrad)" opacity="0.92" />
 
-                {/* Sun-dappled Leaf Clusters (Đốm sáng nắng rọi trên tán lá cực kỳ sắc nét) */}
-                <circle cx="135" cy="72" r="24" fill="url(#leafHighlight)" opacity="0.9" />
-                <circle cx="185" cy="68" r="22" fill="url(#leafHighlight)" opacity="0.85" />
-                <circle cx="160" cy="100" r="28" fill="url(#leafHighlight)" opacity="0.8" />
-                <circle cx="120" cy="118" r="18" fill="#a7f3d0" opacity="0.75" />
-                <circle cx="200" cy="115" r="18" fill="#a7f3d0" opacity="0.75" />
+                {/* Midtone Vibrant Foliage Clouds */}
+                <circle cx="140" cy="95" r="46" fill="url(#canopyFrontGrad)" />
+                <circle cx="180" cy="90" r="48" fill="url(#canopyFrontGrad)" />
+                <circle cx="160" cy="60" r="42" fill="url(#canopyFrontGrad)" />
+                <circle cx="105" cy="130" r="38" fill="url(#canopyFrontGrad)" />
+                <circle cx="215" cy="125" r="39" fill="url(#canopyFrontGrad)" />
 
-                {/* Fluttering Edge Leaflets (Lá viền ngoài sắc bén) */}
-                <ellipse cx="78" cy="115" rx="10" ry="6" fill="#34d399" stroke="#059669" strokeWidth="0.8" transform="rotate(-30 78 115)" />
-                <ellipse cx="242" cy="110" rx="10" ry="6" fill="#10b981" stroke="#047857" strokeWidth="0.8" transform="rotate(30 242 110)" />
-                <ellipse cx="160" cy="22" rx="12" ry="7" fill="#6ee7b7" stroke="#059669" strokeWidth="0.8" />
-                <ellipse cx="115" cy="55" rx="9" ry="5" fill="#34d399" stroke="#059669" strokeWidth="0.8" transform="rotate(-40 115 55)" />
-                <ellipse cx="205" cy="52" rx="9" ry="5" fill="#6ee7b7" stroke="#059669" strokeWidth="0.8" transform="rotate(40 205 52)" />
+                {/* Sun-dappled Leaf Clusters (Bright Highlights) */}
+                <circle cx="135" cy="72" r="26" fill="url(#leafHighlight)" opacity="0.85" />
+                <circle cx="185" cy="68" r="24" fill="url(#leafHighlight)" opacity="0.8" />
+                <circle cx="160" cy="100" r="32" fill="url(#leafHighlight)" opacity="0.75" />
+                <circle cx="120" cy="118" r="22" fill="#a7f3d0" opacity="0.7" />
+                <circle cx="200" cy="115" r="22" fill="#a7f3d0" opacity="0.7" />
+
+                {/* Fluttering Edge Leaflets */}
+                <ellipse cx="78" cy="115" rx="10" ry="6" fill="#34d399" transform="rotate(-30 78 115)" />
+                <ellipse cx="242" cy="110" rx="10" ry="6" fill="#10b981" transform="rotate(30 242 110)" />
+                <ellipse cx="160" cy="22" rx="12" ry="7" fill="#6ee7b7" />
+                <ellipse cx="115" cy="55" rx="9" ry="5" fill="#34d399" transform="rotate(-40 115 55)" />
+                <ellipse cx="205" cy="52" rx="9" ry="5" fill="#6ee7b7" transform="rotate(40 205 52)" />
               </g>
             )}
 
-            {/* Special young leaves cluster for sprout stage */}
+            {/* Special young leaves cluster for sprout stage (guarantees green lushness even when tiny!) */}
             {foliageScale < 0.45 && (
               <g
                 style={{
@@ -363,9 +449,19 @@ export const TreeGrowthShowcase: React.FC = () => {
                   opacity: 1 - foliageScale * 2,
                 }}
               >
-                <ellipse cx="150" cy={245 - trunkScaleY * 165} rx="16" ry="10" fill="#34d399" stroke="#065f46" strokeWidth="1" transform={`rotate(-28 150 ${245 - trunkScaleY * 165})`} />
-                <ellipse cx="170" cy={245 - trunkScaleY * 165} rx="16" ry="10" fill="#10b981" stroke="#065f46" strokeWidth="1" transform={`rotate(28 170 ${245 - trunkScaleY * 165})`} />
-                <ellipse cx="160" cy={245 - trunkScaleY * 178} rx="14" ry="16" fill="#6ee7b7" stroke="#065f46" strokeWidth="1" />
+                {/* Hào quang mầm non rực rỡ vừa phải */}
+                <circle
+                  cx="160"
+                  cy={245 - trunkScaleY * 168}
+                  r="36"
+                  fill="url(#coreAuraGrad)"
+                  filter="url(#canopyBloom)"
+                  opacity="0.65"
+                  className="pointer-events-none"
+                />
+                <ellipse cx="150" cy={245 - trunkScaleY * 165} rx="16" ry="10" fill="#34d399" transform={`rotate(-28 150 ${245 - trunkScaleY * 165})`} />
+                <ellipse cx="170" cy={245 - trunkScaleY * 165} rx="16" ry="10" fill="#10b981" transform={`rotate(28 170 ${245 - trunkScaleY * 165})`} />
+                <ellipse cx="160" cy={245 - trunkScaleY * 178} rx="14" ry="16" fill="#6ee7b7" />
               </g>
             )}
           </g>
