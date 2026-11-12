@@ -520,13 +520,15 @@ export default function App() {
       />
 
       {/* 👥 Modal Quản trị Nhân sự & Đội ngũ KTV (Staff Management) */}
-      <StaffManagementModal
-        isOpen={isStaffManagementOpen}
-        onClose={() => setIsStaffManagementOpen(false)}
-        onUserListChanged={() => {
-          showToast('Đã đồng bộ danh sách nhân sự thành công!');
-        }}
-      />
+      {isStaffManagementOpen && (
+        <StaffManagementModal
+          isOpen={isStaffManagementOpen}
+          onClose={() => setIsStaffManagementOpen(false)}
+          onUserListChanged={() => {
+            showToast('Đã đồng bộ danh sách nhân sự thành công!');
+          }}
+        />
+      )}
 
       {/* 📱 PWA Native Install Banner */}
       <PwaInstallBanner />

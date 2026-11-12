@@ -138,8 +138,6 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
   const [userPermissions, setUserPermissions] = useState<string[]>(['CARE_WRITE', 'INCIDENT_RESOLVE']);
   const [isActive, setIsActive] = useState(true);
 
-  if (!isOpen) return null;
-
   const refreshList = () => {
     const list = storage.getUsers();
     setUsers(list);
@@ -532,17 +530,17 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
       const q = search.trim().toLowerCase();
       const matchesSearch =
         !q ||
-        u.fullName.toLowerCase().includes(q) ||
-        u.username.toLowerCase().includes(q) ||
-        (u.staffCode && u.staffCode.toLowerCase().includes(q)) ||
-        (u.phone && u.phone.includes(q)) ||
-        (u.email && u.email.toLowerCase().includes(q)) ||
-        (u.position && u.position.toLowerCase().includes(q)) ||
-        (u.assignedDistrict && u.assignedDistrict.toLowerCase().includes(q)) ||
-        (u.teamName && u.teamName.toLowerCase().includes(q));
+        Boolean(u.fullName && u.fullName.toLowerCase().includes(q)) ||
+        Boolean(u.username && u.username.toLowerCase().includes(q)) ||
+        Boolean(u.staffCode && u.staffCode.toLowerCase().includes(q)) ||
+        Boolean(u.phone && u.phone.includes(q)) ||
+        Boolean(u.email && u.email.toLowerCase().includes(q)) ||
+        Boolean(u.position && u.position.toLowerCase().includes(q)) ||
+        Boolean(u.assignedDistrict && u.assignedDistrict.toLowerCase().includes(q)) ||
+        Boolean(u.teamName && u.teamName.toLowerCase().includes(q));
 
       const matchesRole = filterRole === 'ALL' || u.role === filterRole;
-      const matchesDistrict = filterDistrict === 'ALL' || u.assignedDistrict?.includes(filterDistrict);
+      const matchesDistrict = filterDistrict === 'ALL' || (u.assignedDistrict && u.assignedDistrict.includes(filterDistrict));
       const matchesDepartment = filterDepartment === 'ALL' || u.department === filterDepartment || u.teamName === filterDepartment;
       const matchesStatus =
         filterStatus === 'ALL' ||
@@ -553,6 +551,8 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
       return matchesSearch && matchesRole && matchesDistrict && matchesDepartment && matchesStatus;
     });
   }, [users, search, filterRole, filterDistrict, filterDepartment, filterStatus]);
+
+  if (!isOpen) return null;
 
   return (
     <div
@@ -1263,7 +1263,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                             <td className="p-3">
                               <div className="flex items-center gap-2.5">
                                 <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-700 dark:text-slate-200 shrink-0 border border-slate-200 dark:border-slate-700">
-                                  {user.fullName.charAt(0)}
+                                  {(user.fullName || user.username || '?').charAt(0).toUpperCase()}
                                 </div>
                                 <div className="min-w-0">
                                   <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
@@ -1440,7 +1440,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
               <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center font-black text-xl shadow-md">
-                    {selectedUserForDetail.fullName.charAt(0)}
+                    {(selectedUserForDetail.fullName || selectedUserForDetail.username || '?').charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
