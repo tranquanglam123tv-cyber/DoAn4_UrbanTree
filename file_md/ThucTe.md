@@ -210,6 +210,88 @@ Trong nghiệp vụ hạ tầng đô thị thông minh cấp quốc gia (Multi-T
   - Hệ thống tự động tổng hợp thành văn bản hành chính khổ A4 chuẩn thể thức Nhà nước (có Quốc hiệu, Tiêu ngữ, Số hiệu công văn, Bảng số liệu phân cấp Thông tư 20, Chỉ số Carbon Allometric, Tỷ lệ SLA và Khung chữ ký duyệt 3 cấp) cho phép in trực tiếp hoặc xuất file PDF nộp báo cáo chỉ với 1 click.
 
 ---
+
+## 📋 PHẦN 7: TỔNG HỢP DANH MỤC TOÀN BỘ 38 CHỨC NĂNG HỆ THỐNG URBANTREE ECO-GIS 4.0
+> **Tài liệu đặc tả chức năng (Functional Specification) chuẩn Đồ án Tốt nghiệp & Bảo vệ trước Hội đồng.**
+
+```
+                   HỆ THỐNG QUẢN TRỊ ĐÔ THỊ THÔNG MINH URBANTREE
+ ┌──────────────────────┬──────────────────────┬──────────────────────┐
+ │    ADMIN (QUẢN TRỊ)  │  STAFF (KỸ THUẬT)    │ CITIZEN (CỘNG ĐỒNG)  │
+ └──────────────────────┴──────────────────────┴──────────────────────┘
+```
+
+### 🗺️ PHÂN HỆ 1: BẢN ĐỒ SỐ GIS & KHÔNG GIAN ĐÔ THỊ (SPATIAL GIS)
+1. **Bản đồ Đa Quận/Huyện TP. Cần Thơ (Multi-District GIS):** Chuyển đổi và bay mượt mà (`flyTo`) giữa 6 vùng: *Ninh Kiều, Cái Răng, Bình Thủy, Ô Môn, Phong Điền, Toàn thành phố*.
+2. **Lọc Địa điểm Nổi tiếng & Tuyến đường:** Lọc nhanh theo các mốc thực địa (Công viên Lưu Hữu Phước, Bến Ninh Kiều, Cầu Tình Yêu, ĐH Cần Thơ, Sân bay Cần Thơ...).
+3. **Tìm kiếm Theo Số Nhà & Tọa độ:** Nhập trực tiếp số nhà mặt tiền hoặc tên cây để bản đồ tự định vị.
+4. **Vùng Bảo Vệ Rễ Cây (Root Protection Zone - RPZ) Chuẩn BS 5837:** Công tắc `[🛡️ Vùng rễ (RPZ)]` vẽ vòng tròn bán kính $3 - 6m$ mô phỏng vùng rễ cọc cấm máy xúc cơ giới đào vỉa hè/đặt cáp viễn thông.
+5. **Ghim Cây Trực Tiếp Trên Bản Đồ (Map Pin Add Mode):** Click bất kỳ điểm nào trên mặt đường để lấy tọa độ và mở form cắm mốc cây mới.
+6. **Điều Chỉnh / Di Dời Tọa Độ Cây (Reposition Mode):** Admin có thể kéo thả hoặc ghim lại vị trí cây khi vỉa hè được mở rộng hoặc nắn tuyến.
+7. **Định Vị Tọa Độ Của Tôi (GPS Locate Me):** Tự động đo tọa độ thực tế của thiết bị công nhân/người dân trên bản đồ số.
+8. **Marker Động & Hiển Thị Mã Tuyến:** Marker đổi màu theo 4 mức sức khỏe (*Xanh/Xám/Vàng/Đỏ*) và in nổi số thứ tự cây trên tuyến (`01`, `02`, `14`...).
+
+### 🏷️ PHÂN HỆ 2: ĐỊNH DANH CÂY XANH & BIỂN SỐ NHÔM ẢO (DIGITAL ALLOY TAG)
+9. **Quy chuẩn Định Danh Mã Tuyến Phố:** Tự động sinh mã nhận diện 3 cấp: `Mã Tuyến - Số Thứ Tự` (VD: `HB-01` Đại lộ Hòa Bình, `30T4-02`, `CR-01` Võ Nguyên Giáp...).
+10. **Mốc Số Nhà Thực Địa (Milestone):** Gán mốc nhận diện mặt đất (VD: *"Trước số 12 Đại lộ Hòa Bình"*).
+11. **Phân Cấp Cây Theo Thông Tư 20/2020/TT-BXD:** 
+    * Cây Loại 1 ($D < 20cm, H < 6m$)
+    * Cây Loại 2 ($D: 20-50cm, H: 6-12m$)
+    * Cây Loại 3 / Cổ Thụ Di Sản ($D \ge 50cm$ hoặc $H \ge 12m$)
+12. **Cảnh Báo Pháp Lý Cây Di Sản (Legal Heritage Stamp):** Tự động dán tem bảo vệ nghiêm ngặt: *Cấm tự ý đốn hạ khi chưa có giấy phép UBND TP hoặc Sở Xây Dựng*.
+13. **Biển Số Nhôm Đổi Màu Kim Loại (Digital Alloy Tag):** Mô phỏng thẻ kim loại dập nổi ngoài thực địa với hiệu ứng góc nghiêng ánh sáng 3D.
+14. **Mã QR Động & Trang Tra Cứu Công Khai:** Quét mã QR dẫn thẳng đến trang hồ sơ số hóa của từng cây mà không cần đăng nhập.
+15. **In Thẻ QR Hàng Loạt (Export / Print Tag):** Cho phép xuất và in thẻ QR để công nhân mang ra đường đóng vào thân cây.
+
+### 📁 PHÂN HỆ 3: NHẬP LIỆU HÀNG LOẠT & HIỆU CHUẨN THỰC ĐỊA
+16. **Nhập Hàng Loạt Cây Từ Tuyến Phố / Excel:** 1 click tạo tự động dãy 10 - 50 cây cách đều nhau dọc theo tọa độ tuyến đường.
+17. **Nhập Nhân Viên Hàng Loạt Bằng File Excel / CSV:** 
+    * Kéo thả file danh sách nhân sự cán bộ.
+    * Tải file mẫu chuẩn hóa UTF-8 tiếng Việt (`.csv`).
+    * Nút thử nghiệm nhanh `[⚡ Nạp 5 KTV mẫu Cần Thơ]`.
+    * Bảng Preview kiểm tra tự động trùng `username`.
+18. **Chế Độ Hiệu Chuẩn Nhanh 10 Giây/Cây:** KTV đứng ngoài đường quét QR, đối chiếu mắt thường và bấm [📍 Khớp tọa độ GPS] để kích hoạt thẻ.
+
+### 🚨 PHÂN HỆ 4: TIẾP NHẬN & ĐIỀU PHỐI SỰ CỐ (INCIDENT SLA)
+19. **Cổng Phản Ánh Sự Cố Cho Người Dân (Citizen Portal):** Người dân chụp ảnh cành gãy, cây nghiêng đổ, gửi kèm định vị GPS.
+20. **Mã Tra Cứu Sự Cố Công Khai (`INC-xxxxx`):** Người dân tra cứu tiến độ xử lý của đơn vị công viên cây xanh theo mã vé.
+21. **Phân Quyền Điều Phối Hai Cấp:**
+    * **Admin:** Tiếp nhận, duyệt vé, chọn Kỹ thuật viên (Staff) và gán lệnh điều phối (`ASSIGNED`).
+    * **Staff:** Đi xe thang đến hiện trường, cập nhật `IN_PROGRESS` và chụp ảnh nghiệm thu đóng vé `RESOLVED`.
+22. **Đồng Hồ Đếm Ngược SLA Phản Ứng Nhanh:**
+    * Mức `CRITICAL`: SLA 30 phút.
+    * Mức `HIGH`: SLA 120 phút.
+    * Mức `MEDIUM / LOW`: SLA 24 – 48 giờ.
+23. **Cảnh Báo Vi Phạm SLA Nhấp Nháy Đỏ:** Bật cảnh báo `🚨 VI PHẠM SLA: Quá hạn N phút!` khi KTV chậm trễ so với cam kết.
+24. **Cơ Chế Phản Hồi Tái Xử Lý (Re-Open):** Nếu người dân thấy cành cây chưa được dọn dẹp sạch, có thể gửi yêu cầu tái xử lý kèm ảnh chụp.
+25. **Tự Động Phục Hồi Sức Khỏe Cây:** Khi KTV đóng sự cố `RESOLVED`, cây tự động chuyển từ `CRITICAL` ➔ `FAIR` và tạo nhật ký chăm sóc On-Chain.
+
+### 🛠️ PHÂN HỆ 5: NHẬT KÝ CHĂM SÓC & BẢO DƯỠNG (MAINTENANCE)
+26. **Ghi Nhật Ký Chăm Sóc Thực Địa:** 7 nghiệp vụ chuyên môn: *Tưới nước, Cắt tỉa cành, Bón phân, Xử lý sâu bệnh, Khảo sát, Chống cọc, Điều trị vết thương*.
+27. **Đối Soát Sức Khỏe Trước/Sau (Health Before/After):** So sánh tình trạng cây phục hồi sau can thiệp kỹ thuật.
+28. **Chụp Ảnh Hiện Trường & Ký Số:** Bắt buộc có ảnh đối chứng hiện trường trước khi ghi nhận vào lịch sử cây.
+29. **Tìm Kiếm Cây Thông Minh (TreeSearchSelect):** Tìm nhanh cây trong danh sách dropdown theo mã hoặc số nhà để tránh thao tác nhầm.
+
+### 📊 PHÂN HỆ 6: BẢNG ĐIỀU KHIỂN QUẢN TRỊ & KHOA HỌC MÔI TRƯỜNG (DASHBOARD)
+30. **KPI Đô Thị Thời Gian Thực:** Thống kê tổng số cây, tỷ lệ xanh tốt, cây cần bảo dưỡng, sự cố đang xử lý.
+31. **Tính Toán Hấp Thụ CO2 & Sinh Khối (Allometric USDA i-Tree Eco):**
+    * Tổng sinh khối tích lũy (Biomass - Tấn).
+    * Lượng CO2 cô lập hàng năm (Tấn CO2/năm).
+    * Lượng Oxy giải phóng tương đương (Tấn O2/năm).
+32. **Chiến Dịch Cắt Tỉa Đón Mùa Mưa Bão (Pre-Storm Pruning):** Tự động phát hiện các cây Loại 2 & Di sản cao >7m chưa được cắt tỉa quá 180 ngày để xuất lệnh hạ độ cao.
+33. **Biểu Đồ Sinh Trưởng Radar & Phân Bố Sức Khỏe:** Trực quan hóa tiến trình phát triển và tỷ lệ sinh trưởng của từng loài cây.
+34. **Xuất Báo Cáo Định Kỳ Chuẩn Mẫu Sở Xây Dựng:** 1 click xuất bản Báo cáo Hành chính A4 (có Quốc hiệu, Tiêu ngữ, Bảng số liệu Thông tư 20, SLA và Khung ký duyệt) để in hoặc tải file PDF nộp UBND Thành phố.
+
+### ⛓️ PHÂN HỆ 7: PHÂN QUYỀN NHÂN SỰ & MINH BẠCH BLOCKCHAIN
+35. **Phân Quyền 3 Vai Trò (RBAC):**
+    * `ADMIN`: Toàn quyền điều hành, phân công KTV, thêm/sửa/xóa cây, xuất báo cáo.
+    * `STAFF`: Tiếp nhận sự cố theo quận phụ trách, trực ca, ghi nhật ký chăm sóc tại hiện trường.
+    * `CITIZEN`: Gửi phản ánh, tích điểm sinh thái, theo dõi tiến độ xử lý.
+36. **Quản Lý Danh Sách & Tài Khoản Cán Bộ:** Thêm mới, chỉnh sửa địa bàn phụ trách (Quận/Huyện), số điện thoại, tổ kỹ thuật.
+37. **Sổ Cái Bất Biến Blockchain (Hardhat EVM Mock):** Mọi thao tác thêm cây, đổi vị trí, nghiệm thu sự cố đều được băm theo chuẩn **SHA-256 Canonical v1** và neo khối (Anchor).
+38. **Màn Hình Kiểm Tra Toàn Vẹn Dữ Liệu (Blockchain Verify):** Cho phép đối chứng mã băm thực tế trong cơ sở dữ liệu với mã băm On-Chain để phát hiện ngay hành vi gian lận số liệu.
+
+---
 *Tài liệu lưu hành nội bộ đồ án tốt nghiệp UrbanTree - Cần Thơ Smart Eco-GIS 4.0.*
 
 
