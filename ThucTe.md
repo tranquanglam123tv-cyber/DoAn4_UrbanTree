@@ -154,6 +154,16 @@ Trong nghiệp vụ hạ tầng đô thị thông minh cấp quốc gia (Multi-T
 ### Câu 3: Làm sao đảm bảo dữ liệu cây không bị công ty cây xanh làm đẹp số liệu hoặc khai khống để rút ngân sách bảo dưỡng?
 - **Trả lời:** Dữ liệu hồ sơ cây và nhật ký chăm sóc đều được băm mã theo chuẩn SHA-256 và neo khối mã hóa lên Smart Contract Blockchain A19. Bất kỳ hành vi sửa đổi lén trong cơ sở dữ liệu SQL/MongoDB (ví dụ sửa ngày trồng, sửa tình trạng sức khỏe từ CHẾT thành TỐT) đều sẽ bị hệ thống phát hiện ngay lập tức do lệch Hash gốc (Data Tampering Detected).
 
+### Câu 4: Khi nhập dữ liệu cây xanh bằng File (Excel / CSV), hệ thống tự định vị mốc tọa độ trên bản đồ thế nào và Icon Marker có được tạo tự động không?
+- **Trả lời phản biện hoàn hảo:**
+  1. **Tự động định vị GPS (Automated Spatial Georeferencing):** Thay vì ghim tay trên bản đồ (vốn dễ lệch tim đường do cảm tính), file khảo sát thực địa của đơn vị đo đạc luôn có 2 cột chuẩn: `latitude` (vĩ độ, ví dụ: `10.03512`) và `longitude` (kinh độ, ví dụ: `105.78221`). Hệ thống tự động phân tích (parse) 2 cột này và cắm trực tiếp Marker lên lưới tọa độ WGS-84 của Leaflet GIS với độ chính xác đến từng centimet.
+  2. **Sinh Icon Marker động theo thời gian thực (Procedural Icon Rendering):** Hệ thống KHÔNG dùng ảnh tĩnh chụp sẵn mà dùng hàm kết xuất động `L.divIcon` kết hợp mã màu trạng thái sức khỏe:
+     - Xanh lục Emerald (`#10b981`) = Khỏe mạnh (GOOD)
+     - Xanh dương xám Slate (`#3b82f6` / `#64748b`) = Bình thường (FAIR)
+     - Vàng cam Amber (`#f59e0b`) = Kém / Sâu bệnh (POOR)
+     - Đỏ thẫm Red (`#ef4444`) = Nguy cấp / Nghiêng đổ (CRITICAL)
+     - Đồng thời, nhãn số thứ tự trên tuyến (như `01`, `02`, `14`) được in nổi trực tiếp giữa lòng Icon Marker, giúp người quản lý nhìn tổng quan từ xa là nhận diện được ngay hiện trạng từng cây mà không cần click vào từng điểm!
+
 ---
 *Tài liệu lưu hành nội bộ đồ án tốt nghiệp UrbanTree - Cần Thơ Smart Eco-GIS 4.0.*
 
