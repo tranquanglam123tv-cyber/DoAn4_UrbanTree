@@ -22,6 +22,7 @@ import { CareFormModal } from './components/CareFormModal';
 import { QRScannerModal } from './components/QRScannerModal';
 import { PublicTreeModal } from './components/PublicTreeModal';
 import { LoginModal } from './components/LoginModal';
+import { CitizenPortalView } from './components/CitizenPortalView';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { SporeBackground } from './components/common/SporeBackground';
 import { storage } from './db/storage';
@@ -129,8 +130,13 @@ export default function App() {
   const handleLoginSuccess = (user: User) => {
     storage.setActiveUser(user);
     setCurrentUser(user);
-    setActiveTab('dashboard');
-    showToast(`Đăng nhập thành công! Chào mừng ${user.fullName} (${user.role}).`);
+    if (user.role === 'CITIZEN') {
+      setActiveTab('citizen_portal');
+      showToast(`Chào mừng ${user.fullName} đến với Cổng Công Dân Xanh!`);
+    } else {
+      setActiveTab('dashboard');
+      showToast(`Đăng nhập thành công! Chào mừng ${user.fullName} (${user.role}).`);
+    }
   };
 
   const handleLogout = () => {
@@ -262,6 +268,19 @@ export default function App() {
           <CareRecordsView
             onOpenCareModal={handleOpenCareModal}
             onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
+          />
+        )}
+
+        {/* Phân hệ Hồ sơ Công Dân Xanh & Phản ánh của tôi */}
+        {activeTab === 'citizen_portal' && (
+          <CitizenPortalView
+            currentUser={currentUser}
+            onNavigateToNewReport={(treeId) => {
+              setIncidentReportTreeId(treeId);
+              setActiveTab('incidents');
+            }}
+            onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
+            onOpenMap={() => setActiveTab('map')}
           />
         )}
 
