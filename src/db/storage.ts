@@ -4,6 +4,7 @@
  */
 
 import {
+  AppNotification,
   CareActionType,
   CareRecord,
   Incident,
@@ -27,6 +28,7 @@ const TREES_STORAGE_KEY = 'urbantree_trees';
 const CARE_RECORDS_STORAGE_KEY = 'urbantree_care_records';
 const INCIDENTS_STORAGE_KEY = 'urbantree_incidents';
 const INCIDENT_UPDATES_STORAGE_KEY = 'urbantree_incident_updates';
+const NOTIFICATIONS_STORAGE_KEY = 'urbantree_notifications';
 const ACTIVE_USER_KEY = 'urbantree_active_user';
 
 export const INITIAL_USERS: User[] = [
@@ -705,6 +707,109 @@ export const INITIAL_INCIDENT_UPDATES: IncidentUpdate[] = [
   },
 ];
 
+export const INITIAL_NOTIFICATIONS: AppNotification[] = [
+  {
+    id: 'notif-storm-01',
+    title: '⛈️ Chiến dịch rà soát cắt tỉa hạ độ cao đón mùa mưa bão (Tháng 5 – 11)',
+    message: 'Phát hiện 985 cây loại 2 & 3 cao trên 7m chưa được cắt tỉa quá 180 ngày (có 985 cây nguy cơ cao khi giông lốc). Cần điều động các tổ KTV xe thang kiểm tra khẩn cấp toàn địa bàn.',
+    type: 'STORM_ALERT',
+    severity: 'WARNING',
+    targetRoles: ['ADMIN', 'STAFF'],
+    linkTab: 'trees',
+    linkId: 'storm-audit',
+    isRead: false,
+    createdAt: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
+    actionLabel: 'Xem danh sách cây',
+  },
+  {
+    id: 'notif-sla-02',
+    title: '🚨 Vi phạm SLA 30 phút: Sự cố INC-71044 cần chỉ đạo gấp!',
+    message: 'Sự cố cây me tây nghiêng 15 độ về phía lòng đường tại đường 30/4 đã vượt quá hạn SLA cam kết (Trễ hạn). Đề nghị Đội Phản Ứng Nhanh khẩn cấp tiếp cận hiện trường.',
+    type: 'SLA_WARNING',
+    severity: 'CRITICAL',
+    targetRoles: ['ADMIN', 'STAFF'],
+    linkTab: 'incidents',
+    linkId: 'inc-002',
+    isRead: false,
+    createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+    actionLabel: 'Xem sự cố',
+  },
+  {
+    id: 'notif-inc-03',
+    title: '📢 Phản ánh người dân mới: Cành cây nứt trước cổng ĐH Cần Thơ',
+    message: 'Người dân vừa gửi phản ánh INC-84920 kèm ảnh chụp cành cây sà thấp nguy hiểm trước cổng Khu II ĐH Cần Thơ. Chờ phân công kỹ thuật viên tiếp nhận.',
+    type: 'INCIDENT_NEW',
+    severity: 'WARNING',
+    targetRoles: ['ADMIN', 'STAFF'],
+    linkTab: 'incidents',
+    linkId: 'inc-001',
+    isRead: false,
+    createdAt: new Date(Date.now() - 70 * 60 * 1000).toISOString(),
+    actionLabel: 'Tiếp nhận phản ánh',
+  },
+  {
+    id: 'notif-cit-04',
+    title: '✅ Phản ánh INC-53219 của bạn đã được xử lý thành công!',
+    message: 'Đội Cây Xanh Môi Trường Đô Thị đã hoàn tất xử lý tổ mối và quét vôi bảo vệ cây bàng tại Công viên Lưu Hữu Phước. Cảm ơn bạn đã đồng hành giữ gìn mảng xanh đô thị!',
+    type: 'INCIDENT_RESOLVED',
+    severity: 'SUCCESS',
+    targetRoles: ['CITIZEN'],
+    linkTab: 'citizen_portal',
+    linkId: 'inc-003',
+    isRead: false,
+    createdAt: new Date(Date.now() - 120 * 60 * 1000).toISOString(),
+    actionLabel: 'Xem chi tiết kết quả',
+  },
+  {
+    id: 'notif-eco-05',
+    title: '🎁 Chúc mừng! Bạn vừa nhận được +50 Eco-Points',
+    message: 'Đóng góp phản ánh hiện trường chính xác của bạn đã được quản trị viên thẩm định và phê duyệt. Tổng điểm hiện tại: 240 Eco-Points.',
+    type: 'SYSTEM_BROADCAST',
+    severity: 'SUCCESS',
+    targetRoles: ['CITIZEN'],
+    linkTab: 'citizen_portal',
+    isRead: true,
+    createdAt: new Date(Date.now() - 180 * 60 * 1000).toISOString(),
+    actionLabel: 'Đổi quà sinh thái',
+  },
+  {
+    id: 'notif-care-06',
+    title: '🌿 Nhắc lịch chăm sóc: Cắt tỉa hạ tán tuyến Đại lộ Hòa Bình',
+    message: 'Tổ Kỹ Thuật Số 1 có lịch vận hành xe thang cắt tỉa đón bão cho dãy 13 cây Bàng Đài Loan và Giáng Hương từ số 2 đến số 38 Đại lộ Hòa Bình.',
+    type: 'CARE_SCHEDULE',
+    severity: 'INFO',
+    targetRoles: ['STAFF', 'ADMIN'],
+    linkTab: 'care',
+    isRead: true,
+    createdAt: new Date(Date.now() - 360 * 60 * 1000).toISOString(),
+    actionLabel: 'Mở sổ chăm sóc',
+  },
+  {
+    id: 'notif-chain-07',
+    title: '⛓️ Smart Contract: Khối mới #104303 đã neo chuỗi thành công',
+    message: 'Hệ thống EVM Hardhat đã xác nhận giao dịch neo chuỗi băm Canonical SHA-256 cho hồ sơ cây xanh và biên bản xử lý sự cố mới nhất. Tính toàn vẹn 100%.',
+    type: 'BLOCKCHAIN_EVENT',
+    severity: 'INFO',
+    targetRoles: ['ADMIN'],
+    linkTab: 'blockchain',
+    isRead: true,
+    createdAt: new Date(Date.now() - 480 * 60 * 1000).toISOString(),
+    actionLabel: 'Kiểm toán Blockchain',
+  },
+  {
+    id: 'notif-storm-cit-08',
+    title: '⛈️ Khuyến cáo thời tiết: Cảnh báo mưa dông chiều tối tại đô thị',
+    message: 'Đài Khí tượng Thủy văn cảnh báo mưa dông kèm gió giật mạnh cấp 6-7. Người dân chú ý hạn chế di chuyển và tuyệt đối không dừng đỗ xe dưới tán cây cổ thụ.',
+    type: 'STORM_ALERT',
+    severity: 'WARNING',
+    targetRoles: ['CITIZEN', 'STAFF', 'ADMIN'],
+    linkTab: 'home',
+    isRead: false,
+    createdAt: new Date(Date.now() - 600 * 60 * 1000).toISOString(),
+    actionLabel: 'Xem bản tin an toàn',
+  },
+];
+
 class StorageService {
   private users: User[] = [];
   private treeTypes: TreeType[] = [];
@@ -712,6 +817,7 @@ class StorageService {
   private careRecords: CareRecord[] = [];
   private incidents: Incident[] = [];
   private incidentUpdates: IncidentUpdate[] = [];
+  private notifications: AppNotification[] = [];
   private activeUser: User = INITIAL_USERS[0]; // Admin by default
   private cachedDashboardStats: any = null;
 
@@ -781,6 +887,13 @@ class StorageService {
         }
 
         this.incidentUpdates = JSON.parse(localStorage.getItem(INCIDENT_UPDATES_STORAGE_KEY) || JSON.stringify(INITIAL_INCIDENT_UPDATES));
+        const storedNotifs = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+        if (storedNotifs) {
+          this.notifications = JSON.parse(storedNotifs);
+        } else {
+          this.notifications = [...INITIAL_NOTIFICATIONS];
+          localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(this.notifications));
+        }
 
         const storedActiveUser = localStorage.getItem(ACTIVE_USER_KEY);
         if (storedActiveUser) {
@@ -819,6 +932,7 @@ class StorageService {
     this.careRecords = [...INITIAL_CARE_RECORDS];
     this.incidents = [...INITIAL_INCIDENTS];
     this.incidentUpdates = [...INITIAL_INCIDENT_UPDATES];
+    this.notifications = [...INITIAL_NOTIFICATIONS];
     this.activeUser = INITIAL_USERS[0];
 
     // Anchor baseline demo records so they are immediately valid in blockchain
@@ -868,6 +982,7 @@ class StorageService {
       localStorage.setItem(CARE_RECORDS_STORAGE_KEY, JSON.stringify(this.careRecords));
       localStorage.setItem(INCIDENTS_STORAGE_KEY, JSON.stringify(this.incidents));
       localStorage.setItem(INCIDENT_UPDATES_STORAGE_KEY, JSON.stringify(this.incidentUpdates));
+      localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(this.notifications));
       localStorage.setItem(ACTIVE_USER_KEY, JSON.stringify(this.activeUser));
     } catch (err) {
       console.warn('Storage save quota notice:', err);
@@ -1532,6 +1647,79 @@ class StorageService {
     this.saveAll();
     this.setActiveUser(newCitizen);
     return newCitizen;
+  }
+
+  // ==========================================
+  // 🔔 THÔNG BÁO & CẢNH BÁO ĐIỀU HÀNH ĐÔ THỊ
+  // ==========================================
+
+  public getNotifications(): AppNotification[] {
+    return [...this.notifications].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  public markNotificationAsRead(id: string): void {
+    const notif = this.notifications.find((n) => n.id === id);
+    if (notif && !notif.isRead) {
+      notif.isRead = true;
+      if (this.isBrowser()) {
+        localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(this.notifications));
+      }
+    }
+  }
+
+  public markAllNotificationsAsRead(role?: string): void {
+    this.notifications.forEach((n) => {
+      if (!role || n.targetRoles.includes(role as any)) {
+        n.isRead = true;
+      }
+    });
+    if (this.isBrowser()) {
+      localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(this.notifications));
+    }
+  }
+
+  public deleteNotification(id: string): void {
+    this.notifications = this.notifications.filter((n) => n.id !== id);
+    if (this.isBrowser()) {
+      localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(this.notifications));
+    }
+  }
+
+  public deleteAllReadNotifications(role?: string): void {
+    this.notifications = this.notifications.filter((n) => {
+      if (!n.isRead) return true;
+      if (role && !n.targetRoles.includes(role as any)) return true;
+      return false;
+    });
+    if (this.isBrowser()) {
+      localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(this.notifications));
+    }
+  }
+
+  public addNotification(
+    notif: Omit<AppNotification, 'id' | 'createdAt' | 'isRead'> & { isRead?: boolean }
+  ): AppNotification {
+    const newNotif: AppNotification = {
+      ...notif,
+      id: `notif-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
+      createdAt: new Date().toISOString(),
+      isRead: notif.isRead ?? false,
+    };
+    this.notifications.unshift(newNotif);
+    if (this.isBrowser()) {
+      localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(this.notifications));
+    }
+    return newNotif;
+  }
+
+  public getUnreadNotificationCount(role?: string): number {
+    return this.notifications.filter((n) => {
+      if (n.isRead) return false;
+      if (!role) return true;
+      return n.targetRoles.includes(role as any);
+    }).length;
   }
 }
 

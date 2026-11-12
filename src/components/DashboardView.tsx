@@ -299,40 +299,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* ⛈️ CẢNH BÁO CHIẾN DỊCH RÀ SOÁT CẮT TỈA TRƯỚC MÙA MƯA BÃO (PRE-STORM PRUNING CAMPAIGN) */}
-      {stormPruningAudit.neededCount > 0 && (
-        <div className="p-4 rounded-2xl bg-amber-500/10 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
-              <CloudRain className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-amber-900 dark:text-amber-300 text-xs sm:text-sm">
-                  Chiến Dịch Rà Soát Cắt Tỉa Hạ Độ Cao Đón Mùa Mưa Bão (Tháng 5 - Tháng 11)
-                </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white">
-                  {stormPruningAudit.neededCount} Cây Cần Xử Lý
-                </span>
-              </div>
-              <p className="text-xs text-amber-800/90 dark:text-amber-400/90 mt-0.5">
-                Phát hiện {stormPruningAudit.neededCount} cây loại 2 &amp; loại 3 cao trên 7m chưa được cắt tỉa quá 180 ngày (có {stormPruningAudit.highUrgencyCount} cây nguy cơ cao khi giông lốc). Cần điều động xe thang kiểm tra.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => onNavigate('trees')}
-              className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors flex items-center gap-1 shadow-2xs cursor-pointer"
-            >
-              <span>Xem danh sách cây</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* 🍱 BENTO GRID KPI STATS (CYBER BOTANICAL ECO-TECH DARK MODE) */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">

@@ -196,3 +196,35 @@ export interface VerificationResult {
     anchoredValue?: unknown;
   }>;
 }
+
+// ==========================================
+// 🔔 THÔNG BÁO & CẢNH BÁO ĐIỀU HÀNH ĐÔ THỊ
+// ==========================================
+
+export type NotificationType =
+  | 'STORM_ALERT'       // Cảnh báo giông bão / Mùa mưa bão / Hạ tán cây
+  | 'INCIDENT_NEW'      // Phản ánh sự cố dân sinh mới gửi đến
+  | 'INCIDENT_ASSIGNED' // Phân công lệnh xử lý hiện trường cho KTV
+  | 'INCIDENT_RESOLVED' // Sự cố đã được xử lý xong
+  | 'SLA_WARNING'       // Cảnh báo vi phạm / sắp trễ hạn SLA phản ứng nhanh
+  | 'CARE_SCHEDULE'     // Nhắc lịch cắt tỉa cây xanh / bón phân định kỳ
+  | 'FELL_PERMIT'       // Đề xuất & phê duyệt cấp phép đốn hạ cây nguy hiểm
+  | 'BLOCKCHAIN_EVENT'  // Neo dữ liệu Smart Contract thành công / băm bất thường
+  | 'SYSTEM_BROADCAST'; // Thông báo chung từ Ban Chỉ huy Đô thị
+
+export type NotificationSeverity = 'INFO' | 'WARNING' | 'CRITICAL' | 'SUCCESS';
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  severity: NotificationSeverity;
+  targetRoles: ('ADMIN' | 'STAFF' | 'CITIZEN')[]; // Vai trò có quyền nhận thông báo
+  targetUserId?: string; // Gửi riêng cho user cụ thể (nếu có)
+  linkTab?: string; // Tab điều hướng nhanh: 'dashboard' | 'trees' | 'incidents' | 'map' | 'blockchain' | 'care' | 'staff_workstation'
+  linkId?: string; // ID của entity liên quan: incidentId, treeId, txHash...
+  isRead: boolean;
+  createdAt: string; // ISO timestamp
+  actionLabel?: string; // Nhãn nút bấm hành động (ví dụ: "Xem sự cố", "Xem danh sách cây")
+}

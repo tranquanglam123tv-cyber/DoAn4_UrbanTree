@@ -25,6 +25,8 @@ import { LoginModal } from './components/LoginModal';
 import { CitizenPortalView } from './components/CitizenPortalView';
 import { StaffWorkstationView } from './components/StaffWorkstationView';
 import { StaffManagementModal } from './components/StaffManagementModal';
+import { EmergencyStormTicker } from './components/EmergencyStormTicker';
+import { NotificationsView } from './components/NotificationsView';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { SporeBackground } from './components/common/SporeBackground';
 import { storage } from './db/storage';
@@ -268,6 +270,13 @@ export default function App() {
         onToggleTheme={toggleTheme}
       />
 
+      {/* ⛈️ CẢNH BÁO CHIẾN DỊCH RÀ SOÁT CẮT TỈA HẠ ĐỘ CAO ĐÓN MÙA MƯA BÃO (MARQUEE TICKER DƯỚI HEADER) */}
+      <EmergencyStormTicker
+        onNavigateTrees={() => setActiveTab('trees')}
+        neededCount={985}
+        highUrgencyCount={985}
+      />
+
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 overflow-x-hidden">
         {/* Trang Chủ (Landing Page công cộng ai cũng xem được) */}
@@ -402,6 +411,19 @@ export default function App() {
 
         {activeTab === 'blockchain' && currentUser.role === 'ADMIN' && (
           <BlockchainVerifyView />
+        )}
+
+        {/* 🔔 TRUNG TÂM THÔNG BÁO & CẢNH BÁO ĐIỀU HÀNH ĐÔ THỊ (HỖ TRỢ CẢ 3 VAI TRÒ ADMIN, STAFF, CITIZEN) */}
+        {activeTab === 'notifications' && (
+          <NotificationsView
+            currentUser={currentUser}
+            onNavigate={(tab, entityId) => {
+              if (tab === 'incidents' && entityId) {
+                setIncidentReportTreeId(entityId);
+              }
+              setActiveTab(tab);
+            }}
+          />
         )}
       </main>
 
