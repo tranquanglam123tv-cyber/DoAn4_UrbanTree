@@ -134,19 +134,35 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
   const handleUpdateStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedIncident) return;
-    if (!transitionNote.trim()) {
-      alert('Vui lòng nhập ghi chú lý do thay đổi trạng thái sự cố.');
-      return;
+
+    if (currentUser.role === 'ADMIN') {
+      if (!assignStaffId && newStatus === 'ASSIGNED') {
+        alert('Vui lòng chọn Kỹ thuật viên (Staff) để giao nhiệm vụ xử lý.');
+        return;
+      }
+    } else {
+      if (!transitionNote.trim()) {
+        alert('Vui lòng nhập ghi chú kết quả công việc xử lý tại hiện trường.');
+        return;
+      }
     }
 
     setIsUpdating(true);
     try {
+      const assignedStaffObj = users.find((u) => u.id === assignStaffId);
+      const defaultAdminNote =
+        newStatus === 'ASSIGNED'
+          ? `Admin ${currentUser.fullName} đã phân công xử lý cho KTV ${assignedStaffObj?.fullName || 'thực địa'}.`
+          : newStatus === 'REJECTED'
+          ? `Admin ${currentUser.fullName} từ chối tiếp nhận (Tin báo trùng lặp hoặc không thuộc phạm vi xử lý).`
+          : `Admin ${currentUser.fullName} yêu cầu tổ KTV kiểm tra lại hiện trường (Reopened).`;
+
       const updated = await storage.updateIncidentStatus({
         incidentId: selectedIncident.id,
         newStatus,
         actorUserId: currentUser.id,
         actorName: `${currentUser.fullName} (${currentUser.role})`,
-        note: transitionNote.trim(),
+        note: transitionNote.trim() || defaultAdminNote,
         assignedToUserId: assignStaffId || undefined,
         imageUrl: transitionImageUrl || transitionImagePreview || undefined,
       });
@@ -413,135 +429,197 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
 
                   {/* Status Transition Form */}
                   <form onSubmit={handleUpdateStatus} className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
-                    <div className="font-bold text-[#174B36] dark:text-emerald-400 text-[11px] uppercase tracking-wider">
-                      Cập nhật trạng thái sự cố
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                        Chuyển sang trạng thái:
-                      </label>
-                      <select
-                        value={newStatus}
-                        onChange={(e) => setNewStatus(e.target.value as IncidentStatus)}
-                        className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white font-medium focus:border-[#347A50] dark:focus:border-emerald-400"
-                      >
-                        <option value="ASSIGNED">Phân công nhân viên (ASSIGNED)</option>
-                        <option value="IN_PROGRESS">Đang xử lý tại hiện trường (IN_PROGRESS)</option>
-                        <option value="REOPENED">Yêu cầu làm lại (REOPENED - Dân phản hồi)</option>
-                        <option value="RESOLVED">Đã xử lý xong (RESOLVED - Neo Blockchain)</option>
-                        <option value="REJECTED">Từ chối / Tin báo sai (REJECTED)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                        Nhân viên phân công:
-                      </label>
-                      <select
-                        value={assignStaffId}
-                        onChange={(e) => setAssignStaffId(e.target.value)}
-                        className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white focus:border-[#347A50] dark:focus:border-emerald-400"
-                      >
-                        <option value="">-- Chưa chỉ định --</option>
-                        {users.filter((u) => u.role === 'STAFF').map((staff) => (
-                          <option key={staff.id} value={staff.id}>
-                            {staff.fullName} (STAFF)
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                        Ghi chú cập nhật (bắt buộc):
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={transitionNote}
-                        onChange={(e) => setTransitionNote(e.target.value)}
-                        placeholder="Ghi rõ hành động (ví dụ: Đã cử xe nâng cắt cành an toàn)"
-                        className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white dark:placeholder-slate-500 focus:border-[#347A50] dark:focus:border-emerald-400"
-                      />
-                    </div>
-
-                    {/* Ảnh chụp hiện trường xử lý thực địa */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                          Ảnh chụp hiện trường xử lý:
-                        </label>
-                        <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-                          Minh chứng thực tế
-                        </span>
+                    <div className="flex items-center justify-between">
+                      <div className="font-bold text-[#174B36] dark:text-emerald-400 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                        <UserCheck className="w-3.5 h-3.5" />
+                        <span>{currentUser.role === 'ADMIN' ? 'Điều Phối & Phân Công Nhiệm Vụ' : 'Cập nhật hiện trường'}</span>
                       </div>
+                      <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
+                        {currentUser.role === 'ADMIN' ? 'Vai trò Admin: Điều phối' : 'Vai trò Staff: Xử lý'}
+                      </span>
+                    </div>
 
-                      <input
-                        type="file"
-                        ref={statusPhotoInputRef}
-                        accept="image/*"
-                        capture="environment"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              const base64 = reader.result as string;
-                              setTransitionImageUrl(base64);
-                              setTransitionImagePreview(base64);
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                        className="hidden"
-                      />
+                    {currentUser.role === 'ADMIN' ? (
+                      /* KHỐI FORM RIÊNG DÀNH CHO ADMIN ĐIỀU PHỐI */
+                      <div className="space-y-3 bg-emerald-50/40 dark:bg-emerald-950/20 p-3 rounded-xl border border-emerald-200/60 dark:border-emerald-800/40">
+                        <div className="text-[11px] text-emerald-800 dark:text-emerald-300 leading-relaxed font-medium">
+                          👮 <strong>Quy trình thực tế:</strong> Admin chỉ thực hiện sàng lọc phản ánh, chỉ định giao việc cho Kỹ thuật viên (Staff). Việc chụp ảnh nghiệm thu, cưa cắt dọn dẹp hiện trường sẽ do <strong>bên Staff thực hiện tại chỗ</strong>.
+                        </div>
 
-                      {transitionImagePreview ? (
-                        <div className="relative rounded-lg overflow-hidden border border-emerald-300 dark:border-emerald-600/60 max-h-28 group flex items-center justify-center bg-slate-900">
-                          <img
-                            src={transitionImagePreview}
-                            alt="Ảnh xử lý"
-                            className="w-full h-28 object-cover"
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Lệnh điều phối sự cố:
+                          </label>
+                          <select
+                            value={newStatus}
+                            onChange={(e) => setNewStatus(e.target.value as IncidentStatus)}
+                            className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white font-bold focus:border-[#347A50] dark:focus:border-emerald-400 text-xs"
+                          >
+                            <option value="ASSIGNED">👉 Phân công Kỹ thuật viên xử lý (ASSIGNED)</option>
+                            <option value="REOPENED">⚠️ Yêu cầu tổ KTV làm lại (REOPENED - Khi dân tái phản ánh)</option>
+                            <option value="REJECTED">🚫 Từ chối / Tin báo sai / Ngoài thẩm quyền (REJECTED)</option>
+                          </select>
+                        </div>
+
+                        {newStatus === 'ASSIGNED' && (
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                              Chọn Kỹ thuật viên (Staff) phụ trách địa bàn *:
+                            </label>
+                            <select
+                              value={assignStaffId}
+                              onChange={(e) => setAssignStaffId(e.target.value)}
+                              className="w-full px-2.5 py-1.5 border border-emerald-300 dark:border-emerald-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white font-medium focus:border-emerald-500 text-xs"
+                              required
+                            >
+                              <option value="">-- Chọn KTV tiếp nhận vé công tác --</option>
+                              {users.filter((u) => u.role === 'STAFF').map((staff) => (
+                                <option key={staff.id} value={staff.id}>
+                                  👷 {staff.fullName} — Đội Kỹ thuật Đô thị (STAFF)
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Lưu ý điều phối gửi KTV (Tùy chọn):
+                          </label>
+                          <input
+                            type="text"
+                            value={transitionNote}
+                            onChange={(e) => setTransitionNote(e.target.value)}
+                            placeholder="Ví dụ: Ưu tiên điều xe thang 12m vì cành sà sát đường dây điện..."
+                            className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white dark:placeholder-slate-500 text-xs"
                           />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                        </div>
+
+                        {/* Banner nhắc nhở KTV sẽ cập nhật hiện trường */}
+                        <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                          <span>KTV phụ trách: <strong>{users.find((u) => u.id === (assignStaffId || selectedIncident.assignedToUserId))?.fullName || 'Chưa chỉ định'}</strong></span>
+                          <span className="text-emerald-600 font-semibold">Staff sẽ chụp ảnh &amp; nghiệm thu On-Chain</span>
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={isUpdating}
+                          className="w-full py-2 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-bold rounded-lg text-xs transition-colors shadow-2xs cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          <span>{isUpdating ? 'Đang điều phối...' : 'Lưu Lệnh Điều Phối & Bàn Giao KTV'}</span>
+                        </button>
+                      </div>
+                    ) : (
+                      /* KHỐI FORM DÀNH CHO STAFF CẬP NHẬT HIỆN TRƯỜNG & NGHIỆM THU */
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                            Trạng thái tiến độ thực địa:
+                          </label>
+                          <select
+                            value={newStatus}
+                            onChange={(e) => setNewStatus(e.target.value as IncidentStatus)}
+                            className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white font-medium focus:border-[#347A50] dark:focus:border-emerald-400"
+                          >
+                            <option value="IN_PROGRESS">Đang xử lý tại hiện trường (IN_PROGRESS)</option>
+                            <option value="RESOLVED">Đã xử lý xong (RESOLVED - Nghiệm thu On-Chain)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                            Ghi chú hành động thực tế tại chỗ *:
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={transitionNote}
+                            onChange={(e) => setTransitionNote(e.target.value)}
+                            placeholder="Mô tả cụ thể: Đã cắt hạ 2 nhánh khô, quét dọn vỉa hè an toàn..."
+                            className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white dark:placeholder-slate-500 focus:border-[#347A50] dark:focus:border-emerald-400"
+                            required
+                          />
+                        </div>
+
+                        {/* Ảnh chụp hiện trường xử lý thực địa */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                              Ảnh chụp hiện trường sau xử lý:
+                            </label>
+                            <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                              Minh chứng nghiệm thu
+                            </span>
+                          </div>
+
+                          <input
+                            type="file"
+                            ref={statusPhotoInputRef}
+                            accept="image/*"
+                            capture="environment"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  const base64 = reader.result as string;
+                                  setTransitionImageUrl(base64);
+                                  setTransitionImagePreview(base64);
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                            className="hidden"
+                          />
+
+                          {transitionImagePreview ? (
+                            <div className="relative rounded-lg overflow-hidden border border-emerald-300 dark:border-emerald-600/60 max-h-28 group flex items-center justify-center bg-slate-900">
+                              <img
+                                src={transitionImagePreview}
+                                alt="Ảnh xử lý"
+                                className="w-full h-28 object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => statusPhotoInputRef.current?.click()}
+                                  className="px-2 py-1 bg-white text-slate-800 rounded text-[10px] font-semibold cursor-pointer"
+                                >
+                                  Đổi ảnh
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setTransitionImagePreview(null);
+                                    setTransitionImageUrl('');
+                                  }}
+                                  className="px-2 py-1 bg-red-600 text-white rounded text-[10px] font-semibold cursor-pointer"
+                                >
+                                  Xóa
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
                             <button
                               type="button"
                               onClick={() => statusPhotoInputRef.current?.click()}
-                              className="px-2 py-1 bg-white text-slate-800 rounded text-[10px] font-semibold cursor-pointer"
+                              className="w-full py-1.5 border border-dashed border-emerald-300 dark:border-emerald-700/60 bg-emerald-50/50 dark:bg-emerald-950/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg flex items-center justify-center gap-1.5 text-[11px] text-emerald-800 dark:text-emerald-300 font-medium cursor-pointer transition-colors"
                             >
-                              Đổi ảnh
+                              <Camera className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                              <span>Chụp / Tải ảnh nghiệm thu sau xử lý</span>
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setTransitionImagePreview(null);
-                                setTransitionImageUrl('');
-                              }}
-                              className="px-2 py-1 bg-red-600 text-white rounded text-[10px] font-semibold cursor-pointer"
-                            >
-                              Xóa
-                            </button>
-                          </div>
+                          )}
                         </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => statusPhotoInputRef.current?.click()}
-                          className="w-full py-1.5 border border-dashed border-emerald-300 dark:border-emerald-700/60 bg-emerald-50/50 dark:bg-emerald-950/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg flex items-center justify-center gap-1.5 text-[11px] text-emerald-800 dark:text-emerald-300 font-medium cursor-pointer transition-colors"
-                        >
-                          <Camera className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                          <span>Chụp / Tải ảnh xử lý sự cố</span>
-                        </button>
-                      )}
-                    </div>
 
-                    <button
-                      type="submit"
-                      disabled={isUpdating}
-                      className="w-full py-2 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold rounded-lg text-xs transition-colors shadow-2xs cursor-pointer"
-                    >
-                      {isUpdating ? 'Đang lưu & băm lịch sử...' : 'Lưu cập nhật trạng thái'}
-                    </button>
+                        <button
+                          type="submit"
+                          disabled={isUpdating}
+                          className="w-full py-2 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold rounded-lg text-xs transition-colors shadow-2xs cursor-pointer"
+                        >
+                          {isUpdating ? 'Đang lưu & băm lịch sử...' : 'Xác nhận xử lý & Ký On-Chain'}
+                        </button>
+                      </div>
+                    )}
                   </form>
 
                   {/* Immutable Timeline History */}
