@@ -34,10 +34,11 @@ import {
   UserCheck,
   Activity,
   Flame,
+  Globe,
 } from 'lucide-react';
 import { storage } from '../db/storage';
 import { Role, StaffWorkStatus, User } from '../types';
-import { CAN_THO_ZONES } from '../utils/zoneUtils';
+import { CAN_THO_ZONES, NATIONAL_PROVINCES, getZonesByProvince } from '../utils/zoneUtils';
 import { ALL_PERMISSIONS, PermissionKey, hasPermission } from '../utils/permissionUtils';
 
 interface StaffManagementModalProps {
@@ -81,6 +82,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
   const [users, setUsers] = useState<User[]>(storage.getUsers());
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState<string>('ALL');
+  const [filterProvince, setFilterProvince] = useState<string>('ALL');
   const [filterDistrict, setFilterDistrict] = useState<string>('ALL');
   const [filterDepartment, setFilterDepartment] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
@@ -112,6 +114,17 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
   const [parsedStaffFromFile, setParsedStaffFromFile] = useState<Omit<User, 'id'>[]>([]);
   const [isImporting, setIsImporting] = useState<boolean>(false);
 
+  // Helper phát hiện tỉnh/thành từ tên quận/huyện
+  const detectProvinceFromDistrict = (district: string): string => {
+    const d = district.toLowerCase();
+    if (d.includes('toàn quốc')) return 'all';
+    if (d.includes('hồ chí minh') || d.includes('quận 1') || d.includes('quận 3') || d.includes('thủ đức') || d.includes('quận 7')) return 'hcm';
+    if (d.includes('đà nẵng') || d.includes('hải châu') || d.includes('sơn trà') || d.includes('ngũ hành sơn') || d.includes('thanh khê') || d.includes('cẩm lệ')) return 'da-nang';
+    if (d.includes('hà nội') || d.includes('hoàn kiếm') || d.includes('ba đình') || d.includes('đống đa') || d.includes('cầu giấy')) return 'ha-noi';
+    if (d.includes('hải phòng')) return 'hai-phong';
+    return 'can-tho';
+  };
+
   // Form add/edit state
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -120,6 +133,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Role>('STAFF');
   const [phone, setPhone] = useState('');
+  const [assignedProvince, setAssignedProvince] = useState<string>('can-tho');
   const [assignedDistrict, setAssignedDistrict] = useState('Quận Ninh Kiều');
   const [department, setDepartment] = useState(DEPARTMENTS[0]);
   const [teamName, setTeamName] = useState(TEAMS[0]);
@@ -130,6 +144,9 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
   const [selectedSkills, setSelectedSkills] = useState<string[]>(['Vận hành xe thang 18m', 'Cắt tỉa hạ tán đón bão']);
   const [userPermissions, setUserPermissions] = useState<string[]>(['CARE_WRITE', 'INCIDENT_RESOLVE']);
   const [isActive, setIsActive] = useState(true);
+
+  // Transfer modal state
+  const [transferProvince, setTransferProvince] = useState<string>('can-tho');
 
   const refreshList = () => {
     const list = storage.getUsers();
@@ -151,6 +168,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     setEmail('');
     setRole('STAFF');
     setPhone('');
+    setAssignedProvince('can-tho');
     setAssignedDistrict('Quận Ninh Kiều');
     setDepartment(DEPARTMENTS[0]);
     setTeamName(TEAMS[0]);
@@ -173,6 +191,8 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     setEmail(user.email || '');
     setRole(user.role);
     setPhone(user.phone || '');
+    const detectedProv = detectProvinceFromDistrict(user.assignedDistrict || '');
+    setAssignedProvince(detectedProv);
     setAssignedDistrict(user.assignedDistrict || 'Quận Ninh Kiều');
     setDepartment(user.department || (user.role === 'CITIZEN' ? DEPARTMENTS[4] : DEPARTMENTS[0]));
     setTeamName(user.teamName || (user.role === 'CITIZEN' ? 'Cộng đồng Cư dân Đô thị' : TEAMS[0]));
@@ -191,6 +211,8 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     setTransferModalUser(user);
     setTransferDept(user.department || DEPARTMENTS[0]);
     setTransferTeam(user.teamName || TEAMS[0]);
+    const detectedProv = detectProvinceFromDistrict(user.assignedDistrict || '');
+    setTransferProvince(detectedProv);
     setTransferDistrict(user.assignedDistrict || 'Quận Ninh Kiều');
     setTransferPosition(user.position || 'Kỹ thuật viên thực địa');
     setTransferWorkStatus(user.workStatus || 'ACTIVE');
@@ -533,6 +555,13 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
         Boolean(u.teamName && u.teamName.toLowerCase().includes(q));
 
       const matchesRole = filterRole === 'ALL' || u.role === filterRole;
+      const userProv = detectProvinceFromDistrict(u.assignedDistrict || '');
+      const matchesProvince =
+        filterProvince === 'ALL' ||
+        userProv === filterProvince ||
+        userProv === 'all' ||
+        (u.assignedDistrict || '').toLowerCase().includes('toàn quốc');
+
       const assigned = (u.assignedDistrict || '').toLowerCase();
       const target = filterDistrict.toLowerCase();
       const matchesDistrict =
@@ -553,9 +582,9 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
         (u.isActive && u.workStatus === filterStatus) ||
         (filterStatus === 'ACTIVE' && u.isActive && (!u.workStatus || u.workStatus === 'ACTIVE'));
 
-      return matchesSearch && matchesRole && matchesDistrict && matchesDepartment && matchesStatus;
+      return matchesSearch && matchesRole && matchesProvince && matchesDistrict && matchesDepartment && matchesStatus;
     });
-  }, [users, search, filterRole, filterDistrict, filterDepartment, filterStatus]);
+  }, [users, search, filterRole, filterProvince, filterDistrict, filterDepartment, filterStatus]);
 
   if (!isOpen) return null;
 
@@ -933,6 +962,33 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                   />
                 </div>
 
+                {/* Tỉnh / Thành phố phụ trách */}
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Tỉnh / Thành Phố Phụ Trách *
+                  </label>
+                  <select
+                    value={assignedProvince}
+                    onChange={(e) => {
+                      const prov = e.target.value;
+                      setAssignedProvince(prov);
+                      if (prov === 'all') {
+                        setAssignedDistrict('Toàn quốc (Tất cả địa bàn)');
+                      } else {
+                        const zones = getZonesByProvince(prov);
+                        setAssignedDistrict(zones[0]?.name || 'Toàn thành phố');
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold"
+                  >
+                    {NATIONAL_PROVINCES.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Địa bàn phụ trách */}
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -941,19 +997,18 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                   <select
                     value={assignedDistrict}
                     onChange={(e) => setAssignedDistrict(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                    disabled={assignedProvince === 'all'}
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white disabled:opacity-60"
                   >
-                    <option value="Toàn quốc (Tất cả địa bàn)">🌐 Toàn quốc (Tất cả địa bàn)</option>
-                    {CAN_THO_ZONES.map((z) => (
-                      <option key={z.id} value={z.name}>
-                        {z.name}
-                      </option>
-                    ))}
-                    <optgroup label="Tỉnh / Thành khác">
-                      <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
-                      <option value="TP. Đà Nẵng">TP. Đà Nẵng</option>
-                      <option value="TP. Hà Nội">TP. Hà Nội</option>
-                    </optgroup>
+                    {assignedProvince === 'all' ? (
+                      <option value="Toàn quốc (Tất cả địa bàn)">🌐 Toàn quốc (Tất cả 63 tỉnh thành)</option>
+                    ) : (
+                      getZonesByProvince(assignedProvince).map((z) => (
+                        <option key={z.id} value={z.name}>
+                          {z.name}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
 
@@ -1204,9 +1259,29 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                   </div>
                 </div>
 
-                {/* Sub-Filters: District, Department, Status */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1.5 border-t border-slate-200/70 dark:border-slate-800/70 text-xs">
-                  {/* Địa bàn */}
+                {/* Sub-Filters: Province, District, Department, Status */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1.5 border-t border-slate-200/70 dark:border-slate-800/70 text-xs">
+                  {/* Tỉnh / Thành Phố */}
+                  <div className="relative">
+                    <Globe className="w-3.5 h-3.5 absolute left-3 top-2.5 text-blue-600 dark:text-blue-400 pointer-events-none" />
+                    <select
+                      value={filterProvince}
+                      onChange={(e) => {
+                        setFilterProvince(e.target.value);
+                        setFilterDistrict('ALL');
+                      }}
+                      className="w-full pl-8 pr-3 py-2 border border-blue-200 dark:border-blue-800/80 rounded-xl bg-blue-50/50 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 text-xs font-semibold shadow-2xs cursor-pointer focus:outline-none focus:ring-1.5 focus:ring-blue-500 transition-all truncate"
+                    >
+                      <option value="ALL">🌐 Tỉnh/Thành: Toàn quốc</option>
+                      {NATIONAL_PROVINCES.filter((p) => p.id !== 'all').map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.shortName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Địa bàn (Quận / Huyện) */}
                   <div className="relative">
                     <MapPin className="w-3.5 h-3.5 absolute left-3 top-2.5 text-emerald-600 dark:text-[#00FF9D] pointer-events-none" />
                     <select
@@ -1214,22 +1289,32 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                       onChange={(e) => setFilterDistrict(e.target.value)}
                       className="w-full pl-8 pr-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-medium shadow-2xs cursor-pointer focus:outline-none focus:ring-1.5 focus:ring-emerald-500 transition-all truncate"
                     >
-                      <option value="ALL">🌐 Địa bàn: Toàn quốc (Tất cả)</option>
-                      <optgroup label="📍 TP. Cần Thơ (Địa bàn trọng điểm)">
-                        <option value="Cần Thơ">Toàn TP. Cần Thơ</option>
-                        <option value="Ninh Kiều">— Quận Ninh Kiều</option>
-                        <option value="Bình Thủy">— Quận Bình Thủy</option>
-                        <option value="Cái Răng">— Quận Cái Răng</option>
-                        <option value="Ô Môn">— Quận Ô Môn</option>
-                        <option value="Thốt Nốt">— Quận Thốt Nốt</option>
-                        <option value="Phong Điền">— Huyện Phong Điền</option>
-                      </optgroup>
-                      <optgroup label="🏙️ Các Tỉnh / Thành phố Khác">
-                        <option value="Hồ Chí Minh">TP. Hồ Chí Minh</option>
-                        <option value="Đà Nẵng">TP. Đà Nẵng</option>
-                        <option value="Hà Nội">TP. Hà Nội</option>
-                        <option value="Hải Phòng">TP. Hải Phòng</option>
-                      </optgroup>
+                      <option value="ALL">📍 Địa bàn: {filterProvince === 'ALL' ? 'Tất cả địa phương' : 'Tất cả khu vực'}</option>
+                      {filterProvince === 'ALL' ? (
+                        <>
+                          <optgroup label="📍 TP. Cần Thơ (Địa bàn trọng điểm)">
+                            <option value="Cần Thơ">Toàn TP. Cần Thơ</option>
+                            <option value="Ninh Kiều">— Quận Ninh Kiều</option>
+                            <option value="Bình Thủy">— Quận Bình Thủy</option>
+                            <option value="Cái Răng">— Quận Cái Răng</option>
+                            <option value="Ô Môn">— Quận Ô Môn</option>
+                            <option value="Thốt Nốt">— Quận Thốt Nốt</option>
+                            <option value="Phong Điền">— Huyện Phong Điền</option>
+                          </optgroup>
+                          <optgroup label="🏙️ Các Tỉnh / Thành phố Khác">
+                            <option value="Hồ Chí Minh">TP. Hồ Chí Minh</option>
+                            <option value="Đà Nẵng">TP. Đà Nẵng</option>
+                            <option value="Hà Nội">TP. Hà Nội</option>
+                            <option value="Hải Phòng">TP. Hải Phòng</option>
+                          </optgroup>
+                        </>
+                      ) : (
+                        getZonesByProvince(filterProvince).map((z) => (
+                          <option key={z.id} value={z.name}>
+                            {z.name}
+                          </option>
+                        ))
+                      )}
                     </select>
                   </div>
 
@@ -1268,7 +1353,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                 </div>
 
                 {/* HÀNG TRẠNG THÁI BỘ LỌC NẾU CÓ FILTER ĐANG ÁP DỤNG */}
-                {(search || filterRole !== 'ALL' || filterDistrict !== 'ALL' || filterDepartment !== 'ALL' || filterStatus !== 'ALL') && (
+                {(search || filterRole !== 'ALL' || filterProvince !== 'ALL' || filterDistrict !== 'ALL' || filterDepartment !== 'ALL' || filterStatus !== 'ALL') && (
                   <div className="flex items-center justify-between pt-1 text-[11px] text-slate-500 dark:text-slate-400 px-1">
                     <span>
                       Đang lọc thấy <strong className="text-emerald-700 dark:text-[#00FF9D] font-mono">{filteredUsers.length}</strong> / {users.length} tài khoản
@@ -1278,6 +1363,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                       onClick={() => {
                         setSearch('');
                         setFilterRole('ALL');
+                        setFilterProvince('ALL');
                         setFilterDistrict('ALL');
                         setFilterDepartment('ALL');
                         setFilterStatus('ALL');
@@ -1792,27 +1878,53 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                   </select>
                 </div>
 
+                {/* Tỉnh / Thành phố mới */}
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Điều Động Đến Tỉnh / Thành Phố
+                  </label>
+                  <select
+                    value={transferProvince}
+                    onChange={(e) => {
+                      const prov = e.target.value;
+                      setTransferProvince(prov);
+                      if (prov === 'all') {
+                        setTransferDistrict('Toàn quốc (Tất cả địa bàn)');
+                      } else {
+                        const zones = getZonesByProvince(prov);
+                        setTransferDistrict(zones[0]?.name || 'Toàn thành phố');
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold"
+                  >
+                    {NATIONAL_PROVINCES.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Địa bàn phân công */}
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Điều Động Đến Địa Bàn (Quận/Huyện)
+                    Địa Bàn Phụ Trách (Quận/Huyện)
                   </label>
                   <select
                     value={transferDistrict}
                     onChange={(e) => setTransferDistrict(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                    disabled={transferProvince === 'all'}
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white disabled:opacity-60"
                   >
-                    <option value="Toàn quốc (Tất cả địa bàn)">🌐 Toàn quốc (Tất cả địa bàn)</option>
-                    {CAN_THO_ZONES.map((z) => (
-                      <option key={z.id} value={z.name}>
-                        {z.name}
-                      </option>
-                    ))}
-                    <optgroup label="Tỉnh / Thành khác">
-                      <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
-                      <option value="TP. Đà Nẵng">TP. Đà Nẵng</option>
-                      <option value="TP. Hà Nội">TP. Hà Nội</option>
-                    </optgroup>
+                    {transferProvince === 'all' ? (
+                      <option value="Toàn quốc (Tất cả địa bàn)">🌐 Toàn quốc (Tất cả 63 tỉnh thành)</option>
+                    ) : (
+                      getZonesByProvince(transferProvince).map((z) => (
+                        <option key={z.id} value={z.name}>
+                          {z.name}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
 
