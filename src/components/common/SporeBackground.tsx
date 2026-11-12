@@ -24,20 +24,20 @@ export const SporeBackground: React.FC<SporeBackgroundProps> = ({ isDark = false
     };
     window.addEventListener('resize', onResize);
 
-    // Hạt phấn hoa sinh thái (Tối ưu nhẹ nhàng: 35 hạt trên desktop, 15 trên mobile)
+    // Hạt phấn hoa sinh thái lung linh (Cân bằng hiệu năng cao & hiệu ứng thẩm mỹ)
     const colors = isDark
-      ? ['#00FF9D', '#10B981', '#34D399', '#6EE7B7']
-      : ['#059669', '#10B981', '#34D399', '#FBBF24'];
-    const totalParticles = window.innerWidth < 768 ? 15 : 35;
+      ? ['#00FF9D', '#10B981', '#34D399', '#6EE7B7', '#A7F3D0']
+      : ['#059669', '#10B981', '#34D399', '#FBBF24', '#6EE7B7'];
+    const totalParticles = window.innerWidth < 768 ? 35 : 95;
 
     class Particle {
       x = Math.random() * w;
       y = Math.random() * h;
-      size = Math.random() * 2.0 + 0.8;
-      speedY = -(Math.random() * 0.3 + 0.1); // Bay nhẹ nhàng từ dưới lên trên
-      wobble = Math.random() * 1.4; // Biên độ lắc ngang
+      size = Math.random() * 2.5 + 1.0;
+      speedY = -(Math.random() * 0.35 + 0.1); // Bay nhẹ nhàng từ dưới lên trên
+      wobble = Math.random() * 1.6; // Biên độ lắc ngang
       wobbleSpeed = Math.random() * 0.02 + 0.006;
-      opacity = Math.random() * 0.45 + 0.2;
+      opacity = Math.random() * 0.55 + 0.25;
       color = colors[Math.floor(Math.random() * colors.length)];
 
       update() {
@@ -52,11 +52,17 @@ export const SporeBackground: React.FC<SporeBackgroundProps> = ({ isDark = false
 
       draw() {
         if (!ctx) return;
+        ctx.save();
         ctx.globalAlpha = this.opacity;
         ctx.fillStyle = this.color;
+        if (isDark) {
+          ctx.shadowColor = this.color;
+          ctx.shadowBlur = 5;
+        }
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
       }
     }
 
