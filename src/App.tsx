@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Lenis from 'lenis';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -98,11 +98,12 @@ export default function App() {
       orientation: 'vertical',
       smoothWheel: true,
       prevent: (node: HTMLElement) => {
-        return (
-          Boolean(node.hasAttribute?.('data-lenis-prevent')) ||
-          node.closest?.('[data-lenis-prevent]') !== null ||
-          node.closest?.('.overflow-y-auto') !== null ||
-          node.closest?.('.overflow-auto') !== null
+        if (!node || typeof node.closest !== 'function') return false;
+        return Boolean(
+          node.hasAttribute('data-lenis-prevent') ||
+          node.closest('[data-lenis-prevent]') ||
+          node.closest('.overflow-y-auto') ||
+          node.closest('.overflow-auto')
         );
       },
     });
