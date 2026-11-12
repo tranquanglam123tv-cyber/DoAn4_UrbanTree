@@ -92,7 +92,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     // Generate data for past 7 days
     const days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
     const mockCounts = [12, 19, 15, 27, 22, 34, 28]; // Realistic baseline activity
-    
+
     // Distribute actual care records if available
     return days.map((day, idx) => {
       const count = mockCounts[idx] + (careRecords.length > 0 ? (careRecords.length % (idx + 2)) : 0);
@@ -397,21 +397,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl flex items-center gap-1 border border-slate-200 dark:border-slate-700/80 text-xs">
               <button
                 onClick={() => setActiveChartTab('timeline')}
-                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
-                  activeChartTab === 'timeline'
+                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${activeChartTab === 'timeline'
                     ? 'bg-white text-emerald-800 shadow-xs dark:bg-emerald-500 dark:text-slate-950 dark:shadow-[0_0_10px_rgba(0,255,157,0.3)]'
                     : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
-                }`}
+                  }`}
               >
                 7 Ngày Qua
               </button>
               <button
                 onClick={() => setActiveChartTab('category')}
-                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
-                  activeChartTab === 'category'
+                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${activeChartTab === 'category'
                     ? 'bg-white text-emerald-800 shadow-xs dark:bg-emerald-500 dark:text-slate-950 dark:shadow-[0_0_10px_rgba(0,255,157,0.3)]'
                     : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
-                }`}
+                  }`}
               >
                 Theo Phân Loại
               </button>
@@ -452,22 +450,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     {/* Bar representation */}
                     <div className="w-full max-w-[42px] h-36 bg-slate-100 dark:bg-slate-800/60 rounded-xl relative overflow-hidden flex items-end p-1 transition-colors">
                       <div
-                        className={`w-full rounded-lg transition-all duration-500 ${
-                          isHovered
+                        className={`w-full rounded-lg transition-all duration-500 ${isHovered
                             ? 'bg-gradient-to-t from-emerald-600 to-[#00FF9D] shadow-[0_0_15px_rgba(0,255,157,0.6)]'
                             : 'bg-gradient-to-t from-emerald-700 to-emerald-500 dark:from-emerald-700/80 dark:to-[#00FF9D]/80'
-                        }`}
+                          }`}
                         style={{ height: `${heightPercent}%` }}
                       />
                     </div>
 
                     {/* Day Label */}
                     <div className="text-center">
-                      <span className={`text-xs font-bold font-mono transition-colors ${
-                        isHovered
+                      <span className={`text-xs font-bold font-mono transition-colors ${isHovered
                           ? 'text-emerald-700 dark:text-[#00FF9D]'
                           : 'text-slate-600 dark:text-slate-400'
-                      }`}>
+                        }`}>
                         {item.day}
                       </span>
                       <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
@@ -643,13 +639,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         {incident.publicCode}
                       </span>
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                          incident.severity === 'CRITICAL'
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded ${incident.severity === 'CRITICAL'
                             ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300 dark:border dark:border-rose-500/40'
                             : incident.severity === 'HIGH'
-                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/70 dark:text-orange-300 dark:border dark:border-orange-500/40'
-                            : 'bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300 dark:border dark:border-amber-500/40'
-                        }`}
+                              ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/70 dark:text-orange-300 dark:border dark:border-orange-500/40'
+                              : 'bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300 dark:border dark:border-amber-500/40'
+                          }`}
                       >
                         {incident.severity}
                       </span>
@@ -713,15 +708,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                 <div className="flex items-center gap-2 shrink-0">
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      tree.healthStatus === 'GOOD'
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tree.healthStatus === 'GOOD'
                         ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-[#00FF9D] dark:border dark:border-emerald-500/30'
                         : tree.healthStatus === 'FAIR'
-                        ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:border dark:border-slate-700'
-                        : tree.healthStatus === 'POOR'
-                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300 dark:border dark:border-amber-500/30'
-                        : 'bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300 dark:border dark:border-rose-500/30'
-                    }`}
+                          ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:border dark:border-slate-700'
+                          : tree.healthStatus === 'POOR'
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300 dark:border dark:border-amber-500/30'
+                            : 'bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300 dark:border dark:border-rose-500/30'
+                      }`}
                   >
                     {tree.healthStatus}
                   </span>

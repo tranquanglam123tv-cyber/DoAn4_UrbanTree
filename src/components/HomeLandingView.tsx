@@ -234,7 +234,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           <div className="absolute inset-0 opacity-25 dark:opacity-20 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
 
           {/* Left Hero Card - Quick Stats tự đổi theo Vùng GPS */}
-          <div className="relative z-10 w-full lg:max-w-xs bg-white dark:bg-[#0c1812] p-5 rounded-2xl border border-slate-200 dark:border-emerald-500/30 shadow-xl dark:shadow-[0_4px_24px_rgba(0,0,0,0.6)] space-y-4 text-left shrink-0">
+          <div className="relative z-10 w-full lg:max-w-xs bg-white/95 dark:bg-[#0c1812]/95 backdrop-blur-md p-5 rounded-2xl border border-emerald-100 dark:border-emerald-500/20 shadow-xl dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] space-y-4 text-left shrink-0">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span className="flex h-3 w-3 relative">
@@ -258,20 +258,20 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             </div>
 
             <div className="space-y-1">
-              <div className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                <Navigation className="w-3.5 h-3.5 shrink-0" />
+              <div className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                <Navigation className="w-3 h-3 shrink-0" />
                 <span className="truncate">{currentZoneName}</span>
               </div>
-              <div className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              <div className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
                 {stats.totalTrees}{' '}
-                <span className="text-sm font-semibold text-slate-500 dark:text-slate-300">Cây số hóa</span>
+                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Cây số hóa</span>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
-                Độ phủ xanh đạt <strong className="text-slate-900 dark:text-white font-bold">{healthyPercent}%</strong> ở mức sinh trưởng tốt.
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                Độ phủ xanh đạt <strong className="text-slate-900 dark:text-slate-200">{healthyPercent}%</strong> ở mức sinh trưởng tốt.
               </p>
             </div>
 
-            <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs font-bold">
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-medium text-slate-600 dark:text-slate-400">
               <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
                 <CheckCircle2 className="w-4 h-4" />
                 {stats.healthyTrees} Khỏe mạnh
@@ -284,7 +284,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
             <button
               onClick={onOpenMap}
-              className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+              className="w-full py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 border border-emerald-100 dark:border-emerald-500/30 transition-colors cursor-pointer"
             >
               <span>Xem Bản đồ chi tiết</span>
               <ExternalLink className="w-3.5 h-3.5" />
@@ -298,12 +298,12 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
           {/* Right Hero Card - Tự động đổi sang Cây gần vị trí GPS nhất */}
           {sampleTree && (
-            <div className="relative z-10 w-full lg:max-w-xs bg-white dark:bg-[#0c1812] p-4 rounded-2xl border border-slate-200 dark:border-emerald-500/30 shadow-xl dark:shadow-[0_4px_24px_rgba(0,0,0,0.6)] text-left space-y-3 shrink-0 hidden md:block">
+            <div className="relative z-10 w-full lg:max-w-xs bg-white/95 dark:bg-[#0c1812]/95 backdrop-blur-md p-4 rounded-2xl border border-emerald-100 dark:border-emerald-500/20 shadow-xl dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] text-left space-y-3 shrink-0 hidden md:block">
               <div className="flex items-center justify-between">
                 <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 text-[10px] font-mono font-bold border border-emerald-200 dark:border-emerald-500/30">
                   {sampleTree.publicCode}
                 </span>
-                <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/70 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/70 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
                   <LocateFixed className="w-3 h-3 text-emerald-600 dark:text-emerald-400 animate-pulse" />
                   {nearestTreeInfo ? `Cách bạn ~${nearestTreeInfo.distanceM}m` : 'Cây mẫu theo GPS'}
                 </span>
@@ -315,21 +315,21 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                   alt={sampleTree.displayName}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                 <div className="absolute bottom-2 left-2 right-2 text-white">
                   <div className="text-xs font-bold truncate">{sampleTree.displayName}</div>
                   <div className="text-[10px] text-emerald-200 truncate">{sampleTree.address}</div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-[11px] text-slate-700 dark:text-slate-300">
-                <span>Chiều cao: <strong className="text-slate-900 dark:text-white font-bold">{sampleTree.heightM}m</strong></span>
-                <span>Đường kính: <strong className="text-slate-900 dark:text-white font-bold">{sampleTree.diameterCm}cm</strong></span>
+              <div className="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400">
+                <span>Chiều cao: <strong className="text-slate-800 dark:text-slate-200">{sampleTree.heightM}m</strong></span>
+                <span>Đường kính: <strong className="text-slate-800 dark:text-slate-200">{sampleTree.diameterCm}cm</strong></span>
               </div>
 
               <button
                 onClick={() => onSelectTree(sampleTree)}
-                className="w-full py-2 text-center text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900/90 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full py-2 text-center text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <span>Tra cứu chi tiết cây này</span>
                 <ArrowRight className="w-3.5 h-3.5" />

@@ -35,17 +35,17 @@ export const PerspectiveTiltShowcase: React.FC<PerspectiveTiltShowcaseProps> = (
       gsap.set(el, {
         transformPerspective: 1400,
         transformOrigin: '50% 20%',
-        rotationX: 18, // Giảm góc nghiêng xuống để chữ luôn sắc nét, không bị mờ do phối cảnh quá gắt
-        scale: 0.94,
-        y: -15,
+        rotationX: 36, // Độ nghiêng 3D nằm ngửa rõ nét
+        scale: 0.84,
+        y: -40,
       });
 
       gsap.to(el, {
         scrollTrigger: {
           trigger: triggerEl,
-          start: 'top 75%', // Bắt đầu dựng thẳng sớm hơn
-          end: 'top 30%',   // Hoàn thành dựng đứng thẳng khi thẻ tiến vào trung tâm
-          scrub: 1.0,
+          start: 'top 60%', // 🎯 CHỈ BẮT ĐẦU LẬT KHI LƯỚT TỚI GẦN GIỮA MÀN HÌNH
+          end: 'top 15%',   // Hoàn thành dựng đứng thẳng khi thẻ chiếm trọn trung tâm tầm mắt
+          scrub: 1.4,       // Mượt mà bám sát con lăn
           invalidateOnRefresh: true,
         },
         rotationX: 0,
@@ -60,17 +60,17 @@ export const PerspectiveTiltShowcase: React.FC<PerspectiveTiltShowcaseProps> = (
       gsap.set(el, {
         transformPerspective: 1100,
         transformOrigin: '50% 20%',
-        rotationX: 12,
-        scale: 0.96,
-        y: -10,
+        rotationX: 28,
+        scale: 0.88,
+        y: -25,
       });
 
       gsap.to(el, {
         scrollTrigger: {
           trigger: triggerEl,
-          start: 'top 80%',
-          end: 'top 35%',
-          scrub: 1.0,
+          start: 'top 65%', // Bắt đầu lật khi thẻ tiến vào nửa giữa màn hình
+          end: 'top 20%',
+          scrub: 1.4,
           invalidateOnRefresh: true,
         },
         rotationX: 0,
@@ -98,11 +98,8 @@ export const PerspectiveTiltShowcase: React.FC<PerspectiveTiltShowcaseProps> = (
         className="relative w-full max-w-7xl rounded-[32px] sm:rounded-[40px] bg-white dark:bg-[#0c1812] border border-slate-200/90 dark:border-emerald-500/20 p-2 sm:p-4 shadow-2xl shadow-emerald-950/15 dark:shadow-[0_4px_30px_rgba(0,0,0,0.6)] will-change-transform"
         style={{
           transformStyle: 'preserve-3d',
-          transform: 'perspective(1400px) rotateX(18deg) scale(0.94) translateY(-15px)',
+          transform: 'perspective(1400px) rotateX(36deg) scale(0.84) translateY(-40px)',
           transformOrigin: '50% 20%',
-          backfaceVisibility: 'hidden',
-          WebkitFontSmoothing: 'antialiased',
-          MozOsxFontSmoothing: 'grayscale',
         }}
       >
         {/* Thanh điều khiển Radar trung tâm */}
