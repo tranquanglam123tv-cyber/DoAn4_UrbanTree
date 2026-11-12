@@ -49,7 +49,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     return (
       localStorage.getItem('URBANTREE_GOOGLE_CLIENT_ID') ||
       (import.meta.env.VITE_GOOGLE_CLIENT_ID as string) ||
-      ''
+      '883374638147-huujfd6886q9lt2frgqusk5f3dediccu.apps.googleusercontent.com'
     );
   });
   const [showConfigGoogleId, setShowConfigGoogleId] = useState<boolean>(false);
@@ -784,7 +784,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               <div className="relative flex py-1 items-center">
                 <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
                 <span className="flex-shrink mx-3 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                  Hoặc đăng ký tài khoản qua SMS OTP
+                  Hoặc đăng ký tài khoản qua Email / SMS OTP
                 </span>
                 <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
               </div>

@@ -77,16 +77,27 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   const incidents = storage.getIncidents();
   const trees = storage.getTrees();
 
-  // Filter incidents reported by this citizen (match by name or phone or fallback to show relevant records)
+  // Filter incidents reported by this citizen:
+  // ONLY show demo incidents if logged in with the demo account 'nguyenvanan'.
+  // Any real or newly registered user/Google account starts with their own real data (empty initially).
   const myIncidents = useMemo(() => {
-    const list = incidents.filter(
-      (inc) =>
-        (inc.reporterName && inc.reporterName.toLowerCase().includes(currentUser.fullName.toLowerCase())) ||
-        (currentUser.username && inc.reporterPhone?.includes(currentUser.username)) ||
-        currentUser.username === 'nguyenvanan' ||
-        currentUser.id === 'citizen-guest' // showcase demo
-    );
-    return list.length > 0 ? list : incidents.slice(0, 3);
+    const isExplicitDemoUser = currentUser.id === 'citizen-demo-an' || currentUser.username === 'nguyenvanan';
+
+    if (isExplicitDemoUser) {
+      return incidents.filter(
+        (inc) =>
+          inc.reporterName?.toLowerCase().includes('nguyễn văn an') ||
+          inc.reporterPhone === '0903847291'
+      );
+    }
+
+    // New or real user: strictly filter by matching phone, email, or exact full name
+    return incidents.filter((inc) => {
+      const matchPhone = Boolean(currentUser.phone && inc.reporterPhone && inc.reporterPhone === currentUser.phone);
+      const matchEmail = Boolean(currentUser.email && inc.reporterPhone && inc.reporterPhone.toLowerCase() === currentUser.email.toLowerCase());
+      const matchName = Boolean(inc.reporterName && currentUser.fullName && inc.reporterName.trim().toLowerCase() === currentUser.fullName.trim().toLowerCase());
+      return matchPhone || matchEmail || matchName;
+    });
   }, [incidents, currentUser]);
 
   // Filtered by sub-status & search
@@ -111,15 +122,21 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
     });
   }, [myIncidents, reportFilter, searchQuery]);
 
-  // Dynamic metrics
+  // Dynamic metrics: for new accounts with 0 reports, all values start at 0
   const resolvedCount = myIncidents.filter((i) => i.status === 'RESOLVED').length;
   const inProgressCount = myIncidents.filter((i) => i.status !== 'RESOLVED' && i.status !== 'REOPENED').length;
   const reopenedCount = myIncidents.filter((i) => i.status === 'REOPENED').length;
   const totalPoints = myIncidents.length * 100 + resolvedCount * 50;
-  const carbonOffsetKg = (myIncidents.length * 24.6 + resolvedCount * 18.2).toFixed(1);
+  const carbonOffsetKg = myIncidents.length === 0 ? '0.0' : (myIncidents.length * 24.6 + resolvedCount * 18.2).toFixed(1);
 
-  // Favorite / Followed trees
-  const followedTrees = trees.slice(0, 3);
+  // Favorite / Followed trees: New accounts start with 0 followed trees (no fake pre-filled trees)
+  const followedTrees = useMemo(() => {
+    const isExplicitDemoUser = currentUser.id === 'citizen-demo-an' || currentUser.username === 'nguyenvanan';
+    if (isExplicitDemoUser) {
+      return trees.slice(0, 3);
+    }
+    return [];
+  }, [trees, currentUser]);
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -865,91 +882,110 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
-              {followedTrees.map((tree) => (
-                <div
-                  key={tree.id}
-                  className="bg-white dark:bg-[#091510] rounded-2xl border border-slate-200/90 dark:border-emerald-500/20 hover:border-emerald-300 dark:hover:border-emerald-500/40 transition-all hover:shadow-lg dark:hover:shadow-[0_4px_24px_rgba(0,0,0,0.5)] p-4 space-y-3.5 flex flex-col justify-between group"
-                >
-                  <div className="space-y-3">
-                    <div className="w-full h-44 rounded-xl overflow-hidden relative bg-slate-100 dark:bg-slate-900">
-                      <img
-                        src={tree.imageUrl || 'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=600&q=80'}
-                        alt={tree.displayName}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                      <span className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-lg bg-black/70 backdrop-blur-md text-white font-mono text-[11px] font-bold">
-                        {tree.publicCode}
-                      </span>
-                      <span className="absolute top-2.5 right-2.5 p-2 rounded-full bg-white/90 dark:bg-slate-900/90 text-rose-500 shadow-md">
-                        <Heart className="w-4 h-4 fill-rose-500" />
-                      </span>
-                      <div className="absolute bottom-2 left-2 px-2.5 py-0.5 rounded-full bg-emerald-600/90 backdrop-blur-xs text-white text-[10px] font-bold flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                        Đang phát triển tốt
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
-                        {tree.displayName}
-                      </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
-                        <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                        <span>{tree.address}</span>
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-1.5 p-2.5 bg-slate-50 dark:bg-[#070e0a] rounded-xl text-center text-xs border border-slate-100 dark:border-slate-800">
-                      <div>
-                        <div className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase">Chiều cao</div>
-                        <div className="font-bold text-slate-800 dark:text-slate-200 font-mono">{tree.heightM}m</div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase">Đường kính</div>
-                        <div className="font-bold text-slate-800 dark:text-slate-200 font-mono">{tree.diameterCm}cm</div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase">Hấp thụ CO₂</div>
-                        <div className="font-bold text-emerald-700 dark:text-emerald-400 font-mono">22kg/y</div>
-                      </div>
-                    </div>
-
-                    {/* Recent Care Info */}
-                    <div className="p-2.5 bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-500/20 rounded-xl text-xs space-y-1">
-                      <div className="flex items-center gap-1.5 text-emerald-900 dark:text-emerald-300 font-semibold">
-                        <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                        <span>Lịch chăm sóc tuần này:</span>
-                      </div>
-                      <div className="text-[11px] text-emerald-700 dark:text-emerald-400">
-                        • Cắt tỉa cành an toàn hoàn tất ngày 10/11
-                      </div>
-                      <div className="text-[11px] text-emerald-700 dark:text-emerald-400">
-                        • Tưới dưỡng rễ: Dự kiến sáng mai 07:00
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 pt-2">
-                    <button
-                      onClick={() => onSelectTree(tree)}
-                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white dark:text-slate-950 font-bold rounded-xl text-xs text-center transition-colors shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>Xem sổ cái &amp; nhật ký cây ➔</span>
-                    </button>
-
-                    <button
-                      onClick={() => onNavigateToNewReport(tree.id)}
-                      className="w-full py-2 bg-slate-100 hover:bg-amber-50 hover:text-amber-900 dark:bg-slate-900 dark:hover:bg-amber-950/40 dark:text-slate-300 dark:hover:text-amber-300 border border-slate-200 dark:border-slate-800 text-slate-700 font-semibold rounded-xl text-xs text-center transition-colors cursor-pointer flex items-center justify-center gap-1"
-                    >
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                      <span>Báo sự cố cho cây này</span>
-                    </button>
-                  </div>
+            {followedTrees.length === 0 ? (
+              <div className="p-10 text-center bg-white dark:bg-[#0c1812] rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 space-y-3">
+                <Heart className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto" />
+                <div className="text-base font-bold text-slate-700 dark:text-slate-300">
+                  Bạn chưa lưu theo dõi cây xanh nào
                 </div>
-              ))}
-            </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                  Tài khoản mới bắt đầu từ trang sạch. Hãy mở Bản đồ GIS hoặc quét mã QR trên thân cây gần nhà để đánh dấu theo dõi lịch tưới nước, tỉa cành và độ phủ bóng mát.
+                </p>
+                <button
+                  onClick={onOpenMap}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white dark:text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer inline-flex items-center gap-2 shadow-xs"
+                >
+                  <MapPin className="w-4 h-4" />
+                  <span>Mở Bản đồ GIS để chọn cây quan tâm</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
+                {followedTrees.map((tree) => (
+                  <div
+                    key={tree.id}
+                    className="bg-white dark:bg-[#091510] rounded-2xl border border-slate-200/90 dark:border-emerald-500/20 hover:border-emerald-300 dark:hover:border-emerald-500/40 transition-all hover:shadow-lg dark:hover:shadow-[0_4px_24px_rgba(0,0,0,0.5)] p-4 space-y-3.5 flex flex-col justify-between group"
+                  >
+                    <div className="space-y-3">
+                      <div className="w-full h-44 rounded-xl overflow-hidden relative bg-slate-100 dark:bg-slate-900">
+                        <img
+                          src={tree.imageUrl || 'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=600&q=80'}
+                          alt={tree.displayName}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                        <span className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-lg bg-black/70 backdrop-blur-md text-white font-mono text-[11px] font-bold">
+                          {tree.publicCode}
+                        </span>
+                        <span className="absolute top-2.5 right-2.5 p-2 rounded-full bg-white/90 dark:bg-slate-900/90 text-rose-500 shadow-md">
+                          <Heart className="w-4 h-4 fill-rose-500" />
+                        </span>
+                        <div className="absolute bottom-2 left-2 px-2.5 py-0.5 rounded-full bg-emerald-600/90 backdrop-blur-xs text-white text-[10px] font-bold flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                          Đang phát triển tốt
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
+                          {tree.displayName}
+                        </h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
+                          <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <span>{tree.address}</span>
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-1.5 p-2.5 bg-slate-50 dark:bg-[#070e0a] rounded-xl text-center text-xs border border-slate-100 dark:border-slate-800">
+                        <div>
+                          <div className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase">Chiều cao</div>
+                          <div className="font-bold text-slate-800 dark:text-slate-200 font-mono">{tree.heightM}m</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase">Đường kính</div>
+                          <div className="font-bold text-slate-800 dark:text-slate-200 font-mono">{tree.diameterCm}cm</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase">Hấp thụ CO₂</div>
+                          <div className="font-bold text-emerald-700 dark:text-emerald-400 font-mono">22kg/y</div>
+                        </div>
+                      </div>
+
+                      {/* Recent Care Info */}
+                      <div className="p-2.5 bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-500/20 rounded-xl text-xs space-y-1">
+                        <div className="flex items-center gap-1.5 text-emerald-900 dark:text-emerald-300 font-semibold">
+                          <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <span>Lịch chăm sóc tuần này:</span>
+                        </div>
+                        <div className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                          • Cắt tỉa cành an toàn hoàn tất ngày 10/11
+                        </div>
+                        <div className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                          • Tưới dưỡng rễ: Dự kiến sáng mai 07:00
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 pt-2">
+                      <button
+                        onClick={() => onSelectTree(tree)}
+                        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white dark:text-slate-950 font-bold rounded-xl text-xs text-center transition-colors shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Xem sổ cái &amp; nhật ký cây ➔</span>
+                      </button>
+
+                      <button
+                        onClick={() => onNavigateToNewReport(tree.id)}
+                        className="w-full py-2 bg-slate-100 hover:bg-amber-50 hover:text-amber-900 dark:bg-slate-900 dark:hover:bg-amber-950/40 dark:text-slate-300 dark:hover:text-amber-300 border border-slate-200 dark:border-slate-800 text-slate-700 font-semibold rounded-xl text-xs text-center transition-colors cursor-pointer flex items-center justify-center gap-1"
+                      >
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Báo sự cố cho cây này</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

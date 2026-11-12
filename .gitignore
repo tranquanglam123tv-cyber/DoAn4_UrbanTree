@@ -48,3 +48,6 @@ ponytail/
 
 # Temporary office files
 ~$*
+
+# Google Cloud OAuth Credentials
+client_secret*.json
