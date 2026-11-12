@@ -4,8 +4,13 @@ const { OAuth2Client } = require('google-auth-library');
 const db = require('../config/db');
 const emailService = require('../services/emailService');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'urbantree_jwt_super_secret_key_2026_doan4';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'urbantree_jwt_refresh_super_secret_key_2026_doan4';
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? null : 'urbantree_jwt_super_secret_key_2026_doan4');
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || (process.env.NODE_ENV === 'production' ? null : 'urbantree_jwt_refresh_super_secret_key_2026_doan4');
+
+if (process.env.NODE_ENV === 'production' && (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET)) {
+  console.error('🚨 [CRITICAL SECURITY ERROR] Production environment must define JWT_SECRET and JWT_REFRESH_SECRET in .env!');
+  process.exit(1);
+}
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'urbantree-mobile-client.apps.googleusercontent.com';

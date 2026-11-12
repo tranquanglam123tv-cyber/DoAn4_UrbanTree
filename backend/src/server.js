@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const path = require('path');
 require('dotenv').config();
 
@@ -15,6 +16,14 @@ const aiRoutes = require('./routes/aiRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+
+// 🛡️ BẢO VỆ HTTP HEADERS CHUYÊN SÂU BẰNG HELMET (OWASP TOP 10)
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // Để tương thích linh hoạt với Leaflet tile servers & inline styles demo
+    crossOriginEmbedderPolicy: false,
+  })
+);
 
 // Middlewares & CORS (Hỗ trợ Localhost, Mobile PWA & Cloudflare Tunnel *.trycloudflare.com)
 const allowedOriginRegex = /^(http:\/\/localhost(:\d+)?|http:\/\/127\.0\.0\.1(:\d+)?|https:\/\/.*\.trycloudflare\.com)$/;

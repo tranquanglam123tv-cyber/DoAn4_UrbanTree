@@ -1,7 +1,12 @@
 const jwt = require('jsonwebtoken');
 const db = require('../config/db');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'urbantree_jwt_super_secret_key_2026_doan4';
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? null : 'urbantree_jwt_super_secret_key_2026_doan4');
+
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  console.error('🚨 [CRITICAL SECURITY ERROR] Production environment must define JWT_SECRET in .env!');
+  process.exit(1);
+}
 
 /**
  * Middleware xác thực JWT Access Token
