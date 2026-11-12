@@ -66,6 +66,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const [activeChartTab, setActiveChartTab] = useState<'timeline' | 'category'>('timeline');
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
+  const [highlightedCategory, setHighlightedCategory] = useState<string | null>(null);
   const [showOfficialReportModal, setShowOfficialReportModal] = useState<boolean>(false);
 
   const healthyPercent = stats.totalTrees > 0 ? Math.round((stats.healthyTrees / stats.totalTrees) * 100) : 0;
@@ -142,24 +143,44 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Aggregate care activity data for the interactive chart
   const weeklyCareData = useMemo(() => {
-    // Generate data for past 7 days
+    // Generate data for past 7 days matching the realistic schedule
     const days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-    const mockCounts = [12, 19, 15, 27, 22, 34, 28]; // Realistic baseline activity
+    const mockCounts = [14, 21, 18, 30, 24, 48, 35]; // Realistic baseline activity
 
-    // Distribute actual care records if available
     return days.map((day, idx) => {
-      const count = mockCounts[idx] + (careRecords.length > 0 ? (careRecords.length % (idx + 2)) : 0);
+      const base = mockCounts[idx];
+      const count = base + (careRecords.length > 0 ? (careRecords.length % (idx + 3)) : 0);
+      const watering = Math.round(count * 0.42);
+      const pruning = Math.round(count * 0.28);
+      const fertilizing = Math.round(count * 0.15);
+      const treatment = Math.max(1, count - (watering + pruning + fertilizing));
+
       return {
         day,
         label: `Thứ ${idx + 2 === 8 ? 'Chủ Nhật' : idx + 2}`,
+        dateStr: `Ngày ${10 + idx}/11`,
         count,
-        watering: Math.round(count * 0.4),
-        pruning: Math.round(count * 0.25),
-        treatment: Math.round(count * 0.2),
-        fertilizing: Math.max(1, count - Math.round(count * 0.85)),
+        watering,
+        pruning,
+        fertilizing,
+        treatment,
+        mainStreet:
+          idx === 5
+            ? 'Đại lộ Hòa Bình & Tuyến 30/4'
+            : idx === 3
+            ? 'Đường 3 Tháng 2 & Mậu Thân'
+            : idx === 6
+            ? 'Công viên Lưu Hữu Phước & Bến Ninh Kiều'
+            : 'Khu vực Trung tâm Quận Ninh Kiều',
       };
     });
   }, [careRecords]);
+
+  const totalWeeklyCare = useMemo(() => weeklyCareData.reduce((acc, d) => acc + d.count, 0), [weeklyCareData]);
+  const maxWeeklyCount = useMemo(() => Math.max(...weeklyCareData.map((d) => d.count), 50), [weeklyCareData]);
+  const peakDay = useMemo(() => {
+    return weeklyCareData.reduce((prev, curr) => (curr.count > prev.count ? curr : prev), weeklyCareData[0]);
+  }, [weeklyCareData]);
 
   const categoryCareData = useMemo(() => {
     const counts: Record<string, number> = {
@@ -195,8 +216,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       count: Math.max(count, 3), // Ensure attractive visual representation
     }));
   }, [careRecords]);
-
-  const maxWeeklyCount = Math.max(...weeklyCareData.map((d) => d.count), 35);
 
   return (
     <div className="space-y-8 animate-fade-in pb-16">
@@ -478,142 +497,406 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* 📈 INTERACTIVE CARE ACTIVITY CHART (ECO-TECH TELEMETRY) */}
-      <div className="bento-card p-5 sm:p-6 dark:bg-[#0c1812] dark:border-emerald-500/20 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+      <div className="bento-card p-5 sm:p-6 dark:bg-[#0c1812] dark:border-emerald-500/20 space-y-5">
+        {/* Header & Controls */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/80 pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-[#00FF9D] dark:border dark:border-emerald-500/30">
-                <BarChart3 className="w-4 h-4" />
+              <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-[#00FF9D] dark:border dark:border-emerald-500/30">
+                <BarChart3 className="w-5 h-5" />
               </div>
-              <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100">
-                Biểu Đồ Hoạt Động Chăm Sóc & Bảo Dưỡng (Interactive Telemetry)
-              </h2>
+              <div>
+                <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <span>Biểu Đồ Hoạt Động Chăm Sóc & Bảo Dưỡng Thực Địa</span>
+                  <span className="hidden sm:inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-[#00FF9D] border border-emerald-300 dark:border-emerald-500/40">
+                    Telemetry 4.0
+                  </span>
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Giám sát tiến độ 7 ngày qua, phân lớp nghiệp vụ nông học và cơ cấu giải quyết theo trục đường
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Tần suất xử lý hiện trường 7 ngày qua và cơ cấu hoạt động nông học đô thị
-            </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl flex items-center gap-1 border border-slate-200 dark:border-slate-700/80 text-xs">
+          <div className="flex items-center flex-wrap gap-2.5">
+            {/* View Switcher */}
+            <div className="bg-slate-100 dark:bg-slate-800/90 p-1 rounded-xl flex items-center gap-1 border border-slate-200 dark:border-slate-700/80 text-xs shadow-inner">
               <button
                 onClick={() => setActiveChartTab('timeline')}
-                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${activeChartTab === 'timeline'
-                    ? 'bg-white text-emerald-800 shadow-xs dark:bg-emerald-500 dark:text-slate-950 dark:shadow-[0_0_10px_rgba(0,255,157,0.3)]'
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  activeChartTab === 'timeline'
+                    ? 'bg-white text-emerald-800 shadow-sm dark:bg-emerald-500 dark:text-slate-950 dark:shadow-[0_0_12px_rgba(0,255,157,0.35)]'
                     : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}
+                }`}
               >
-                7 Ngày Qua
+                <Activity className="w-3.5 h-3.5" />
+                <span>Tiến Độ 7 Ngày</span>
               </button>
               <button
                 onClick={() => setActiveChartTab('category')}
-                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${activeChartTab === 'category'
-                    ? 'bg-white text-emerald-800 shadow-xs dark:bg-emerald-500 dark:text-slate-950 dark:shadow-[0_0_10px_rgba(0,255,157,0.3)]'
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  activeChartTab === 'category'
+                    ? 'bg-white text-emerald-800 shadow-sm dark:bg-emerald-500 dark:text-slate-950 dark:shadow-[0_0_12px_rgba(0,255,157,0.35)]'
                     : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}
+                }`}
               >
-                Theo Phân Loại
+                <Layers className="w-3.5 h-3.5" />
+                <span>Theo Nghiệp Vụ</span>
               </button>
             </div>
 
             <button
               onClick={() => onNavigate('care')}
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:text-[#00FF9D] dark:hover:bg-emerald-950/60 dark:border dark:border-emerald-500/30 transition-colors flex items-center gap-1 cursor-pointer"
+              className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:text-[#00FF9D] dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:border dark:border-emerald-500/40 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
             >
+              <ClipboardList className="w-3.5 h-3.5" />
               <span>Xem Sổ Chăm Sóc</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-3 h-3" />
             </button>
           </div>
         </div>
 
         {activeChartTab === 'timeline' ? (
-          <div>
-            {/* Interactive Timeline Bar Chart */}
-            <div className="h-48 pt-6 pb-2 flex items-end justify-between gap-2 sm:gap-4 px-2">
-              {weeklyCareData.map((item, index) => {
-                const heightPercent = Math.max(15, Math.round((item.count / maxWeeklyCount) * 100));
-                const isHovered = hoveredBar === index;
+          <div className="space-y-4">
+            {/* Interactive Filter Pills (Legend + Filter) */}
+            <div className="flex items-center justify-between flex-wrap gap-2 pt-1 pb-1">
+              <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mr-1">Bộ lọc:</span>
+                <button
+                  onClick={() => setHighlightedCategory(null)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
+                    highlightedCategory === null
+                      ? 'bg-slate-900 text-white border-slate-900 dark:bg-emerald-500 dark:text-slate-950 dark:border-emerald-400 shadow-xs'
+                      : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200 dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700'
+                  }`}
+                >
+                  Tất Cả (Stacked)
+                </button>
+                <button
+                  onClick={() => setHighlightedCategory(highlightedCategory === 'watering' ? null : 'watering')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${
+                    highlightedCategory === 'watering'
+                      ? 'bg-cyan-500 text-white border-cyan-600 shadow-sm dark:bg-cyan-400 dark:text-slate-950 dark:shadow-[0_0_10px_rgba(6,182,212,0.4)]'
+                      : 'bg-cyan-50/80 text-cyan-800 border-cyan-200 hover:bg-cyan-100 dark:bg-cyan-950/40 dark:text-cyan-300 dark:border-cyan-800/50'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                  <span>💧 Tưới nước (42%)</span>
+                </button>
+                <button
+                  onClick={() => setHighlightedCategory(highlightedCategory === 'pruning' ? null : 'pruning')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${
+                    highlightedCategory === 'pruning'
+                      ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm dark:bg-emerald-400 dark:text-slate-950 dark:shadow-[0_0_10px_rgba(16,185,129,0.4)]'
+                      : 'bg-emerald-50/80 text-emerald-800 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-[#00FF9D] dark:border-emerald-800/50'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span>✂️ Cắt tỉa đón bão (28%)</span>
+                </button>
+                <button
+                  onClick={() => setHighlightedCategory(highlightedCategory === 'fertilizing' ? null : 'fertilizing')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${
+                    highlightedCategory === 'fertilizing'
+                      ? 'bg-lime-600 text-white border-lime-700 shadow-sm dark:bg-lime-400 dark:text-slate-950 dark:shadow-[0_0_10px_rgba(132,204,22,0.4)]'
+                      : 'bg-lime-50/80 text-lime-800 border-lime-200 hover:bg-lime-100 dark:bg-lime-950/40 dark:text-lime-300 dark:border-lime-800/50'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-lime-500" />
+                  <span>🧪 Bón dưỡng rễ (15%)</span>
+                </button>
+                <button
+                  onClick={() => setHighlightedCategory(highlightedCategory === 'treatment' ? null : 'treatment')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${
+                    highlightedCategory === 'treatment'
+                      ? 'bg-amber-600 text-white border-amber-700 shadow-sm dark:bg-amber-400 dark:text-slate-950 dark:shadow-[0_0_10px_rgba(245,158,11,0.4)]'
+                      : 'bg-amber-50/80 text-amber-800 border-amber-200 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/50'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  <span>🛡️ Trị nấm sâu bệnh (15%)</span>
+                </button>
+              </div>
+
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium hidden sm:flex items-center gap-1">
+                <span>Rà chuột để soi chi tiết từng ngày</span>
+              </div>
+            </div>
+
+            {/* Main Interactive Chart Canvas with Y-Gridlines */}
+            <div className="relative pt-6 pb-2 px-1 sm:px-3 bg-gradient-to-b from-slate-50/50 to-transparent dark:from-[#08130d]/60 dark:to-transparent rounded-2xl border border-slate-100 dark:border-slate-800/60">
+              {/* Horizontal Reference Grid Lines */}
+              <div className="absolute inset-x-6 top-8 bottom-12 flex flex-col justify-between pointer-events-none opacity-40 dark:opacity-30">
+                <div className="border-b border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                  <span>45 ca</span>
+                  <span className="text-[9px] uppercase tracking-wider text-amber-500 dark:text-amber-400 font-sans font-semibold">Ngưỡng Cao Điểm</span>
+                </div>
+                <div className="border-b border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                  <span>30 ca</span>
+                  <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-sans">Chuẩn trung bình 27 ca/ngày</span>
+                </div>
+                <div className="border-b border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                  <span>15 ca</span>
+                  <span></span>
+                </div>
+                <div className="border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                  <span>0 ca</span>
+                  <span></span>
+                </div>
+              </div>
+
+              {/* Bar Columns Container */}
+              <div className="h-56 flex items-end justify-between gap-2 sm:gap-4 px-2 sm:px-6 relative z-10">
+                {weeklyCareData.map((item, index) => {
+                  const totalHeightPercent = Math.min(100, Math.max(18, Math.round((item.count / maxWeeklyCount) * 100)));
+                  const isHovered = hoveredBar === index;
+                  const isPeak = item.day === peakDay.day;
+
+                  // Segment heights relative to total bar height
+                  const waterH = (item.watering / item.count) * 100;
+                  const pruneH = (item.pruning / item.count) * 100;
+                  const fertH = (item.fertilizing / item.count) * 100;
+                  const treatH = (item.treatment / item.count) * 100;
+
+                  return (
+                    <div
+                      key={item.day}
+                      className="flex-1 flex flex-col items-center gap-2 group cursor-pointer relative"
+                      onMouseEnter={() => setHoveredBar(index)}
+                      onMouseLeave={() => setHoveredBar(null)}
+                    >
+                      {/* Rich Floating Tooltip */}
+                      {isHovered && (
+                        <div className="absolute -top-32 z-30 w-56 sm:w-64 p-3 rounded-2xl bg-slate-900/95 text-white dark:bg-[#040f09]/95 dark:border dark:border-emerald-500/50 text-[11px] shadow-2xl backdrop-blur-md pointer-events-none animate-in fade-in zoom-in-95">
+                          <div className="flex items-center justify-between border-b border-slate-700/80 dark:border-slate-800 pb-1.5 mb-2">
+                            <div className="font-extrabold text-[#00FF9D] text-xs flex items-center gap-1.5">
+                              <span>{item.label}</span>
+                              <span className="text-[10px] text-slate-400 font-normal">({item.dateStr})</span>
+                            </div>
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-[#00FF9D] font-mono font-bold text-[10px] border border-emerald-500/40">
+                              {item.count} lượt
+                            </span>
+                          </div>
+
+                          <div className="space-y-1 text-[10px]">
+                            <div className="flex items-center justify-between">
+                              <span className="flex items-center gap-1 text-cyan-300">
+                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                                Tưới nước sinh thái:
+                              </span>
+                              <span className="font-mono font-bold">{item.watering} ca ({Math.round(waterH)}%)</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="flex items-center gap-1 text-emerald-300">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                Cắt tỉa đón bão:
+                              </span>
+                              <span className="font-mono font-bold">{item.pruning} ca ({Math.round(pruneH)}%)</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="flex items-center gap-1 text-lime-300">
+                                <span className="w-1.5 h-1.5 rounded-full bg-lime-400" />
+                                Bón dưỡng rễ:
+                              </span>
+                              <span className="font-mono font-bold">{item.fertilizing} ca ({Math.round(fertH)}%)</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="flex items-center gap-1 text-amber-300">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                Trị nấm sâu bệnh:
+                              </span>
+                              <span className="font-mono font-bold">{item.treatment} ca ({Math.round(treatH)}%)</span>
+                            </div>
+                          </div>
+
+                          <div className="mt-2 pt-1.5 border-t border-slate-700/80 dark:border-slate-800 text-[9px] text-slate-400 truncate flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-emerald-400 shrink-0" />
+                            <span className="truncate">{item.mainStreet}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Bar Representation Container */}
+                      <div className="w-full max-w-[48px] h-44 bg-slate-100/80 dark:bg-slate-800/50 rounded-xl relative overflow-hidden flex items-end p-1 transition-all group-hover:bg-slate-200/80 dark:group-hover:bg-slate-800/80 border border-transparent group-hover:border-emerald-500/30">
+                        {/* Peak Badge */}
+                        {isPeak && (
+                          <div className="absolute top-1 inset-x-0 mx-auto w-fit px-1 py-0.2 rounded text-[8px] font-black uppercase tracking-wider bg-amber-500 text-slate-950 z-10 shadow-xs">
+                            Top 1
+                          </div>
+                        )}
+
+                        {/* Stacked Fill Capsule */}
+                        <div
+                          className={`w-full rounded-lg overflow-hidden transition-all duration-300 flex flex-col justify-end ${
+                            isHovered
+                              ? 'shadow-[0_0_16px_rgba(0,255,157,0.45)] ring-2 ring-emerald-400/80'
+                              : ''
+                          }`}
+                          style={{ height: `${totalHeightPercent}%` }}
+                        >
+                          {/* Top Segment: Treatment (Amber) */}
+                          <div
+                            style={{ height: `${treatH}%` }}
+                            className={`w-full bg-amber-500 transition-opacity ${
+                              highlightedCategory && highlightedCategory !== 'treatment' ? 'opacity-25' : 'opacity-100'
+                            }`}
+                            title={`Trị sâu bệnh: ${item.treatment} ca`}
+                          />
+                          {/* Segment 3: Fertilizing (Lime) */}
+                          <div
+                            style={{ height: `${fertH}%` }}
+                            className={`w-full bg-lime-500 transition-opacity ${
+                              highlightedCategory && highlightedCategory !== 'fertilizing' ? 'opacity-25' : 'opacity-100'
+                            }`}
+                            title={`Bón dưỡng rễ: ${item.fertilizing} ca`}
+                          />
+                          {/* Segment 2: Pruning (Emerald) */}
+                          <div
+                            style={{ height: `${pruneH}%` }}
+                            className={`w-full bg-emerald-500 dark:bg-[#00FF9D] transition-opacity ${
+                              highlightedCategory && highlightedCategory !== 'pruning' ? 'opacity-25' : 'opacity-100'
+                            }`}
+                            title={`Cắt tỉa: ${item.pruning} ca`}
+                          />
+                          {/* Bottom Segment: Watering (Cyan) */}
+                          <div
+                            style={{ height: `${waterH}%` }}
+                            className={`w-full bg-cyan-500 transition-opacity rounded-b-md ${
+                              highlightedCategory && highlightedCategory !== 'watering' ? 'opacity-25' : 'opacity-100'
+                            }`}
+                            title={`Tưới nước: ${item.watering} ca`}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Day Label & Count */}
+                      <div className="text-center">
+                        <div
+                          className={`text-xs font-black font-mono transition-colors ${
+                            isHovered || isPeak
+                              ? 'text-emerald-700 dark:text-[#00FF9D]'
+                              : 'text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          {item.day}
+                        </div>
+                        <div className="text-[11px] font-mono font-extrabold text-slate-900 dark:text-slate-100">
+                          {item.count}
+                        </div>
+                        <div className="text-[9px] text-slate-400 dark:text-slate-500">
+                          {item.dateStr.replace('Ngày ', '')}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Bottom KPI Telemetry Strip */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#08140e] border border-slate-200/80 dark:border-emerald-500/20 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-cyan-100 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-400 flex items-center justify-center font-bold">
+                  <Droplets className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold">
+                    Tổng Thực Địa 7 Ngày
+                  </div>
+                  <div className="text-base font-black text-slate-900 dark:text-slate-100 font-mono">
+                    {totalWeeklyCare} <span className="text-xs font-sans font-medium text-slate-500">lượt xử lý</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#08140e] border border-slate-200/80 dark:border-emerald-500/20 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 flex items-center justify-center font-bold">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold">
+                    Đỉnh Điểm Tuần
+                  </div>
+                  <div className="text-base font-black text-amber-600 dark:text-amber-400 font-mono">
+                    {peakDay.label}: {peakDay.count} ca{' '}
+                    <span className="text-xs font-sans font-normal text-slate-500 dark:text-slate-400">
+                      (Đạt 137% SLA)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#08140e] border border-slate-200/80 dark:border-emerald-500/20 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-[#00FF9D] flex items-center justify-center font-bold">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold">
+                    Hoàn Thành Kế Hoạch Tuần
+                  </div>
+                  <div className="text-base font-black text-emerald-600 dark:text-[#00FF9D] font-mono">
+                    98.5%{' '}
+                    <span className="text-xs font-sans font-normal text-slate-500 dark:text-slate-400">
+                      (Không tồn đọng)
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Enhanced Category Breakdown View */
+          <div className="space-y-4 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {categoryCareData.map((cat) => {
+                const CatIcon = cat.icon;
+                const totalCatCount = categoryCareData.reduce((acc, c) => acc + c.count, 0);
+                const percent = totalCatCount > 0 ? Math.round((cat.count / totalCatCount) * 100) : 0;
                 return (
                   <div
-                    key={item.day}
-                    className="flex-1 flex flex-col items-center gap-2 group cursor-pointer relative"
-                    onMouseEnter={() => setHoveredBar(index)}
-                    onMouseLeave={() => setHoveredBar(null)}
+                    key={cat.type}
+                    className="p-4 rounded-2xl bg-slate-50/80 dark:bg-[#08120c]/80 border border-slate-200/80 dark:border-slate-800/80 hover:border-emerald-400/50 transition-all flex flex-col justify-between gap-3 group shadow-xs hover:shadow-md"
                   >
-                    {/* Tooltip on Hover */}
-                    {isHovered && (
-                      <div className="absolute -top-14 z-20 px-2.5 py-1.5 rounded-xl bg-slate-900 text-white dark:bg-[#040c07] dark:border dark:border-emerald-500/40 text-[10px] whitespace-nowrap shadow-xl pointer-events-none animate-in fade-in zoom-in-95">
-                        <div className="font-bold text-[#00FF9D]">{item.label}</div>
-                        <div className="text-slate-300">{item.count} lượt xử lý thực địa</div>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200/60 dark:border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-[#00FF9D] shrink-0 group-hover:scale-105 transition-transform">
+                          <CatIcon className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+                            {cat.name}
+                          </div>
+                          <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono uppercase">
+                            MÃ: {cat.type}
+                          </div>
+                        </div>
                       </div>
-                    )}
-
-                    {/* Bar representation */}
-                    <div className="w-full max-w-[42px] h-36 bg-slate-100 dark:bg-slate-800/60 rounded-xl relative overflow-hidden flex items-end p-1 transition-colors">
-                      <div
-                        className={`w-full rounded-lg transition-all duration-500 ${isHovered
-                            ? 'bg-gradient-to-t from-emerald-600 to-[#00FF9D] shadow-[0_0_15px_rgba(0,255,157,0.6)]'
-                            : 'bg-gradient-to-t from-emerald-700 to-emerald-500 dark:from-emerald-700/80 dark:to-[#00FF9D]/80'
-                          }`}
-                        style={{ height: `${heightPercent}%` }}
-                      />
+                      <div className="text-right shrink-0">
+                        <div className="text-lg font-black text-emerald-600 dark:text-[#00FF9D] font-mono">
+                          {cat.count}
+                        </div>
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{percent}% tổng</div>
+                      </div>
                     </div>
 
-                    {/* Day Label */}
-                    <div className="text-center">
-                      <span className={`text-xs font-bold font-mono transition-colors ${isHovered
-                          ? 'text-emerald-700 dark:text-[#00FF9D]'
-                          : 'text-slate-600 dark:text-slate-400'
-                        }`}>
-                        {item.day}
-                      </span>
-                      <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
-                        {item.count}
+                    {/* Progress Bar */}
+                    <div className="space-y-1">
+                      <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-emerald-600 to-[#00FF9D]"
+                          style={{ width: `${Math.min(100, percent * 2.5)}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 pt-0.5">
+                        <span className="text-emerald-700 dark:text-[#00FF9D] font-medium">✓ Đạt định mức định kỳ</span>
+                        <span className="font-mono">{cat.count * 12} cây được bảo trợ</span>
                       </div>
                     </div>
                   </div>
                 );
               })}
             </div>
-
-            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-[#00FF9D] animate-pulse" />
-                Cập nhật tức thời: 146 lượt chăm sóc trong tuần
-              </span>
-              <span className="font-mono text-emerald-700 dark:text-[#00FF9D] font-medium">
-                Đỉnh điểm: 34 ca/ngày (Thứ 7)
-              </span>
-            </div>
-          </div>
-        ) : (
-          /* Category Breakdown View */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2">
-            {categoryCareData.map((cat) => {
-              const CatIcon = cat.icon;
-              return (
-                <div
-                  key={cat.type}
-                  className="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-[#08120c]/80 border border-slate-100 dark:border-slate-800/80 hover:border-emerald-400/40 transition-all flex items-center justify-between gap-3"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/50 dark:border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-[#00FF9D] shrink-0">
-                      <CatIcon className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{cat.name}</div>
-                      <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono uppercase">{cat.type}</div>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <span className="text-base font-extrabold text-emerald-600 dark:text-[#00FF9D] font-mono">
-                      {cat.count}
-                    </span>
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-1">lượt</span>
-                  </div>
-                </div>
-              );
-            })}
           </div>
         )}
       </div>
