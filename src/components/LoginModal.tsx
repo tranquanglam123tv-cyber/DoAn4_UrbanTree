@@ -138,18 +138,16 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-fade-in"
       data-lenis-prevent
-      onWheel={(e) => e.stopPropagation()}
     >
       <div
-        className="relative w-full max-w-md max-h-[92vh] flex flex-col bg-white dark:bg-[#0c1812] rounded-3xl shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] border border-emerald-100 dark:border-emerald-500/30 overflow-hidden animate-scale-up my-auto"
+        className="relative w-full max-w-md max-h-[90vh] flex flex-col bg-white dark:bg-[#0c1812] rounded-3xl shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] border border-emerald-100 dark:border-emerald-500/30 overflow-hidden animate-scale-up my-auto"
         data-lenis-prevent
-        onWheel={(e) => e.stopPropagation()}
       >
         {/* Top Accent Gradient Bar */}
-        <div className="h-2 bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-700" />
+        <div className="h-2 bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-700 shrink-0" />
 
         {/* Modal Header */}
-        <div className="p-6 pb-4 flex items-start justify-between border-b border-slate-100 dark:border-slate-800">
+        <div className="p-6 pb-4 flex items-start justify-between border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800 flex items-center justify-center text-emerald-700 dark:text-emerald-400 shadow-xs">
               {activeTab === 'citizen' ? (
@@ -177,7 +175,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         </div>
 
         {/* Two-Tab Navigation */}
-        <div className="p-2 bg-slate-100/80 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 flex gap-1">
+        <div className="p-2 bg-slate-100/80 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 flex gap-1 shrink-0">
           <button
             type="button"
             onClick={() => {
@@ -212,7 +210,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-5 overflow-y-auto flex-1 overscroll-contain" data-lenis-prevent>
           {error && (
             <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 rounded-xl text-xs flex items-center gap-2 animate-fade-in">
               <AlertCircle className="w-4 h-4 shrink-0" />
