@@ -1159,110 +1159,124 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* 📄 MODAL XUẤT BÁO CÁO ĐỊNH KỲ CHÍNH QUY (UBND & SỞ XÂY DỰNG TP. CẦN THƠ) */}
       {showOfficialReportModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto no-print"
           data-lenis-prevent
         >
-          <div className="bg-white dark:bg-[#0c1812] rounded-3xl max-w-4xl w-full max-h-[92vh] shadow-2xl flex flex-col border border-slate-200 dark:border-emerald-500/30 overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto">
-            {/* Header Toolbar */}
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/60 shrink-0">
+          <div className="bg-white dark:bg-[#0c1812] rounded-2xl max-w-3xl w-full max-h-[92vh] shadow-2xl flex flex-col border border-slate-200 dark:border-emerald-500/30 overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto">
+            {/* Header Toolbar (Sticky Top) */}
+            <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/90 dark:bg-slate-900/80 shrink-0">
               <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-slate-100">
-                  Bản In Báo Cáo Nghiệp Vụ Quản Trị Cây Xanh (Mẫu Sở Xây Dựng)
-                </h3>
+                <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-400 flex items-center justify-center">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-slate-100">
+                    Bản In Báo Cáo Sở Xây Dựng TP. Cần Thơ
+                  </h3>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                    Khổ chuẩn A4 · Nghị định 64/2010/NĐ-CP & Thông tư 20/2020/TT-BXD
+                  </p>
+                </div>
               </div>
+
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95"
+                  title="In báo cáo hoặc lưu dạng PDF (Ctrl + P)"
                 >
-                  <Printer className="w-4 h-4" />
-                  <span>In Báo Cáo / Lưu PDF</span>
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>In / Lưu PDF</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowOfficialReportModal(false)}
-                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  title="Đóng cửa sổ"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            {/* Document Content (A4 Official Printable Format) */}
-            <div className="p-6 sm:p-10 overflow-y-auto space-y-6 text-slate-800 dark:text-slate-200 font-sans leading-relaxed" data-lenis-prevent>
+            {/* Document Content (A4 Official Printable Format - Compact & Elegant) */}
+            <div
+              className="p-5 sm:p-7 overflow-y-auto space-y-4 text-slate-800 dark:text-slate-200 font-sans leading-normal print-document"
+              data-lenis-prevent
+            >
               {/* Official Header */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-slate-800 dark:border-slate-300 pb-4 gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-700 dark:border-slate-300 pb-2.5 gap-2">
                 <div className="text-center sm:text-left">
-                  <div className="font-semibold text-xs tracking-wider uppercase text-slate-600 dark:text-slate-400">
+                  <div className="font-semibold text-[10px] tracking-wider uppercase text-slate-600 dark:text-slate-400">
                     ỦY BAN NHÂN DÂN THÀNH PHỐ CẦN THƠ
                   </div>
-                  <div className="font-extrabold text-sm uppercase text-slate-900 dark:text-white">
+                  <div className="font-extrabold text-xs uppercase text-slate-900 dark:text-white">
                     SỞ XÂY DỰNG TP. CẦN THƠ
                   </div>
-                  <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                  <div className="font-mono text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
                     Số: 248/BC-SXD-QLĐT
                   </div>
                 </div>
 
                 <div className="text-center sm:text-right">
-                  <div className="font-extrabold text-xs uppercase text-slate-900 dark:text-white">
+                  <div className="font-extrabold text-[11px] uppercase text-slate-900 dark:text-white">
                     CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
                   </div>
-                  <div className="font-bold text-xs underline decoration-1 text-slate-800 dark:text-slate-200">
+                  <div className="font-bold text-[10px] underline decoration-1 text-slate-800 dark:text-slate-200">
                     Độc lập - Tự do - Hạnh phúc
                   </div>
-                  <div className="text-[11px] italic text-slate-500 dark:text-slate-400 mt-1">
+                  <div className="text-[10px] italic text-slate-500 dark:text-slate-400 mt-0.5">
                     Cần Thơ, ngày {new Date().getDate()} tháng {new Date().getMonth() + 1} năm {new Date().getFullYear()}
                   </div>
                 </div>
               </div>
 
               {/* Document Title */}
-              <div className="text-center space-y-1.5 pt-2">
-                <h1 className="text-base sm:text-lg font-black uppercase text-slate-900 dark:text-white tracking-tight">
-                  BÁO CÁO TỔNG HỢP CÔNG TÁC QUẢN TRỊ CÂY XANH ĐÔ THỊ, TIẾP NHẬN SỰ CỐ &amp; CHỈ SỐ CARBON SINH THÁI
+              <div className="text-center space-y-0.5 pt-1">
+                <h1 className="text-xs sm:text-sm font-black uppercase text-slate-900 dark:text-white tracking-tight">
+                  BÁO CÁO TỔNG HỢP CÔNG TÁC QUẢN TRỊ CÂY XANH ĐÔ THỊ, TIẾP NHẬN SỰ CỐ & CHỈ SỐ CARBON SINH THÁI
                 </h1>
-                <p className="text-xs italic text-slate-500 dark:text-slate-400">
+                <p className="text-[10px] italic text-slate-500 dark:text-slate-400">
                   (Căn cứ Thông tư 20/2020/TT-BXD, Nghị định 64/2010/NĐ-CP và Đề án Chuyển đổi số GIS 4.0)
                 </p>
               </div>
 
               {/* Section 1: Phân loại cây Thông tư 20 */}
-              <div className="space-y-2">
-                <h2 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
+              <div className="space-y-1.5">
+                <h2 className="font-extrabold text-xs text-slate-900 dark:text-emerald-400 uppercase tracking-wide flex items-center justify-between">
                   <span>I. Hiện trạng phân cấp cây xanh đô thị (Thông tư 20/2020/TT-BXD)</span>
+                  <span className="text-[10px] font-normal text-slate-400">Tổng: {stats.totalTrees} cây</span>
                 </h2>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border border-slate-200 dark:border-slate-800">
-                    <thead className="bg-slate-100 dark:bg-slate-800 font-bold text-slate-700 dark:text-slate-300">
+                <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
+                  <table className="w-full text-left text-[11px]">
+                    <thead className="bg-slate-100 dark:bg-slate-800/80 font-bold text-slate-700 dark:text-slate-300">
                       <tr>
-                        <th className="p-2.5 border-b border-slate-200 dark:border-slate-700">Phân loại cây</th>
-                        <th className="p-2.5 border-b border-slate-200 dark:border-slate-700">Tiêu chuẩn kích thước</th>
-                        <th className="p-2.5 border-b border-slate-200 dark:border-slate-700 text-center">Số lượng số hóa</th>
-                        <th className="p-2.5 border-b border-slate-200 dark:border-slate-700">Quy định quản lý</th>
+                        <th className="py-1.5 px-2.5 border-b border-slate-200 dark:border-slate-700">Phân loại cây</th>
+                        <th className="py-1.5 px-2.5 border-b border-slate-200 dark:border-slate-700">Tiêu chuẩn kích thước</th>
+                        <th className="py-1.5 px-2.5 border-b border-slate-200 dark:border-slate-700 text-center">Số lượng</th>
+                        <th className="py-1.5 px-2.5 border-b border-slate-200 dark:border-slate-700">Quy định quản lý</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-[11px]">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-[10px]">
                       <tr>
-                        <td className="p-2.5 font-bold text-blue-700 dark:text-blue-400">Cây Loại 1 (Mới trồng / Cây con)</td>
-                        <td className="p-2.5">Đường kính D &lt; 20cm, Chiều cao H &lt; 6m</td>
-                        <td className="p-2.5 text-center font-bold font-mono">{ecoAllometricStats.type1Count} cây</td>
-                        <td className="p-2.5">Duy trì cọc chống, tưới nước ẩm và kiểm tra định kỳ</td>
+                        <td className="py-1.5 px-2.5 font-bold text-blue-700 dark:text-blue-400">Cây Loại 1 (Mới trồng)</td>
+                        <td className="py-1.5 px-2.5">Đường kính D &lt; 20cm, Cao H &lt; 6m</td>
+                        <td className="py-1.5 px-2.5 text-center font-bold font-mono text-blue-700 dark:text-blue-400">{ecoAllometricStats.type1Count} cây</td>
+                        <td className="py-1.5 px-2.5">Duy trì cọc chống, tưới nước ẩm và kiểm tra định kỳ</td>
                       </tr>
                       <tr>
-                        <td className="p-2.5 font-bold text-emerald-700 dark:text-emerald-400">Cây Loại 2 (Trưởng thành)</td>
-                        <td className="p-2.5">Đường kính D: 20–50cm, Chiều cao H: 6–12m</td>
-                        <td className="p-2.5 text-center font-bold font-mono">{ecoAllometricStats.type2Count} cây</td>
-                        <td className="p-2.5">Cắt tỉa cành định kỳ trước mùa mưa bão</td>
+                        <td className="py-1.5 px-2.5 font-bold text-emerald-700 dark:text-emerald-400">Cây Loại 2 (Trưởng thành)</td>
+                        <td className="py-1.5 px-2.5">Đường kính D: 20–50cm, Cao H: 6–12m</td>
+                        <td className="py-1.5 px-2.5 text-center font-bold font-mono text-emerald-700 dark:text-emerald-400">{ecoAllometricStats.type2Count} cây</td>
+                        <td className="py-1.5 px-2.5">Cắt tỉa cành định kỳ trước mùa mưa bão</td>
                       </tr>
-                      <tr className="bg-purple-50/50 dark:bg-purple-950/30">
-                        <td className="p-2.5 font-bold text-purple-800 dark:text-purple-300">Cây Cổ Thụ Di Sản (Loại 3)</td>
-                        <td className="p-2.5">Đường kính D &ge; 50cm hoặc Chiều cao H &ge; 12m</td>
-                        <td className="p-2.5 text-center font-bold font-mono text-purple-700 dark:text-purple-300">{ecoAllometricStats.heritageCount} cây</td>
-                        <td className="p-2.5 font-semibold text-purple-900 dark:text-purple-300">
-                          Bảo tồn nghiêm ngặt. Cấm đốn hạ nếu không có phê duyệt từ UBND TP hoặc Sở Xây dựng
+                      <tr className="bg-purple-50/40 dark:bg-purple-950/20">
+                        <td className="py-1.5 px-2.5 font-bold text-purple-800 dark:text-purple-300">Cây Di Sản Cổ Thụ (Loại 3)</td>
+                        <td className="py-1.5 px-2.5">Đường kính D &ge; 50cm hoặc Cao H &ge; 12m</td>
+                        <td className="py-1.5 px-2.5 text-center font-bold font-mono text-purple-700 dark:text-purple-300">{ecoAllometricStats.heritageCount} cây</td>
+                        <td className="py-1.5 px-2.5 font-semibold text-purple-900 dark:text-purple-300">
+                          Bảo tồn nghiêm ngặt, cấm đốn hạ trái phép
                         </td>
                       </tr>
                     </tbody>
@@ -1270,69 +1284,98 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
               </div>
 
-              {/* Section 2: Sự cố & SLA */}
-              <div className="space-y-2">
-                <h2 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
-                  <span>II. Tiếp nhận xử lý sự cố &amp; Cam kết thời gian đáp ứng (SLA)</span>
+              {/* Section 2: Sự cố & SLA Cam Kết */}
+              <div className="space-y-1.5">
+                <h2 className="font-extrabold text-xs text-slate-900 dark:text-emerald-400 uppercase tracking-wide">
+                  II. Tiếp nhận xử lý sự cố & Cam kết thời gian đáp ứng (SLA)
                 </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                    <div className="text-[10px] text-slate-500 uppercase font-bold">Tổng số sự cố tiếp nhận</div>
-                    <div className="text-xl font-black text-slate-900 dark:text-white font-mono mt-0.5">{incidents.length} vụ</div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800">
+                    <div className="text-[9px] text-slate-500 uppercase font-bold">Tổng số sự cố tiếp nhận</div>
+                    <div className="text-base font-black text-slate-900 dark:text-white font-mono mt-0.5">{incidents.length} vụ</div>
                   </div>
-                  <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60">
-                    <div className="text-[10px] text-rose-700 dark:text-rose-400 uppercase font-bold">Mức độ Nguy cấp (CRITICAL)</div>
-                    <div className="text-xl font-black text-rose-700 dark:text-rose-400 font-mono mt-0.5">{incidentSlaStats.criticalCount} vụ (SLA 30p)</div>
+                  <div className="p-2 rounded-lg bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-900/50">
+                    <div className="text-[9px] text-rose-700 dark:text-rose-400 uppercase font-bold">Nguy cấp (CRITICAL - SLA 30p)</div>
+                    <div className="text-base font-black text-rose-700 dark:text-rose-400 font-mono mt-0.5">{incidentSlaStats.criticalCount} vụ</div>
                   </div>
-                  <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60">
-                    <div className="text-[10px] text-emerald-700 dark:text-emerald-400 uppercase font-bold">Tỷ lệ tuân thủ cam kết SLA</div>
-                    <div className="text-xl font-black text-emerald-700 dark:text-emerald-400 font-mono mt-0.5">{incidentSlaStats.complianceRate}%</div>
+                  <div className="p-2 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/50">
+                    <div className="text-[9px] text-emerald-700 dark:text-emerald-400 uppercase font-bold">Tuân thủ cam kết SLA</div>
+                    <div className="text-base font-black text-emerald-700 dark:text-emerald-400 font-mono mt-0.5">{incidentSlaStats.complianceRate}%</div>
                   </div>
-                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                    <div className="text-[10px] text-slate-500 uppercase font-bold">Nghiệm thu On-Chain</div>
-                    <div className="text-xl font-black text-slate-900 dark:text-white font-mono mt-0.5">{incidents.filter(i => i.status === 'RESOLVED').length} vụ</div>
+                  <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800">
+                    <div className="text-[9px] text-slate-500 uppercase font-bold">Nghiệm thu On-Chain</div>
+                    <div className="text-base font-black text-slate-900 dark:text-white font-mono mt-0.5">{incidents.filter(i => i.status === 'RESOLVED').length} vụ</div>
                   </div>
                 </div>
               </div>
 
               {/* Section 3: Sinh khối & Allometric Carbon */}
-              <div className="space-y-2">
-                <h2 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
-                  <span>III. Chỉ số sinh khối &amp; Hấp thụ Carbon (Mô hình USDA i-Tree Eco)</span>
+              <div className="space-y-1.5">
+                <h2 className="font-extrabold text-xs text-slate-900 dark:text-emerald-400 uppercase tracking-wide">
+                  III. Chỉ số sinh khối & Hấp thụ Carbon (Mô hình USDA i-Tree Eco)
                 </h2>
-                <div className="p-3.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 flex flex-wrap items-center justify-between gap-4 text-xs">
+                <div className="p-2.5 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/50 flex flex-wrap items-center justify-between gap-3 text-xs">
                   <div>
-                    <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Tổng sinh khối (Biomass)</span>
-                    <strong className="text-base text-emerald-800 dark:text-emerald-300 font-mono">{ecoAllometricStats.totalBiomassTon} tấn</strong>
+                    <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-bold">Tổng sinh khối gỗ (Biomass)</span>
+                    <strong className="text-sm text-emerald-800 dark:text-emerald-300 font-mono">{ecoAllometricStats.totalBiomassTon} tấn</strong>
                   </div>
                   <div>
-                    <span className="text-slate-500 dark:text-slate-400 block text-[10px]">CO2 cô lập tích lũy</span>
-                    <strong className="text-base text-teal-800 dark:text-teal-300 font-mono">{ecoAllometricStats.totalCo2TonYear} tấn CO2/năm</strong>
+                    <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-bold">CO2 cô lập tích lũy</span>
+                    <strong className="text-sm text-teal-800 dark:text-teal-300 font-mono">{ecoAllometricStats.totalCo2TonYear} tấn CO2/năm</strong>
                   </div>
                   <div>
-                    <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Oxy hoàn lưu không gian</span>
-                    <strong className="text-base text-cyan-800 dark:text-cyan-300 font-mono">{ecoAllometricStats.totalO2TonYear} tấn O2/năm</strong>
+                    <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-bold">Oxy tạo ra cho phố</span>
+                    <strong className="text-sm text-cyan-800 dark:text-cyan-300 font-mono">{ecoAllometricStats.totalO2TonYear} tấn O2/năm</strong>
                   </div>
                 </div>
               </div>
 
               {/* Signatures */}
-              <div className="pt-8 border-t border-slate-200 dark:border-slate-800 grid grid-cols-3 text-center text-xs">
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800 grid grid-cols-3 text-center text-[11px]">
                 <div>
                   <div className="font-bold uppercase text-slate-800 dark:text-slate-200">NGƯỜI LẬP BIỂU</div>
-                  <div className="text-[10px] text-slate-400 italic">(Ký và ghi rõ họ tên)</div>
-                  <div className="mt-14 font-semibold text-slate-700 dark:text-slate-300">Đặng Thế Thuận</div>
+                  <div className="text-[9px] text-slate-400 italic">(Ký và ghi rõ họ tên)</div>
+                  <div className="mt-7 font-semibold text-slate-700 dark:text-slate-300">Đặng Thế Thuận</div>
                 </div>
                 <div>
                   <div className="font-bold uppercase text-slate-800 dark:text-slate-200">TRƯỞNG PHÒNG QLĐT</div>
-                  <div className="text-[10px] text-slate-400 italic">(Ký và ghi rõ họ tên)</div>
-                  <div className="mt-14 font-semibold text-slate-700 dark:text-slate-300">Lê Tuấn Anh</div>
+                  <div className="text-[9px] text-slate-400 italic">(Ký và ghi rõ họ tên)</div>
+                  <div className="mt-7 font-semibold text-slate-700 dark:text-slate-300">Lê Tuấn Anh</div>
                 </div>
                 <div>
                   <div className="font-bold uppercase text-slate-800 dark:text-slate-200">GIÁM ĐỐC SỞ XÂY DỰNG</div>
-                  <div className="text-[10px] text-slate-400 italic">(Ký tên và đóng dấu)</div>
-                  <div className="mt-14 font-bold text-emerald-700 dark:text-emerald-400">ĐÃ PHÊ DUYỆT ON-CHAIN</div>
+                  <div className="text-[9px] text-slate-400 italic">(Ký tên và đóng dấu)</div>
+                  <div className="mt-7 font-bold text-emerald-700 dark:text-emerald-400 flex items-center justify-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-[#00FF9D]" />
+                    <span>ĐÃ PHÊ DUYỆT ON-CHAIN</span>
+                  </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Sticky Bottom Footer Toolbar (Tiện ích xem & In nhanh không cần cuộn) */}
+            <div className="px-5 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 flex items-center justify-between shrink-0 text-xs">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-[#00FF9D] animate-pulse" />
+                <span>Trang 1/1 · Khổ A4 chuẩn hóa tự động</span>
+              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowOfficialReportModal(false)}
+                  className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  Đóng
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>In Báo Cáo Ngay</span>
+                </button>
               </div>
             </div>
           </div>

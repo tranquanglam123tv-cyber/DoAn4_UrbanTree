@@ -408,3 +408,30 @@ html.dark .hero-badge-anim .rectangle, .dark .hero-badge-anim .rectangle {
     padding-top: max(0.5rem, env(safe-area-inset-top));
   }
 }
+
+/* 🖨️ Official A4 Print Styles (Sở Xây Dựng & Báo Cáo Định Kỳ) */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-document, .print-document * {
+    visibility: visible;
+  }
+  .print-document {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    padding: 10mm 15mm !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+    line-height: 1.3 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
