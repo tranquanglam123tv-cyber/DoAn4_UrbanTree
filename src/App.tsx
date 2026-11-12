@@ -8,6 +8,7 @@ import Lenis from 'lenis';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Header } from './components/Header';
+import { HomeLandingView } from './components/HomeLandingView';
 import { DashboardView } from './components/DashboardView';
 import { TreeListView } from './components/TreeListView';
 import { MapView } from './components/MapView';
@@ -28,7 +29,7 @@ import { Tree, User } from './types';
 gsap.registerPlugin(ScrollTrigger);
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [activeTab, setActiveTab] = useState<string>('home');
   const [currentUser, setCurrentUser] = useState<User>(storage.getActiveUser());
   const [isDark, setIsDark] = useState<boolean>(() => {
     return localStorage.getItem('urbantree_theme') === 'dark';
@@ -163,11 +164,34 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 overflow-x-hidden">
+        {/* Trang Chủ (Landing Page công cộng ai cũng xem được) */}
+        {activeTab === 'home' && (
+          <HomeLandingView
+            onOpenMap={() => setActiveTab('map')}
+            onOpenReport={() => setActiveTab('incidents')}
+            onOpenQrScanner={() => setIsQrScannerOpen(true)}
+            onOpenAdminDashboard={() => setActiveTab('dashboard')}
+            onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
+          />
+        )}
+
+        {/* Dashboard Quản trị dành cho Admin & Staff */}
         {activeTab === 'dashboard' && currentUser.role !== 'CITIZEN' && (
           <DashboardView
             onNavigate={(tab) => setActiveTab(tab)}
             onOpenAddTree={() => setIsAddTreeOpen(true)}
             onOpenCareModal={handleOpenCareModal}
+            onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
+          />
+        )}
+
+        {/* Nếu Citizen vào dashboard thì điều hướng về Home */}
+        {activeTab === 'dashboard' && currentUser.role === 'CITIZEN' && (
+          <HomeLandingView
+            onOpenMap={() => setActiveTab('map')}
+            onOpenReport={() => setActiveTab('incidents')}
+            onOpenQrScanner={() => setIsQrScannerOpen(true)}
+            onOpenAdminDashboard={() => showToast('Bạn đang ở vai trò Người dân. Vui lòng chuyển vai trò sang Admin hoặc Staff ở góc trên để vào Dashboard Quản Trị.')}
             onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
           />
         )}
@@ -183,7 +207,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'map' && currentUser.role !== 'CITIZEN' && (
+        {activeTab === 'map' && (
           <MapView
             onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
             onOpenCareModal={handleOpenCareModal}

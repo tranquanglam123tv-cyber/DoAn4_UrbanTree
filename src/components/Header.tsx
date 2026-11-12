@@ -13,6 +13,8 @@ import {
   Sparkles,
   Sun,
   Moon,
+  Home,
+  Sliders,
 } from 'lucide-react';
 import { Role, User } from '../types';
 import { storage } from '../db/storage';
@@ -49,7 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
         role: 'CITIZEN',
         isActive: true,
       });
-      setActiveTab('incidents');
+      setActiveTab('home');
     } else {
       const match = users.find((u) => u.role === role);
       if (match) {
@@ -65,8 +67,8 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Brand Logo */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
-              onClick={() => setActiveTab(currentUser.role === 'CITIZEN' ? 'incidents' : 'dashboard')}
-              className="flex items-center gap-2 text-left group focus:outline-none"
+              onClick={() => setActiveTab('home')}
+              className="flex items-center gap-2 text-left group focus:outline-none cursor-pointer"
             >
               <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-full bg-emerald-50 border border-emerald-200/70 flex items-center justify-center text-emerald-700 shadow-2xs transition-transform group-hover:scale-105">
                 <Trees className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
@@ -85,23 +87,40 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Navigation Links (Pill Tabs) */}
           <nav className="hidden lg:flex items-center gap-1 shrink-0 bg-slate-100/70 p-1 rounded-full border border-slate-200/60">
+            {/* 1. Trang chủ (dành cho mọi người, công cộng) */}
+            <button
+              onClick={() => setActiveTab('home')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
+                activeTab === 'home'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-emerald-700 hover:bg-white/80'
+              }`}
+            >
+              <Home className="w-3.5 h-3.5" />
+              <span>Trang chủ</span>
+            </button>
+
+            {/* 2. Nút riêng vào Dashboard Quản trị dành cho Admin & Staff */}
+            {currentUser.role !== 'CITIZEN' && (
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 whitespace-nowrap cursor-pointer border ${
+                  activeTab === 'dashboard'
+                    ? 'bg-emerald-700 text-white border-emerald-800 shadow-xs'
+                    : 'text-emerald-800 bg-emerald-50/70 border-emerald-200/80 hover:bg-emerald-100/80'
+                }`}
+              >
+                <Sliders className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Dashboard Quản trị</span>
+              </button>
+            )}
+
+            {/* 3. Phân hệ Quản lý Cây cho Nhân viên/Admin */}
             {currentUser.role !== 'CITIZEN' && (
               <>
                 <button
-                  onClick={() => setActiveTab('dashboard')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap ${
-                    activeTab === 'dashboard'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-emerald-700 hover:bg-white/80'
-                  }`}
-                >
-                  <LayoutDashboard className="w-3.5 h-3.5" />
-                  <span>Tổng quan</span>
-                </button>
-
-                <button
                   onClick={() => setActiveTab('trees')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
                     activeTab === 'trees'
                       ? 'bg-emerald-600 text-white shadow-xs'
                       : 'text-slate-600 hover:text-emerald-700 hover:bg-white/80'
@@ -110,36 +129,41 @@ export const Header: React.FC<HeaderProps> = ({
                   <Trees className="w-3.5 h-3.5" />
                   <span>Hồ sơ cây</span>
                 </button>
-
-                <button
-                  onClick={() => setActiveTab('map')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap ${
-                    activeTab === 'map'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-emerald-700 hover:bg-white/80'
-                  }`}
-                >
-                  <MapPin className="w-3.5 h-3.5" />
-                  <span>Bản đồ số</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('care')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap ${
-                    activeTab === 'care'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-emerald-700 hover:bg-white/80'
-                  }`}
-                >
-                  <ClipboardList className="w-3.5 h-3.5" />
-                  <span>Chăm sóc</span>
-                </button>
               </>
             )}
 
+            {/* 4. Bản đồ số GIS (Mọi người dân và nhân viên đều xem được) */}
+            <button
+              onClick={() => setActiveTab('map')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
+                activeTab === 'map'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-emerald-700 hover:bg-white/80'
+              }`}
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              <span>Bản đồ số GIS</span>
+            </button>
+
+            {/* 5. Chăm sóc (Nhân viên / Admin) */}
+            {currentUser.role !== 'CITIZEN' && (
+              <button
+                onClick={() => setActiveTab('care')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
+                  activeTab === 'care'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-emerald-700 hover:bg-white/80'
+                }`}
+              >
+                <ClipboardList className="w-3.5 h-3.5" />
+                <span>Chăm sóc</span>
+              </button>
+            )}
+
+            {/* 6. Phản ánh Sự cố (Mọi người) */}
             <button
               onClick={() => setActiveTab('incidents')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
                 activeTab === 'incidents'
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'text-slate-600 hover:text-emerald-700 hover:bg-white/80'
@@ -149,10 +173,11 @@ export const Header: React.FC<HeaderProps> = ({
               <span>Sự cố</span>
             </button>
 
+            {/* 7. Blockchain Proof (Admin) */}
             {currentUser.role === 'ADMIN' && (
               <button
                 onClick={() => setActiveTab('blockchain')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
                   activeTab === 'blockchain'
                     ? 'bg-emerald-600 text-white shadow-xs'
                     : 'text-slate-600 hover:text-emerald-700 hover:bg-white/80'
@@ -264,15 +289,23 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Mobile secondary navigation */}
         <div className="lg:hidden flex items-center gap-1 overflow-x-auto pt-2 pb-1 border-t border-slate-100 px-1 scrollbar-none">
+          <button
+            onClick={() => setActiveTab('home')}
+            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+              activeTab === 'home' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            Trang chủ
+          </button>
           {currentUser.role !== 'CITIZEN' && (
             <>
               <button
                 onClick={() => setActiveTab('dashboard')}
                 className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-                  activeTab === 'dashboard' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+                  activeTab === 'dashboard' ? 'bg-emerald-700 text-white font-bold' : 'text-emerald-800 bg-emerald-50 hover:bg-emerald-100'
                 }`}
               >
-                Tổng quan
+                Dashboard
               </button>
               <button
                 onClick={() => setActiveTab('trees')}
@@ -282,23 +315,25 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 Hồ sơ cây
               </button>
-              <button
-                onClick={() => setActiveTab('map')}
-                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-                  activeTab === 'map' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                Bản đồ số
-              </button>
-              <button
-                onClick={() => setActiveTab('care')}
-                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-                  activeTab === 'care' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                Chăm sóc
-              </button>
             </>
+          )}
+          <button
+            onClick={() => setActiveTab('map')}
+            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+              activeTab === 'map' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            Bản đồ số
+          </button>
+          {currentUser.role !== 'CITIZEN' && (
+            <button
+              onClick={() => setActiveTab('care')}
+              className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                activeTab === 'care' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              Chăm sóc
+            </button>
           )}
           <button
             onClick={() => setActiveTab('incidents')}

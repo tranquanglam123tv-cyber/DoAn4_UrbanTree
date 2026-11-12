@@ -14,12 +14,12 @@ import {
   Activity,
   Layers,
   Search,
+  Sliders,
+  Home,
 } from 'lucide-react';
 import { storage } from '../db/storage';
 import { blockchainService } from '../services/blockchainService';
 import { Tree } from '../types';
-import { HudBadge } from './common/HudBadge';
-import { PerspectiveTiltShowcase } from './common/PerspectiveTiltShowcase';
 
 interface DashboardViewProps {
   onNavigate: (tab: string) => void;
@@ -43,155 +43,51 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const sampleTree = trees[0] || null;
 
   return (
-    <div className="space-y-10 animate-fade-in pb-16">
-      {/* 🌟 HERO SECTION (AUTOMARK LIGHT STYLE) */}
-      <div className="flex flex-col items-center text-center pt-4 sm:pt-8 px-2 sm:px-6 max-w-4xl mx-auto space-y-4 sm:space-y-6">
-        {/* Automark HUD Corner-dot Tagline Badge */}
-        <HudBadge label="HỆ THỐNG QUẢN LÝ SINH THÁI CÂY XANH ĐÔ THỊ 4.0" />
+    <div className="space-y-8 animate-fade-in pb-16">
+      {/* 🧭 Top Admin Dashboard Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bento-card p-5 sm:p-6 bg-gradient-to-r from-emerald-950/10 via-transparent to-transparent">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white font-bold text-[10px] uppercase tracking-wider">
+              ADMIN CONTROL CENTER
+            </span>
+            <span className="text-xs text-slate-500">· Hệ thống điều hành Đô thị thông minh</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <Sliders className="w-6 h-6 text-emerald-600" />
+            <span>Bảng Điều Khiển Quản Trị Hệ Thống (Admin Dashboard)</span>
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Giám sát toàn diện hạ tầng cây xanh, phân công xử lý sự cố và kiểm tra tính toàn vẹn Smart Contract.
+          </p>
+        </div>
 
-        {/* Hero Headline */}
-        <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 leading-[1.15]">
-          Bảo Tồn &amp; Phát Triển{' '}
-          <span className="text-emerald-600 bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">
-            Sinh Quyển Đô Thị
-          </span>{' '}
-          Bằng AI &amp; Chuỗi Khối
-        </h1>
-
-        {/* Subtitle */}
-        <p className="text-sm sm:text-lg text-slate-600 max-w-2xl leading-relaxed">
-          Nền tảng GIS thời gian thực số hóa từng cá thể cây xanh, dự báo nguy cơ gãy đổ tự động bằng Gemini AI và minh bạch lịch sử chăm sóc trên sổ cái Blockchain bất biến.
-        </p>
-
-        {/* Action Button Group */}
-        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 pt-2">
+        <div className="flex items-center gap-2.5 shrink-0">
           <button
-            onClick={() => onNavigate('map')}
-            className="flex items-center gap-2 px-6 py-3.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-emerald-600/30 active:scale-95 group cursor-pointer"
+            onClick={() => onNavigate('home')}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors cursor-pointer border border-slate-200"
           >
-            <MapPin className="w-4 h-4 text-emerald-200" />
-            <span>Khám Phá Bản Đồ Cây GIS</span>
-            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            <Home className="w-3.5 h-3.5" />
+            <span>Về Trang Chủ</span>
           </button>
 
           <button
             onClick={onOpenAddTree}
-            className="flex items-center gap-2 px-5 py-3.5 rounded-full bg-white hover:bg-slate-50 text-slate-800 font-semibold text-xs sm:text-sm border border-slate-200/90 transition-all shadow-sm shadow-slate-900/5 active:scale-95 cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all shadow-md shadow-emerald-600/20 active:scale-95 cursor-pointer"
           >
-            <Plus className="w-4 h-4 text-emerald-600" />
+            <Plus className="w-4 h-4" />
             <span>Thêm Cây Mới</span>
           </button>
 
           <button
             onClick={() => onOpenCareModal()}
-            className="flex items-center gap-2 px-5 py-3.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold text-xs sm:text-sm border border-emerald-200/70 transition-all active:scale-95 cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white hover:bg-emerald-50 text-emerald-800 font-bold text-xs transition-colors border border-emerald-200 shadow-xs cursor-pointer"
           >
             <ClipboardList className="w-4 h-4 text-emerald-600" />
             <span>Ghi Chăm Sóc</span>
           </button>
         </div>
       </div>
-
-      {/* 🚀 AUTOMARK 3D PERSPECTIVE SCROLL TILT SHOWCASE (TỪ NẰM SANG ĐỨNG) */}
-      <PerspectiveTiltShowcase
-        urlBarText="urbantree.cantho.gov.vn/gis/live-radar"
-        badgeText="RADAR TRỰC TIẾP GIS CẦN THƠ"
-      >
-        <div className="relative min-h-[360px] sm:min-h-[460px] p-4 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 bg-gradient-to-br from-emerald-50/70 via-teal-50/30 to-slate-50">
-          {/* Background Map Visual Simulation */}
-          <div className="absolute inset-0 opacity-25 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
-
-          {/* Left Floating Card: Tree Quick Specs */}
-          <div className="relative z-10 w-full md:w-80 bento-card p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                CÂY CỔ THỤ ĐÔ THỊ
-              </span>
-              <span className="font-mono text-xs font-bold text-emerald-700">
-                {sampleTree ? sampleTree.publicCode : '#TREE-001'}
-              </span>
-            </div>
-
-            <div>
-              <div className="text-base sm:text-lg font-bold text-slate-900">
-                {sampleTree ? sampleTree.displayName : 'Cây Bàng Đài Loan #01'}
-              </div>
-              <div className="text-xs text-slate-500 truncate">
-                {sampleTree ? sampleTree.address : 'Công viên Lưu Hữu Phước, Q. Ninh Kiều, Cần Thơ'}
-              </div>
-            </div>
-
-            <div className="w-full h-px bg-slate-100" />
-
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div>
-                <div className="text-[10px] text-slate-400">Năm trồng</div>
-                <div className="text-xs sm:text-sm font-bold text-slate-900">
-                  {sampleTree ? sampleTree.plantedAt : '2021'}
-                </div>
-              </div>
-              <div>
-                <div className="text-[10px] text-slate-400">Chiều cao</div>
-                <div className="text-xs sm:text-sm font-bold text-slate-900">
-                  {sampleTree ? `${sampleTree.heightM} m` : '7.5 m'}
-                </div>
-              </div>
-              <div>
-                <div className="text-[10px] text-slate-400">Độ an toàn</div>
-                <div className="text-xs sm:text-sm font-bold text-emerald-600">98.5%</div>
-              </div>
-            </div>
-
-            <div className="px-3 py-2 rounded-xl bg-emerald-50/90 border border-emerald-200/60 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-              <div className="text-[11px] text-emerald-800 font-medium truncate font-mono">
-                EVM: 0x9f8c...b412 (100% Khớp)
-              </div>
-            </div>
-          </div>
-
-          {/* Center Pulsing Radar Hub */}
-          <div className="relative z-10 flex flex-col items-center text-center space-y-3">
-            <div className="relative">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-emerald-500/10 border-2 border-emerald-500/40 flex items-center justify-center animate-pulse">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-600/40">
-                  <Activity className="w-5 h-5 sm:w-6 sm:h-6" />
-                </div>
-              </div>
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 animate-ping" />
-            </div>
-
-            <div className="bg-white/95 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200/90 shadow-sm">
-              <div className="text-xs font-bold text-slate-900">{stats.totalTrees} Cây Xanh Giám Sát</div>
-              <div className="text-[10px] text-emerald-600 font-medium">Bảo chứng toàn vẹn dữ liệu</div>
-            </div>
-          </div>
-
-          {/* Right Floating Card: Gemini AI Insight */}
-          <div className="relative z-10 w-full md:w-80 bento-card p-5 space-y-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-200/60 flex items-center justify-center text-indigo-600">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="text-xs sm:text-sm font-bold text-slate-900">Gemini Vision AI</div>
-                <div className="text-[10px] text-indigo-600 font-medium">Chẩn đoán hình ảnh thực địa</div>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-600 leading-relaxed italic">
-              "Tán lá phát triển đồng đều, thân không có vết nứt mục hoặc nấm rễ ký sinh. Đề xuất: Cắt tỉa cành vươn trước mùa mưa tháng 11."
-            </p>
-
-            <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-              <span className="text-[11px] text-slate-500">Độ tin cậy mô hình</span>
-              <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-mono">
-                98.4% Match
-              </span>
-            </div>
-          </div>
-        </div>
-      </PerspectiveTiltShowcase>
 
       {/* 🍱 BENTO GRID KPI STATS (AUTOMARK LIGHT THEME) */}
       <div className="space-y-4">
@@ -249,7 +145,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="text-2xl sm:text-3xl font-extrabold text-amber-600 tabular-nums">
               {stats.atRiskTrees}
             </div>
-            <div className="text-[11px] text-amber-600 font-medium mt-1">Sâu bệnh hoặc nghiêng</div>
+            <div className="text-[11px] text-amber-600 font-medium mt-1">Cần cắt tỉa / Gia cố cọc</div>
           </div>
 
           {/* Card 4 */}
@@ -257,56 +153,52 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="flex items-center justify-between text-slate-400 mb-2">
               <span className="text-xs font-semibold text-slate-500">Sự cố đang xử lý</span>
               <div className="w-7 h-7 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600">
-                <AlertTriangle className="w-4 h-4" />
+                <ClipboardList className="w-4 h-4" />
               </div>
             </div>
             <div className="text-2xl sm:text-3xl font-extrabold text-rose-600 tabular-nums">
               {stats.activeIncidents}
             </div>
-            <div className="text-[11px] text-slate-500 mt-1">Từ phản ánh cộng đồng</div>
+            <div className="text-[11px] text-rose-600 font-medium mt-1">Tiếp nhận từ phản ánh</div>
           </div>
 
           {/* Card 5 */}
-          <div className="col-span-2 lg:col-span-1 bento-card p-4 sm:p-5">
+          <div className="bento-card p-4 sm:p-5 col-span-2 lg:col-span-1">
             <div className="flex items-center justify-between text-slate-400 mb-2">
-              <span className="text-xs font-semibold text-slate-500">Khối Blockchain</span>
+              <span className="text-xs font-semibold text-slate-500">Smart Contract</span>
               <div className="w-7 h-7 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
                 <ShieldCheck className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-indigo-700 tabular-nums">
+            <div className="text-2xl sm:text-3xl font-extrabold text-indigo-600 tabular-nums font-mono">
               {stats.totalAnchors}
             </div>
-            <div className="text-[11px] text-indigo-600 font-medium mt-1 flex items-center">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-ping" />
-              100% SHA-256
-            </div>
+            <div className="text-[11px] text-indigo-600 font-medium mt-1">Bản ghi On-chain</div>
           </div>
         </div>
       </div>
 
-      {/* 📊 HEALTH BREAKDOWN & PRIORITY INCIDENTS */}
+      {/* 📊 MID ROW: HEALTH BREAKDOWN + PRIORITY INCIDENTS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Health status distribution Bento */}
+        {/* Health Breakdown Bento Card */}
         <div className="bento-card p-5 sm:p-6 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm sm:text-base font-bold text-slate-900">Hiện Trạng Sức Khỏe</h2>
-              <button
-                onClick={() => onNavigate('trees')}
-                className="text-xs font-semibold text-emerald-700 hover:underline flex items-center gap-1"
-              >
-                <span>Chi tiết</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+              <h2 className="text-sm sm:text-base font-bold text-slate-900">Phân Phối Sức Khỏe Cây</h2>
+              <span className="text-[10px] bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
+                Kiểm định thực địa
+              </span>
             </div>
 
-            {/* Distribution bars */}
             <div className="space-y-3.5">
+              {/* GOOD */}
               <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-600 font-medium">Tốt (Sinh trưởng khỏe mạnh)</span>
-                  <span className="font-bold text-emerald-700 tabular-nums">{stats.healthBreakdown.GOOD} cây</span>
+                <div className="flex justify-between text-xs font-semibold mb-1">
+                  <span className="text-emerald-700 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    Tốt (Khỏe mạnh, tán lá dày)
+                  </span>
+                  <span className="font-mono text-slate-800">{stats.healthBreakdown.GOOD}</span>
                 </div>
                 <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                   <div
@@ -316,10 +208,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
               </div>
 
+              {/* FAIR */}
               <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-600 font-medium">Bình thường (Định kỳ cắt tỉa)</span>
-                  <span className="font-bold text-slate-700 tabular-nums">{stats.healthBreakdown.FAIR} cây</span>
+                <div className="flex justify-between text-xs font-semibold mb-1">
+                  <span className="text-slate-600 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-slate-400" />
+                    Bình thường (Phát triển ổn định)
+                  </span>
+                  <span className="font-mono text-slate-800">{stats.healthBreakdown.FAIR}</span>
                 </div>
                 <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                   <div
@@ -329,23 +225,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
               </div>
 
+              {/* POOR */}
               <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-600 font-medium">Kém (Lá héo / Sâu đục thân)</span>
-                  <span className="font-bold text-amber-600 tabular-nums">{stats.healthBreakdown.POOR} cây</span>
+                <div className="flex justify-between text-xs font-semibold mb-1">
+                  <span className="text-amber-700 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                    Kém (Sâu bệnh, cành khô)
+                  </span>
+                  <span className="font-mono text-slate-800">{stats.healthBreakdown.POOR}</span>
                 </div>
                 <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                   <div
-                    className="bg-amber-400 h-2 rounded-full transition-all duration-500"
+                    className="bg-amber-500 h-2 rounded-full transition-all duration-500"
                     style={{ width: `${(stats.healthBreakdown.POOR / (stats.totalTrees || 1)) * 100}%` }}
                   />
                 </div>
               </div>
 
+              {/* CRITICAL */}
               <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-600 font-medium">Nguy cấp (Nghiêng / Nứt gốc)</span>
-                  <span className="font-bold text-rose-600 tabular-nums">{stats.healthBreakdown.CRITICAL} cây</span>
+                <div className="flex justify-between text-xs font-semibold mb-1">
+                  <span className="text-rose-700 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-rose-500" />
+                    Nguy cấp (Nghiêng, mục rễ, sắp đổ)
+                  </span>
+                  <span className="font-mono text-slate-800">{stats.healthBreakdown.CRITICAL}</span>
                 </div>
                 <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                   <div
