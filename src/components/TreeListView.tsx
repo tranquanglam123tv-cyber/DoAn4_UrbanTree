@@ -22,6 +22,9 @@ import {
   AlertTriangle,
   LocateFixed,
   Cpu,
+  Scissors,
+  Ruler,
+  RefreshCw,
 } from 'lucide-react';
 import { Tree, TreeHealthStatus } from '../types';
 import { storage } from '../db/storage';
@@ -70,7 +73,33 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
   const [selectedType, setSelectedType] = useState<string>('ALL');
   const [selectedHealth, setSelectedHealth] = useState<string>('ALL');
   const [selectedCorridorFilter, setSelectedCorridorFilter] = useState<string>('ALL');
+  // 📏🌲✂️ Bộ lọc lâm sinh & kỹ thuật cây xanh
+  const [selectedHeight, setSelectedHeight] = useState<string>('ALL');
+  const [selectedDiameter, setSelectedDiameter] = useState<string>('ALL');
+  const [selectedPruning, setSelectedPruning] = useState<string>('ALL');
   const [viewMode, setViewMode] = useState<'grid' | 'table' | 'corridor'>('corridor');
+
+  // Lấy danh sách lịch sử chăm sóc để xác định ngày chưa cắt tỉa
+  const careRecords = useMemo(() => storage.getCareRecords(), []);
+
+  // Map treeId -> số ngày trôi qua kể từ lần cắt tỉa cành (PRUNING) gần nhất
+  const treePruningDaysMap = useMemo(() => {
+    const map = new Map<string, number>();
+    const now = Date.now();
+    careRecords.forEach((c) => {
+      if (c.actionType === 'PRUNING' && c.performedAt) {
+        const time = new Date(c.performedAt).getTime();
+        if (!isNaN(time)) {
+          const days = Math.max(0, Math.floor((now - time) / (24 * 60 * 60 * 1000)));
+          const currentMinDays = map.get(c.treeId);
+          if (currentMinDays === undefined || days < currentMinDays) {
+            map.set(c.treeId, days);
+          }
+        }
+      }
+    });
+    return map;
+  }, [careRecords]);
 
   // ⚡ Debounce 300ms: Tối ưu chống đơ lag khi tìm kiếm trên tập 5,000+ cây
   useEffect(() => {
@@ -120,7 +149,18 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
   // Reset trang về 1 khi bất kỳ bộ lọc nào thay đổi
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, selectedProvince, selectedArea, selectedCorridorFilter, selectedType, selectedHealth, viewMode]);
+  }, [
+    debouncedSearch,
+    selectedProvince,
+    selectedArea,
+    selectedCorridorFilter,
+    selectedType,
+    selectedHealth,
+    selectedHeight,
+    selectedDiameter,
+    selectedPruning,
+    viewMode,
+  ]);
 
   // Filtered Trees (Tối ưu Fast-Path Short Circuit: kiểm tra thuộc tính trực tiếp trước khi tính toán chuỗi)
   const filteredTrees = useMemo(() => {
@@ -131,11 +171,40 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
       if (selectedHealth !== 'ALL' && tree.healthStatus !== selectedHealth) return false;
       if (selectedType !== 'ALL' && tree.treeTypeId !== selectedType) return false;
 
-      // 2. Area & Corridor checks
+      // 2. Chiều cao cây (heightM)
+      if (selectedHeight !== 'ALL') {
+        const h = tree.heightM ?? 0;
+        if (selectedHeight === '<6' && !(h < 6)) return false;
+        if (selectedHeight === '6-12' && !(h >= 6 && h <= 12)) return false;
+        if (selectedHeight === '12-20' && !(h > 12 && h <= 20)) return false;
+        if (selectedHeight === '>20' && !(h > 20)) return false;
+      }
+
+      // 3. Độ to thân cây (diameterCm)
+      if (selectedDiameter !== 'ALL') {
+        const d = tree.diameterCm ?? 0;
+        if (selectedDiameter === '<20' && !(d < 20)) return false;
+        if (selectedDiameter === '20-50' && !(d >= 20 && d <= 50)) return false;
+        if (selectedDiameter === '50-100' && !(d > 50 && d <= 100)) return false;
+        if (selectedDiameter === '>100' && !(d > 100)) return false;
+      }
+
+      // 4. Ngày chưa cắt tỉa (Pruning)
+      if (selectedPruning !== 'ALL') {
+        const daysSince = treePruningDaysMap.get(tree.id); // undefined nếu chưa từng cắt tỉa
+        if (selectedPruning === 'NEVER' && daysSince !== undefined) return false;
+        if (selectedPruning === '>30' && (daysSince !== undefined && daysSince <= 30)) return false;
+        if (selectedPruning === '>60' && (daysSince !== undefined && daysSince <= 60)) return false;
+        if (selectedPruning === '>90' && (daysSince !== undefined && daysSince <= 90)) return false;
+        if (selectedPruning === '>180' && (daysSince !== undefined && daysSince <= 180)) return false;
+        if (selectedPruning === '<=30' && (daysSince === undefined || daysSince > 30)) return false;
+      }
+
+      // 5. Area & Corridor checks
       if (selectedArea !== 'ALL' && getTreeGeneralArea(tree) !== selectedArea) return false;
       if (selectedCorridorFilter !== 'ALL' && getTreeCorridor(tree) !== selectedCorridorFilter) return false;
 
-      // 3. Search query check (chỉ tính toán chuỗi khi người dùng gõ tìm kiếm)
+      // 6. Search query check (chỉ tính toán chuỗi khi người dùng gõ tìm kiếm)
       if (!searchLower) return true;
 
       if (
@@ -155,7 +224,18 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
       const milestone = getTreeMilestone(tree).toLowerCase();
       return milestone.includes(searchLower);
     });
-  }, [trees, debouncedSearch, selectedArea, selectedType, selectedHealth, selectedCorridorFilter]);
+  }, [
+    provinceTrees,
+    debouncedSearch,
+    selectedArea,
+    selectedCorridorFilter,
+    selectedType,
+    selectedHealth,
+    selectedHeight,
+    selectedDiameter,
+    selectedPruning,
+    treePruningDaysMap,
+  ]);
 
   // Paginated Trees for Grid & Table
   const totalPages = Math.max(1, Math.ceil(filteredTrees.length / pageSize));
@@ -329,28 +409,29 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="p-3 bento-card flex flex-wrap items-center gap-3 dark:bg-[#0c1812] dark:border-slate-800">
-        <div className="relative flex-1 min-w-[220px]">
-          <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3" />
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Tìm theo mã tuyến [HB-01], số nhà mốc, tên cây, đường phố..."
-            className="w-full pl-9 pr-8 py-2 text-xs border border-slate-200 dark:border-slate-700/80 rounded-full focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-slate-50/50 dark:bg-slate-900/90 dark:text-slate-100 dark:placeholder-slate-500"
-          />
-          {searchInput && (
-            <button
-              type="button"
-              onClick={() => setSearchInput('')}
-              className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold"
-            >
-              ✕
-            </button>
-          )}
-        </div>
+      <div className="p-3 bento-card space-y-2.5 dark:bg-[#0c1812] dark:border-slate-800">
+        {/* HÀNG 1: TÌM KIẾM & ĐỊA BÀN TUYẾN ĐƯỜNG */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="relative flex-1 min-w-[240px]">
+            <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-2.5" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Tìm theo mã tuyến [HB-01], số nhà mốc, tên cây, đường phố..."
+              className="w-full pl-9 pr-8 py-2 text-xs border border-slate-200 dark:border-slate-700/80 rounded-xl focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-slate-50/50 dark:bg-slate-900/90 dark:text-slate-100 dark:placeholder-slate-500 transition-all shadow-2xs"
+            />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={() => setSearchInput('')}
+                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            )}
+          </div>
 
-        <div className="flex flex-wrap items-center gap-2">
           {/* 🏙️ Lọc theo Tỉnh / Thành phố (Toàn quốc, Cần Thơ, Đà Nẵng, TP.HCM, Hà Nội...) */}
           <select
             value={selectedProvince}
@@ -359,7 +440,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
               setSelectedArea('ALL');
               setSelectedCorridorFilter('ALL');
             }}
-            className="px-3 py-1.5 text-xs font-bold border border-blue-300 dark:border-blue-700/80 rounded-full bg-blue-50/80 dark:bg-blue-950/60 text-blue-900 dark:text-blue-300 focus:border-blue-500 shadow-2xs cursor-pointer"
+            className="px-3 py-2 text-xs font-bold border border-blue-300 dark:border-blue-700/80 rounded-xl bg-blue-50/80 dark:bg-blue-950/60 text-blue-900 dark:text-blue-300 focus:border-blue-500 shadow-2xs cursor-pointer"
           >
             {NATIONAL_PROVINCES.map((prov) => (
               <option key={prov.id} value={prov.id}>
@@ -375,7 +456,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
               setSelectedArea(e.target.value);
               setSelectedCorridorFilter('ALL');
             }}
-            className="px-3 py-1.5 text-xs font-bold border border-emerald-300 dark:border-emerald-700/80 rounded-full bg-emerald-50/80 dark:bg-emerald-950/60 text-emerald-900 dark:text-[#00FF9D] focus:border-emerald-500 shadow-2xs cursor-pointer"
+            className="px-3 py-2 text-xs font-bold border border-emerald-300 dark:border-emerald-700/80 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/60 text-emerald-900 dark:text-[#00FF9D] focus:border-emerald-500 shadow-2xs cursor-pointer"
           >
             <option value="ALL">📍 Tất cả địa phương ({availableAreas.length} khu vực)</option>
             {availableAreas.map(([areaName, count]) => (
@@ -389,7 +470,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
           <select
             value={selectedCorridorFilter}
             onChange={(e) => setSelectedCorridorFilter(e.target.value)}
-            className="px-3 py-1.5 text-xs font-medium border border-slate-200 dark:border-slate-700/80 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500"
+            className="px-3 py-2 text-xs font-medium border border-slate-200 dark:border-slate-700/80 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 shadow-2xs cursor-pointer"
           >
             <option value="ALL">
               🛣️ {selectedArea !== 'ALL' ? `Tất cả tuyến ở ${selectedArea.split('(')[0].trim()}` : 'Tất cả tuyến đường'} ({availableCorridors.length})
@@ -400,35 +481,124 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
               </option>
             ))}
           </select>
+        </div>
 
-          {/* Lọc loài cây */}
-          <select
-            value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value)}
-            className="px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700/80 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500"
-          >
-            <option value="ALL">Tất cả loài cây</option>
-            {treeTypes.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
+        {/* HÀNG 2: THÔNG SỐ LÂM SINH (CHIỀU CAO, ĐỘ TO THÂN, CẮT TỈA, LOÀI CÂY, SỨC KHỎE) */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-800/60">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* 📏 LỌC THEO CHIỀU CAO CÂY */}
+            <select
+              value={selectedHeight}
+              onChange={(e) => setSelectedHeight(e.target.value)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer shadow-2xs ${
+                selectedHeight !== 'ALL'
+                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-[#00FF9D]'
+                  : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+              }`}
+            >
+              <option value="ALL">📏 Tất cả chiều cao</option>
+              <option value="<6">&lt; 6m (Cây thấp / mới trồng)</option>
+              <option value="6-12">6m - 12m (Loại 1 - Trung bình)</option>
+              <option value="12-20">12m - 20m (Loại 2 - Cây cao)</option>
+              <option value=">20">&gt; 20m (Cây đại thụ / Tán lớn)</option>
+            </select>
 
-          {/* Lọc sức khỏe */}
-          <select
-            value={selectedHealth}
-            onChange={(e) => setSelectedHealth(e.target.value)}
-            className="px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700/80 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500"
-          >
-            <option value="ALL">Tất cả sức khỏe</option>
-            <option value="GOOD">Tốt (GOOD)</option>
-            <option value="FAIR">Bình thường (FAIR)</option>
-            <option value="POOR">Kém (POOR)</option>
-            <option value="CRITICAL">Nguy cấp (CRITICAL)</option>
-          </select>
+            {/* 🌳 LỌC THEO ĐỘ TO THÂN CÂY (ĐƯỜNG KÍNH DBH) */}
+            <select
+              value={selectedDiameter}
+              onChange={(e) => setSelectedDiameter(e.target.value)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer shadow-2xs ${
+                selectedDiameter !== 'ALL'
+                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-[#00FF9D]'
+                  : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+              }`}
+            >
+              <option value="ALL">🌳 Tất cả độ to thân (Đk)</option>
+              <option value="<20">&lt; 20cm (Thân mảnh / cây non)</option>
+              <option value="20-50">20cm - 50cm (Thân vừa)</option>
+              <option value="50-100">50cm - 100cm (Thân to)</option>
+              <option value=">100">&gt; 100cm (Cổ thụ &gt; 1m)</option>
+            </select>
 
-          <span className="text-xs text-emerald-700 dark:text-[#00FF9D] font-mono font-bold pl-2">
+            {/* ✂️ LỌC THEO NGÀY CHƯA CẮT TỈA */}
+            <select
+              value={selectedPruning}
+              onChange={(e) => setSelectedPruning(e.target.value)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer shadow-2xs ${
+                selectedPruning !== 'ALL'
+                  ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300'
+                  : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+              }`}
+            >
+              <option value="ALL">✂️ Tất cả kỳ cắt tỉa</option>
+              <option value=">30">Chưa tỉa &gt; 30 ngày (1 tháng)</option>
+              <option value=">60">Chưa tỉa &gt; 60 ngày (2 tháng)</option>
+              <option value=">90">Chưa tỉa &gt; 90 ngày (1 quý)</option>
+              <option value=">180">Chưa tỉa &gt; 180 ngày (6 tháng - Cần tỉa)</option>
+              <option value="NEVER">Chưa từng có hồ sơ tỉa cành</option>
+              <option value="<=30">Đã tỉa gần đây (≤ 30 ngày)</option>
+            </select>
+
+            {/* Lọc loài cây */}
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700/80 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 shadow-2xs cursor-pointer"
+            >
+              <option value="ALL">Tất cả loài cây</option>
+              {treeTypes.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+
+            {/* Lọc sức khỏe */}
+            <select
+              value={selectedHealth}
+              onChange={(e) => setSelectedHealth(e.target.value)}
+              className="px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700/80 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 shadow-2xs cursor-pointer"
+            >
+              <option value="ALL">Tất cả sức khỏe</option>
+              <option value="GOOD">Tốt (GOOD)</option>
+              <option value="FAIR">Bình thường (FAIR)</option>
+              <option value="POOR">Kém (POOR)</option>
+              <option value="CRITICAL">Nguy cấp (CRITICAL)</option>
+            </select>
+
+            {/* Nút Xóa bộ lọc nếu có điều kiện đang active */}
+            {(searchInput ||
+              selectedProvince !== 'all' ||
+              selectedArea !== 'ALL' ||
+              selectedCorridorFilter !== 'ALL' ||
+              selectedType !== 'ALL' ||
+              selectedHealth !== 'ALL' ||
+              selectedHeight !== 'ALL' ||
+              selectedDiameter !== 'ALL' ||
+              selectedPruning !== 'ALL') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchInput('');
+                  setSelectedProvince('all');
+                  setSelectedArea('ALL');
+                  setSelectedCorridorFilter('ALL');
+                  setSelectedType('ALL');
+                  setSelectedHealth('ALL');
+                  setSelectedHeight('ALL');
+                  setSelectedDiameter('ALL');
+                  setSelectedPruning('ALL');
+                }}
+                className="px-2.5 py-1 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                title="Xóa toàn bộ bộ lọc về mặc định"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>Đặt lại</span>
+              </button>
+            )}
+          </div>
+
+          <span className="text-xs text-emerald-700 dark:text-[#00FF9D] font-mono font-bold whitespace-nowrap pl-2">
             {filteredTrees.length}/{trees.length} cây
           </span>
         </div>
@@ -569,12 +739,36 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
 
                           {/* Metrics summary */}
                           <div className="flex items-center justify-between text-[11px] font-mono text-slate-600 dark:text-slate-400 pt-1">
-                            <span>Đk: <strong>{tree.diameterCm || 28}cm</strong></span>
+                            <span>Đk: <strong className="text-slate-800 dark:text-slate-200">{tree.diameterCm || 28}cm</strong></span>
                             <span>•</span>
-                            <span>Cao: <strong>{tree.heightM || 7.5}m</strong></span>
+                            <span>Cao: <strong className="text-slate-800 dark:text-slate-200">{tree.heightM || 7.5}m</strong></span>
                             <span>•</span>
                             <span>Trồng: <strong>{tree.plantedAt ? new Date(tree.plantedAt).getFullYear() : 2021}</strong></span>
                           </div>
+
+                          {/* Pruning Telemetry */}
+                          {(() => {
+                            const daysSincePruned = treePruningDaysMap.get(tree.id);
+                            return (
+                              <div className="flex items-center justify-between text-[10px] font-mono pt-1 border-t border-slate-200/50 dark:border-slate-800/60">
+                                <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
+                                  <Scissors className="w-3 h-3 text-amber-500 shrink-0" />
+                                  <span>Kỳ cắt tỉa cành:</span>
+                                </span>
+                                <span
+                                  className={`font-semibold ${
+                                    daysSincePruned === undefined || daysSincePruned > 180
+                                      ? 'text-amber-600 dark:text-amber-400'
+                                      : 'text-emerald-600 dark:text-emerald-400'
+                                  }`}
+                                >
+                                  {daysSincePruned !== undefined
+                                    ? `${daysSincePruned} ngày trước`
+                                    : 'Chưa có hồ sơ tỉa'}
+                                </span>
+                              </div>
+                            );
+                          })()}
                         </div>
 
                         {/* Action buttons on card footer */}
@@ -734,10 +928,21 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                         </span>
                       </div>
                       <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
-                        <span className="text-[10px] text-slate-400 dark:text-slate-500 block">Năm trồng</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
-                          {tree.plantedAt ? new Date(tree.plantedAt).getFullYear() : '2021'}
-                        </span>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 block">Kỳ cắt tỉa</span>
+                        {(() => {
+                          const days = treePruningDaysMap.get(tree.id);
+                          return (
+                            <span
+                              className={`font-bold font-mono text-[11px] block truncate ${
+                                days === undefined || days > 180
+                                  ? 'text-amber-600 dark:text-amber-400'
+                                  : 'text-emerald-700 dark:text-emerald-400'
+                              }`}
+                            >
+                              {days !== undefined ? `${days} ngày` : 'Chưa tỉa'}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -856,7 +1061,16 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                         </span>
                       </td>
                       <td className="py-3 px-4 font-mono text-[11px] text-slate-600 dark:text-slate-300">
-                        {tree.diameterCm || 28}cm / {tree.heightM || 7.5}m
+                        <div>Đk: {tree.diameterCm || 28}cm · Cao: {tree.heightM || 7.5}m</div>
+                        {(() => {
+                          const days = treePruningDaysMap.get(tree.id);
+                          return (
+                            <div className={`text-[10px] flex items-center gap-1 ${days === undefined || days > 180 ? 'text-amber-600 dark:text-amber-400 font-bold' : 'text-slate-400'}`}>
+                              <Scissors className="w-2.5 h-2.5" />
+                              <span>{days !== undefined ? `Tỉa: ${days} ngày trước` : 'Chưa có hồ sơ tỉa'}</span>
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="py-3 px-4">
                         <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 dark:text-[#00FF9D] font-semibold font-mono">
