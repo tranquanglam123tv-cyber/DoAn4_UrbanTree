@@ -3,6 +3,7 @@ import { X, ClipboardList, Check, ShieldCheck, Camera, Upload, Image as ImageIco
 import { CareActionType, TreeHealthStatus } from '../types';
 import { storage } from '../db/storage';
 import { TreeSearchSelect } from './common/TreeSearchSelect';
+import { assertPermission } from '../utils/permissionUtils';
 
 interface CareFormModalProps {
   initialTreeId?: string;
@@ -52,6 +53,10 @@ export const CareFormModal: React.FC<CareFormModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!assertPermission(activeUser, 'CARE_WRITE', 'Ghi nhật ký chăm sóc, bón phân & cắt tỉa')) {
+      return;
+    }
 
     if (!notes.trim()) {
       setError('Vui lòng nhập mô tả chi tiết công việc chăm sóc đã thực hiện');

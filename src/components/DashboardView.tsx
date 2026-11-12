@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { storage } from '../db/storage';
 import { blockchainService } from '../services/blockchainService';
+import { hasPermission, assertPermission } from '../utils/permissionUtils';
 import { Tree, CareRecord } from '../types';
 import {
   calculateAllometricCarbon,
@@ -246,7 +247,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Sub-group: Quản lý & Báo cáo */}
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowOfficialReportModal(true)}
+              onClick={() => {
+                if (assertPermission(currentUser, 'EXPORT_REPORT', 'Xuất bản in báo cáo thanh tra Sở Xây Dựng A4')) {
+                  setShowOfficialReportModal(true);
+                }
+              }}
               className="h-10 px-3.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-300 font-bold text-xs transition-all border border-blue-200 dark:border-blue-800/60 cursor-pointer shadow-2xs flex items-center gap-1.5 active:scale-95"
               title="Xuất Báo cáo Thanh tra Định kỳ Sở Xây Dựng (Khổ chuẩn A4)"
             >
@@ -254,7 +259,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span>Xuất Báo Cáo A4</span>
             </button>
 
-            {onOpenStaffManagement && (
+            {onOpenStaffManagement && hasPermission(currentUser, 'STAFF_MANAGE') && (
               <button
                 onClick={onOpenStaffManagement}
                 className="h-10 px-3.5 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/50 dark:hover:bg-purple-900/60 text-purple-800 dark:text-purple-300 font-bold text-xs transition-all border border-purple-200 dark:border-purple-800/60 cursor-pointer shadow-2xs flex items-center gap-1.5 active:scale-95"
@@ -271,7 +276,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Sub-group: Tác vụ Thực địa */}
           <div className="flex items-center gap-2">
             <button
-              onClick={() => onOpenCareModal()}
+              onClick={() => {
+                if (assertPermission(currentUser, 'CARE_WRITE', 'Ghi nhật ký chăm sóc, bón phân & cắt tỉa')) {
+                  onOpenCareModal();
+                }
+              }}
               className="h-10 px-3.5 rounded-xl bg-white hover:bg-emerald-50/80 text-emerald-800 font-bold text-xs transition-all border border-emerald-200 shadow-xs cursor-pointer dark:bg-[#0c1812] dark:hover:bg-[#12281c] dark:text-emerald-300 dark:border-emerald-500/30 dark:shadow-[0_0_10px_rgba(16,185,129,0.12)] flex items-center gap-1.5 active:scale-95"
             >
               <ClipboardList className="w-4 h-4 text-emerald-600 dark:text-[#00FF9D]" />

@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { Role, User } from '../types';
 import { storage } from '../db/storage';
+import { hasPermission } from '../utils/permissionUtils';
 
 interface HeaderProps {
   activeTab: string;
@@ -220,7 +221,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 animate-pulse shrink-0" />
                   <span>Blockchain</span>
                 </button>
-                {onOpenStaffManagement && (
+                {onOpenStaffManagement && hasPermission(currentUser, 'STAFF_MANAGE') && (
                   <button
                     onClick={onOpenStaffManagement}
                     className="flex items-center gap-1 xl:gap-1.5 px-2 xl:px-2.5 py-1.5 rounded-full text-[11px] xl:text-xs font-semibold text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/60 transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 border border-purple-200 dark:border-purple-800/60"
@@ -531,7 +532,7 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 Blockchain
               </button>
-              {onOpenStaffManagement && (
+              {onOpenStaffManagement && hasPermission(currentUser, 'STAFF_MANAGE') && (
                 <button
                   onClick={onOpenStaffManagement}
                   className="px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100"

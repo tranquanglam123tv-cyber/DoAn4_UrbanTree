@@ -22,6 +22,7 @@ import { storage } from '../db/storage';
 import { Incident, IncidentSeverity, IncidentStatus, IncidentUpdate, User } from '../types';
 import { TreeSearchSelect } from './common/TreeSearchSelect';
 import { calculateIncidentSLA } from '../utils/treeUtils';
+import { assertPermission } from '../utils/permissionUtils';
 
 interface IncidentsViewProps {
   onSelectTree: (tree: any) => void;
@@ -149,6 +150,10 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
   const handleUpdateStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedIncident) return;
+
+    if (!assertPermission(currentUser, 'INCIDENT_RESOLVE', 'Tiếp nhận, xử lý & nghiệm thu sự cố người dân')) {
+      return;
+    }
 
     if (currentUser.role === 'ADMIN') {
       if (!assignStaffId && newStatus === 'ASSIGNED') {

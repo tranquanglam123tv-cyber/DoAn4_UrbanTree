@@ -38,6 +38,7 @@ import {
 import { storage } from '../db/storage';
 import { Role, StaffWorkStatus, User } from '../types';
 import { CAN_THO_ZONES } from '../utils/zoneUtils';
+import { ALL_PERMISSIONS, PermissionKey, hasPermission } from '../utils/permissionUtils';
 
 interface StaffManagementModalProps {
   isOpen: boolean;
@@ -70,14 +71,6 @@ const DEFAULT_SKILLS = [
   'An toàn điện cao thế',
   'Gia cố cọc giằng bão',
   'Khai báo Smart Contract',
-];
-
-const ALL_PERMISSIONS = [
-  { key: 'CARE_WRITE', label: 'Ghi nhật ký chăm sóc, bón phân & cắt tỉa', group: 'Thực địa' },
-  { key: 'INCIDENT_RESOLVE', label: 'Tiếp nhận, xử lý & nghiệm thu sự cố người dân', group: 'Sự cố' },
-  { key: 'TREE_FELL_APPROVE', label: 'Đề xuất & phê duyệt đốn hạ cây Loại 3 nguy cấp', group: 'Pháp lý' },
-  { key: 'EXPORT_REPORT', label: 'Xuất bản in báo cáo thanh tra Sở Xây Dựng A4', group: 'Báo cáo' },
-  { key: 'STAFF_MANAGE', label: 'Quản trị nhân sự, điều phối lệnh công tác & phân quyền', group: 'Quản trị' },
 ];
 
 export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
