@@ -35,6 +35,12 @@ import {
   findNearestTree,
   STREET_CORRIDORS_LIST,
 } from '../utils/treeUtils';
+import {
+  NATIONAL_PROVINCES,
+  getTreeProvinceId,
+  getTreeZoneId,
+  getZonesByProvince,
+} from '../utils/zoneUtils';
 
 interface TreeListViewProps {
   onSelectTree: (tree: Tree) => void;
@@ -59,6 +65,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
   const [searchInput, setSearchInput] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [jumpPageInput, setJumpPageInput] = useState('');
+  const [selectedProvince, setSelectedProvince] = useState<string>('all');
   const [selectedArea, setSelectedArea] = useState<string>('ALL');
   const [selectedType, setSelectedType] = useState<string>('ALL');
   const [selectedHealth, setSelectedHealth] = useState<string>('ALL');
@@ -83,37 +90,43 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
   const [radarUserLocation, setRadarUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [radarToast, setRadarToast] = useState<string | null>(null);
 
+  // 🌐 Cây theo Tỉnh / Thành phố
+  const provinceTrees = useMemo(() => {
+    if (selectedProvince === 'all') return trees;
+    return trees.filter((t) => getTreeProvinceId(t) === selectedProvince);
+  }, [trees, selectedProvince]);
+
   // 🗺️ Danh sách Địa phương / Khu vực tổng quát (Quận Ninh Kiều, Cái Răng, Bình Thủy, Đà Nẵng...)
   const availableAreas = useMemo(() => {
     const counts: { [area: string]: number } = {};
-    trees.forEach((t) => {
+    provinceTrees.forEach((t) => {
       const a = getTreeGeneralArea(t);
       counts[a] = (counts[a] || 0) + 1;
     });
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  }, [trees]);
+  }, [provinceTrees]);
 
   // 🛣️ Danh sách Tuyến đường / Dãy cây theo khu vực đang chọn
   const availableCorridors = useMemo(() => {
     const counts: { [corridor: string]: number } = {};
-    trees.forEach((t) => {
+    provinceTrees.forEach((t) => {
       if (selectedArea !== 'ALL' && getTreeGeneralArea(t) !== selectedArea) return;
       const c = getTreeCorridor(t);
       counts[c] = (counts[c] || 0) + 1;
     });
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  }, [trees, selectedArea]);
+  }, [provinceTrees, selectedArea]);
 
   // Reset trang về 1 khi bất kỳ bộ lọc nào thay đổi
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, selectedArea, selectedCorridorFilter, selectedType, selectedHealth, viewMode]);
+  }, [debouncedSearch, selectedProvince, selectedArea, selectedCorridorFilter, selectedType, selectedHealth, viewMode]);
 
   // Filtered Trees (Tối ưu Fast-Path Short Circuit: kiểm tra thuộc tính trực tiếp trước khi tính toán chuỗi)
   const filteredTrees = useMemo(() => {
     const searchLower = debouncedSearch.toLowerCase().trim();
 
-    return trees.filter((tree) => {
+    return provinceTrees.filter((tree) => {
       // 1. Fast checks (Direct property match O(1))
       if (selectedHealth !== 'ALL' && tree.healthStatus !== selectedHealth) return false;
       if (selectedType !== 'ALL' && tree.treeTypeId !== selectedType) return false;
@@ -338,6 +351,23 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* 🏙️ Lọc theo Tỉnh / Thành phố (Toàn quốc, Cần Thơ, Đà Nẵng, TP.HCM, Hà Nội...) */}
+          <select
+            value={selectedProvince}
+            onChange={(e) => {
+              setSelectedProvince(e.target.value);
+              setSelectedArea('ALL');
+              setSelectedCorridorFilter('ALL');
+            }}
+            className="px-3 py-1.5 text-xs font-bold border border-blue-300 dark:border-blue-700/80 rounded-full bg-blue-50/80 dark:bg-blue-950/60 text-blue-900 dark:text-blue-300 focus:border-blue-500 shadow-2xs cursor-pointer"
+          >
+            {NATIONAL_PROVINCES.map((prov) => (
+              <option key={prov.id} value={prov.id}>
+                {prov.shortName}
+              </option>
+            ))}
+          </select>
+
           {/* 📍 Lọc theo Khu Vực / Địa Phương Tổng Quát (Quận Ninh Kiều, Cái Răng, Bình Thủy, Đà Nẵng...) */}
           <select
             value={selectedArea}
