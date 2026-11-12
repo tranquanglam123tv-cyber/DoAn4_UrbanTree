@@ -110,10 +110,14 @@ export default function App() {
             // Cán bộ mở mã QR -> Mở hồ sơ quản trị thực địa
             setSelectedTreeForDetail(tree);
             showToast(`Nhận diện QR [${tree.publicCode}] cho cán bộ: Mở hồ sơ quản trị.`);
-          } else {
-            // Người dân quét mã QR -> Ra thẳng luôn form gửi phản ánh sự cố cây, không cần đăng nhập!
+          } else if (hash.startsWith('#report-')) {
+            // Link trực tiếp báo cáo sự cố -> Mở thẳng form báo cáo
             handleReportIncidentForTree(tree);
-            showToast(`Nhận diện QR [${tree.publicCode}]: Mở trực tiếp form gửi phản ánh sự cố (Không cần đăng nhập).`);
+            showToast(`Nhận diện QR [${tree.publicCode}]: Mở form gửi phản ánh sự cố khẩn cấp.`);
+          } else {
+            // Người dân quét mã QR (#tree-) -> Mở trang thông tin cây công cộng (kèm nút báo cáo sự cố 1-chạm không cần đăng nhập)
+            setPublicTreeModalTree(tree);
+            showToast(`Tra cứu cây xanh [${tree.publicCode}]: Xem hồ sơ & phản ánh sự cố không cần đăng nhập.`);
           }
         }
       }
