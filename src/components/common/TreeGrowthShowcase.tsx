@@ -159,51 +159,34 @@ export const TreeGrowthShowcase: React.FC = () => {
 
       {/* 🌿 Main Botanical Canvas: Beautiful Living Tree */}
       <div className="relative w-72 h-64 sm:w-80 sm:h-72 flex items-end justify-center overflow-visible">
-        {/* 🌟 HÀO QUANG MÀU XANH TO DẦN VÀ DI CHUYỂN BÁM 1:1 THEO ĐỘ CAO NGỌN CÂY */}
-        {/* Layer 1: Hào quang khuếch tán rộng (Atmospheric Ambient Aura) */}
+        {/* 🌟 HÀO QUANG MÀU XANH KHUẾCH TÁN GẮN LIỀN VỚI KÍCH THƯỚC TÁN LÁ */}
+        {/* Layer 1: Hào quang khí quyển nhẹ ôm theo vòm tán lá */}
         <div
           className="absolute pointer-events-none rounded-full"
           style={{
             top: `${canopyCenterPercent}%`,
             left: '50%',
-            width: `${130 + progress * 170}px`,
-            height: `${130 + progress * 170}px`,
+            width: `${50 + foliageScale * 250}px`,
+            height: `${50 + foliageScale * 250}px`,
             transform: 'translate(-50%, -50%)',
             background:
-              'radial-gradient(circle, rgba(52,211,153,0.5) 0%, rgba(16,185,129,0.3) 40%, rgba(5,150,105,0.08) 68%, transparent 75%)',
-            filter: 'blur(32px)',
-            opacity: haloOpacity,
+              'radial-gradient(circle, rgba(52,211,153,0.45) 0%, rgba(16,185,129,0.25) 45%, rgba(5,150,105,0.06) 70%, transparent 80%)',
+            filter: 'blur(30px)',
+            opacity: (0.35 + foliageScale * 0.65) * cycleOpacity,
             transition: isPlaying ? 'none' : 'all 300ms ease-out',
           }}
         />
 
-        {/* Layer 2: Hào quang trọng tâm (Core Ambient Glow) */}
-        <div
-          className="absolute pointer-events-none rounded-full"
-          style={{
-            top: `${canopyCenterPercent}%`,
-            left: '50%',
-            width: `${75 + progress * 115}px`,
-            height: `${75 + progress * 115}px`,
-            transform: 'translate(-50%, -50%)',
-            background:
-              'radial-gradient(circle, rgba(110,231,183,0.65) 0%, rgba(52,211,153,0.38) 45%, transparent 72%)',
-            filter: 'blur(18px)',
-            opacity: (0.5 + progress * 0.5) * cycleOpacity,
-            transition: isPlaying ? 'none' : 'all 300ms ease-out',
-          }}
-        />
-
-        {/* Layer 3: Hào quang năng lượng đất mẹ dưới gốc cây (Soil Base Aura) */}
+        {/* Layer 2: Hào quang năng lượng đất mẹ dưới gốc cây (Soil Base Aura) */}
         <div
           className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full pointer-events-none"
           style={{
-            width: `${100 + progress * 120}px`,
-            height: `${18 + progress * 24}px`,
+            width: `${90 + progress * 110}px`,
+            height: `${16 + progress * 22}px`,
             background:
-              'radial-gradient(ellipse, rgba(16,185,129,0.5) 0%, rgba(4,120,87,0.2) 50%, transparent 80%)',
+              'radial-gradient(ellipse, rgba(16,185,129,0.45) 0%, rgba(4,120,87,0.18) 50%, transparent 80%)',
             filter: 'blur(10px)',
-            opacity: (0.4 + progress * 0.4) * cycleOpacity,
+            opacity: (0.35 + progress * 0.45) * cycleOpacity,
             transition: isPlaying ? 'none' : 'all 300ms ease-out',
           }}
         />
@@ -278,26 +261,6 @@ export const TreeGrowthShowcase: React.FC = () => {
 
           {/* 🌟 Group chứa cây và hào quang với hiệu ứng mờ dần chuyển giao chu kỳ */}
           <g style={{ opacity: cycleOpacity, transition: isPlaying ? 'none' : 'opacity 300ms ease-out' }}>
-            {/* 🌟 Dynamic SVG Living Halo Circle behind Tree: Tọa độ cy bám chính xác 100% ngọn tán cây */}
-            <circle
-              cx="160"
-              cy={canopyCenterY}
-              r={24 + progress * 96}
-              fill="url(#canopyAuraGrad)"
-              filter="url(#glowEffect)"
-              opacity={0.6 + progress * 0.4}
-              className="pointer-events-none"
-            />
-            <circle
-              cx="160"
-              cy={canopyCenterY}
-              r={12 + progress * 48}
-              fill="url(#coreAuraGrad)"
-              filter="url(#glowEffect)"
-              opacity={0.7 + progress * 0.3}
-              className="pointer-events-none"
-            />
-
             {/* 1. GROUND MOUND & SOIL BASE */}
             <ellipse cx="160" cy="242" rx="90" ry="14" className="fill-emerald-100 dark:fill-emerald-950/80 transition-colors" />
             <ellipse cx="160" cy="245" rx="70" ry="9" className="fill-emerald-700/25 dark:fill-emerald-600/35 transition-colors" />
@@ -408,6 +371,28 @@ export const TreeGrowthShowcase: React.FC = () => {
                   opacity: foliageOpacity,
                 }}
               >
+                {/* 🌟 VÒNG HÀO QUANG GẮN LIỀN TRỰC TIẾP VỚI TÁN CÂY (TÁN LÁ BỰ THÌ HÀO QUANG BỰ THEO) */}
+                {/* Lớp hào quang vòm ngoài bao bọc tán lá */}
+                <circle
+                  cx="160"
+                  cy="92"
+                  r="125"
+                  fill="url(#canopyAuraGrad)"
+                  filter="url(#glowEffect)"
+                  opacity="0.9"
+                  className="pointer-events-none"
+                />
+                {/* Lớp hào quang lõi sinh khí rực rỡ sau tán */}
+                <circle
+                  cx="160"
+                  cy="92"
+                  r="90"
+                  fill="url(#coreAuraGrad)"
+                  filter="url(#glowEffect)"
+                  opacity="0.95"
+                  className="pointer-events-none"
+                />
+
                 {/* Back Shadow Canopy Clouds */}
                 <circle cx="160" cy="85" r="58" fill="url(#canopyBackGrad)" opacity="0.95" />
                 <circle cx="115" cy="115" r="48" fill="url(#canopyBackGrad)" opacity="0.92" />
@@ -444,6 +429,16 @@ export const TreeGrowthShowcase: React.FC = () => {
                   opacity: 1 - foliageScale * 2,
                 }}
               >
+                {/* Hào quang mầm non tí hon gắn chặt với chồi mầm */}
+                <circle
+                  cx="160"
+                  cy={245 - trunkScaleY * 168}
+                  r="30"
+                  fill="url(#coreAuraGrad)"
+                  filter="url(#glowEffect)"
+                  opacity="0.85"
+                  className="pointer-events-none"
+                />
                 <ellipse cx="150" cy={245 - trunkScaleY * 165} rx="16" ry="10" fill="#34d399" transform={`rotate(-28 150 ${245 - trunkScaleY * 165})`} />
                 <ellipse cx="170" cy={245 - trunkScaleY * 165} rx="16" ry="10" fill="#10b981" transform={`rotate(28 170 ${245 - trunkScaleY * 165})`} />
                 <ellipse cx="160" cy={245 - trunkScaleY * 178} rx="14" ry="16" fill="#6ee7b7" />
