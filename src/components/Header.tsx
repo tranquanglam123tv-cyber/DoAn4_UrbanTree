@@ -26,6 +26,7 @@ import {
 import { Role, User } from '../types';
 import { storage } from '../db/storage';
 import { hasPermission } from '../utils/permissionUtils';
+import { EmergencyStormTicker } from './EmergencyStormTicker';
 
 interface HeaderProps {
   activeTab: string;
@@ -76,7 +77,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-2 sm:top-3.5 z-40 w-full px-2 sm:px-4 lg:px-6 transition-all">
+    <header className="sticky top-2 sm:top-3.5 z-40 w-full px-2 sm:px-4 lg:px-6 transition-all space-y-2">
       <div className="max-w-[1440px] mx-auto bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800 rounded-2xl lg:rounded-full shadow-lg shadow-emerald-950/4 dark:shadow-emerald-950/30 px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 transition-colors duration-200">
         <div className="flex items-center justify-between h-11 sm:h-12 gap-1.5 sm:gap-2 lg:gap-3 min-w-0">
           {/* Brand Logo */}
@@ -276,25 +277,6 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </>
             )}
-
-            {/* --- NÚT THÔNG BÁO CHUNG CHO CẢ 3 VAI TRÒ (ADMIN, STAFF, CITIZEN) --- */}
-            <button
-              onClick={() => setActiveTab('notifications')}
-              className={`flex items-center gap-1 xl:gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-full text-[11px] xl:text-xs font-bold transition-all active:scale-95 whitespace-nowrap cursor-pointer relative shrink-0 ${
-                activeTab === 'notifications'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'text-amber-800 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-200 hover:bg-amber-100/70 dark:hover:bg-amber-950/40'
-              }`}
-              title="Trung tâm thông báo & cảnh báo điều hành đô thị"
-            >
-              <Bell className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
-              <span>Thông báo</span>
-              {unreadNotifications > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-rose-500 text-white shadow-xs animate-pulse">
-                  {unreadNotifications}
-                </span>
-              )}
-            </button>
           </nav>
 
           {/* Action Zone: QR Scanner, Persona Switcher, Reset */}
@@ -639,6 +621,9 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
       </div>
+
+      {/* ⛈️ Thanh cảnh báo chạy ngang bão (Nằm sát dưới Navbar, không bị che lấp) */}
+      <EmergencyStormTicker onNavigateTrees={() => setActiveTab('trees')} />
     </header>
   );
 };

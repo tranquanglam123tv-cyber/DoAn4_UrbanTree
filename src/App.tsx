@@ -25,7 +25,6 @@ import { LoginModal } from './components/LoginModal';
 import { CitizenPortalView } from './components/CitizenPortalView';
 import { StaffWorkstationView } from './components/StaffWorkstationView';
 import { StaffManagementModal } from './components/StaffManagementModal';
-import { EmergencyStormTicker } from './components/EmergencyStormTicker';
 import { NotificationsView } from './components/NotificationsView';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { SporeBackground } from './components/common/SporeBackground';
@@ -268,13 +267,6 @@ export default function App() {
         onOpenStaffManagement={() => setIsStaffManagementOpen(true)}
         isDark={isDark}
         onToggleTheme={toggleTheme}
-      />
-
-      {/* ⛈️ CẢNH BÁO CHIẾN DỊCH RÀ SOÁT CẮT TỈA HẠ ĐỘ CAO ĐÓN MÙA MƯA BÃO (MARQUEE TICKER DƯỚI HEADER) */}
-      <EmergencyStormTicker
-        onNavigateTrees={() => setActiveTab('trees')}
-        neededCount={985}
-        highUrgencyCount={985}
       />
 
       {/* Main Content Area */}
