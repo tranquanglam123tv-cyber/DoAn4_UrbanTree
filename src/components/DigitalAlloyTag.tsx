@@ -13,7 +13,12 @@ import {
   Cpu,
 } from 'lucide-react';
 import { Tree } from '../types';
-import { getTreeCorridor, getTreeMilestone, getTreeStreetCode } from '../utils/treeUtils';
+import {
+  getTreeClassification,
+  getTreeCorridor,
+  getTreeMilestone,
+  getTreeStreetCode,
+} from '../utils/treeUtils';
 
 interface DigitalAlloyTagProps {
   tree: Tree;
@@ -33,6 +38,7 @@ export const DigitalAlloyTag: React.FC<DigitalAlloyTagProps> = ({
   const milestone = getTreeMilestone(tree);
   const corridor = getTreeCorridor(tree);
   const plantedYear = tree.plantedAt ? new Date(tree.plantedAt).getFullYear() : 2021;
+  const classification = getTreeClassification(tree);
 
   const handleCopyTagCode = () => {
     const text = `[${streetCode}] - ${tree.displayName} - ${milestone} (UrbanTree Cần Thơ)`;
@@ -123,10 +129,20 @@ export const DigitalAlloyTag: React.FC<DigitalAlloyTagProps> = ({
               >
                 [{streetCode}]
               </div>
-              <div className="text-xs sm:text-sm font-black text-slate-900 tracking-tight flex items-center gap-1">
+              <div className="text-xs sm:text-sm font-black text-slate-900 tracking-tight flex items-center gap-1 flex-wrap">
                 <span className="truncate max-w-[160px] sm:max-w-[200px]">{tree.displayName}</span>
                 <span className="text-[10px] font-mono text-emerald-800 font-bold px-1 bg-emerald-100 rounded border border-emerald-300">
                   #{tree.publicCode}
+                </span>
+                <span
+                  className={`text-[8.5px] font-bold px-1.5 py-0.2 rounded border ${
+                    classification.isProtected
+                      ? 'bg-purple-200 text-purple-900 border-purple-400 animate-pulse'
+                      : 'bg-slate-200 text-slate-800 border-slate-300'
+                  }`}
+                  title={classification.legalNote}
+                >
+                  {classification.label.split('(')[0].trim()}
                 </span>
               </div>
             </div>
@@ -210,10 +226,16 @@ export const DigitalAlloyTag: React.FC<DigitalAlloyTagProps> = ({
           </div>
 
           {/* OFFICIAL STAMP FOOTER */}
-          <div className="mt-1 text-center">
-            <div className="text-[7.5px] font-bold uppercase tracking-wider text-slate-500">
-              * TÀI SẢN ĐÔ THỊ ĐỊNH DANH ON-CHAIN CẦN THƠ · XÂM HẠI XỬ LÝ THEO PHÁP LUẬT *
-            </div>
+          <div className="mt-1 text-center space-y-0.5">
+            {classification.isProtected ? (
+              <div className="text-[7.5px] font-black uppercase tracking-wider text-rose-700 bg-rose-100/80 rounded px-1 py-0.5 border border-rose-300">
+                🛑 CÂY DI SẢN BẢO TỒN ĐÔ THỊ · NGHIÊM CẤM TỰ Ý ĐỐN HẠ KHI CHƯA CÓ GIẤY PHÉP UBND
+              </div>
+            ) : (
+              <div className="text-[7.5px] font-bold uppercase tracking-wider text-slate-500">
+                * TÀI SẢN ĐÔ THỊ ĐỊNH DANH ON-CHAIN CẦN THƠ · XÂM HẠI XỬ LÝ THEO PHÁP LUẬT *
+              </div>
+            )}
           </div>
         </div>
       </div>

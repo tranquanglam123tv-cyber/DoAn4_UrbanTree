@@ -1001,6 +1001,40 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, initialCoord
               </div>
             </div>
 
+            {/* 🏷️ PHÂN CẤP CÂY ĐÔ THỊ TỰ ĐỘNG THEO THÔNG TƯ 20/2020/TT-BXD */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-700 dark:text-slate-300 text-xs flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>Phân cấp Cây Đô thị (Thông tư 20/2020/TT-BXD):</span>
+                </span>
+                <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] border ${
+                  diameterCm >= 50 || heightM >= 12
+                    ? 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/70 dark:text-purple-300 dark:border-purple-800 animate-pulse'
+                    : diameterCm >= 20 || heightM >= 6
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/70 dark:text-emerald-300'
+                    : 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950/70 dark:text-blue-300'
+                }`}>
+                  {diameterCm >= 50 || heightM >= 12
+                    ? '🏛️ CÂY LOẠI 3 (CỔ THỤ / BẢO TỒN)'
+                    : diameterCm >= 20 || heightM >= 6
+                    ? '🌳 CÂY LOẠI 2 (TRƯỞNG THÀNH)'
+                    : '🌱 CÂY LOẠI 1 (MỚI TRỒNG)'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                {diameterCm >= 50 || heightM >= 12 ? (
+                  <span className="text-purple-700 dark:text-purple-300 font-semibold">
+                    🛑 <strong>Cảnh báo Pháp lý:</strong> Cây có đường kính &ge; 50cm hoặc cao &ge; 12m thuộc nhóm Cổ thụ bảo tồn. Mọi hành vi đốn hạ phải có Giấy phép được ký duyệt bởi UBND Tỉnh/Thành phố hoặc Sở Xây Dựng!
+                  </span>
+                ) : diameterCm >= 20 || heightM >= 6 ? (
+                  'Thuộc nhóm cây xanh vỉa hè trưởng thành, nằm trong kế hoạch cắt tỉa hạ độ cao định kỳ trước mùa mưa bão.'
+                ) : (
+                  'Cây con đang trong giai đoạn ươm dưỡng, yêu cầu cắm cọc chống đỡ và tưới ẩm giữ rễ thường xuyên.'
+                )}
+              </p>
+            </div>
+
             {/* Chụp ảnh thực tế bắt buộc */}
             <div>
               <div className="flex items-center justify-between mb-1">

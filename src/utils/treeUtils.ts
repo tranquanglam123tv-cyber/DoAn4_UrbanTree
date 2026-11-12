@@ -157,3 +157,95 @@ export function findNearestTree(
   return { tree: nearest, distanceM: minDistance };
 }
 
+/**
+ * 🌳 PHÂN CẤP CÂY ĐÔ THỊ THEO THÔNG TƯ 20/2020/TT-BXD
+ * - Cây Loại 1: D < 20cm, H < 6m (Cây con, mới trồng)
+ * - Cây Loại 2: D 20-50cm, H 6-12m (Cây trưởng thành vỉa hè)
+ * - Cây Loại 3: D > 50cm, H > 12m hoặc cây cổ thụ bảo tồn di sản (CẤM ĐỐN HẠ)
+ */
+export function getTreeClassification(tree: {
+  diameterCm?: number;
+  heightM?: number;
+  classification?: string;
+}): {
+  key: 'TYPE_1' | 'TYPE_2' | 'HERITAGE';
+  label: string;
+  badgeClass: string;
+  legalNote: string;
+  isProtected: boolean;
+} {
+  const d = tree.diameterCm || 25;
+  const h = tree.heightM || 8;
+
+  if (tree.classification === 'HERITAGE' || d >= 50 || h >= 12) {
+    return {
+      key: 'HERITAGE',
+      label: 'Cây Cổ Thụ Loại 3 (Di Sản / Bảo Tồn)',
+      badgeClass: 'bg-purple-100 dark:bg-purple-950/70 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-800',
+      legalNote: '⚠️ CẤM ĐỐN HẠ: Cây thuộc danh mục bảo tồn đô thị. Mọi tác động đốn hạ phải có phê duyệt từ UBND Tỉnh/Thành phố hoặc Sở Xây Dựng!',
+      isProtected: true,
+    };
+  }
+
+  if (d >= 20 || h >= 6) {
+    return {
+      key: 'TYPE_2',
+      label: 'Cây Trưởng Thành Loại 2',
+      badgeClass: 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800',
+      legalNote: 'Duy tu cắt tỉa hạ độ cao theo lịch trước mùa mưa bão (Đường kính 20–50cm, Cao 6–12m).',
+      isProtected: false,
+    };
+  }
+
+  return {
+    key: 'TYPE_1',
+    label: 'Cây Trẻ / Mới Trồng Loại 1',
+    badgeClass: 'bg-blue-100 dark:bg-blue-950/70 text-blue-800 dark:text-blue-300 border-blue-300 dark:border-blue-800',
+    legalNote: 'Cần chống cọc giữ gốc và tưới dưỡng ẩm thường xuyên (Đường kính < 20cm, Cao < 6m).',
+    isProtected: false,
+  };
+}
+
+/**
+ * 🌿 TÍNH TOÁN SINH KHỐI & HẤP THỤ CARBON (CO2) CHUẨN KHOA HỌC ALLOMETRIC (i-Tree Eco)
+ * Công thức Allometric lâm sinh: Biomass = 0.0673 * (woodDensity * DBH^2 * H)^0.976
+ * Lượng CO2 cô lập hàng năm = Sinh khối tích lũy * 0.5 (tỷ lệ Carbon) * (44/12 tỷ số phân tử CO2)
+ */
+export function calculateAllometricCarbon(tree: {
+  diameterCm?: number;
+  heightM?: number;
+  woodDensity?: number;
+}): {
+  biomassKg: number;
+  co2SequestrationKgYear: number;
+  oxygenProductionKgYear: number;
+  rootProtectionRadiusM: number;
+} {
+  const dbh = tree.diameterCm || 25; // DBH (cm)
+  const h = tree.heightM || 8; // Chiều cao (m)
+  const rho = tree.woodDensity || 0.65; // Tỷ trọng gỗ khô (g/cm3)
+
+  // 1. Sinh khối trên mặt đất (Aboveground Biomass) theo Chave et al. (2014)
+  const biomassKg = Math.round(0.0673 * Math.pow(rho * Math.pow(dbh, 2) * h, 0.976));
+
+  // 2. Lượng hấp thụ CO2 hàng năm (kg CO2/năm)
+  // Cây hấp thụ trung bình tích lũy sinh khối hàng năm ~ 3.5% - 5% tổng sinh khối
+  const annualBiomassGrowth = Math.max(biomassKg * 0.045, 1.2);
+  const co2SequestrationKgYear = Math.round(annualBiomassGrowth * 0.5 * (44 / 12) * 10) / 10;
+
+  // 3. Lượng Oxy giải phóng tương đương (1 phân tử CO2 hấp thụ giải phóng 1 phân tử O2)
+  const oxygenProductionKgYear = Math.round(co2SequestrationKgYear * (32 / 44) * 10) / 10;
+
+  // 4. Bán kính vùng bảo vệ rễ an toàn (Root Protection Zone - RPZ) theo tiêu chuẩn BS 5837
+  // RPZ = DBH (cm) * 0.12 (m)
+  const rootProtectionRadiusM = Math.max(Math.round(dbh * 0.12 * 10) / 10, 1.5);
+
+  return {
+    biomassKg,
+    co2SequestrationKgYear,
+    oxygenProductionKgYear,
+    rootProtectionRadiusM,
+  };
+}
+
+

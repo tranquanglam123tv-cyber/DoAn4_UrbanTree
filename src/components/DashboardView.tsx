@@ -28,6 +28,7 @@ import {
 import { storage } from '../db/storage';
 import { blockchainService } from '../services/blockchainService';
 import { Tree, CareRecord } from '../types';
+import { calculateAllometricCarbon, getTreeClassification } from '../utils/treeUtils';
 
 interface DashboardViewProps {
   onNavigate: (tab: string) => void;
@@ -54,6 +55,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
 
   const healthyPercent = stats.totalTrees > 0 ? Math.round((stats.healthyTrees / stats.totalTrees) * 100) : 0;
+
+  // 🌿 TÍNH TOÁN KHOA HỌC: SINH KHỐI ALLOMETRIC & HẤP THỤ CO2 TOÀN THÀNH PHỐ
+  const ecoAllometricStats = useMemo(() => {
+    let totalBiomass = 0;
+    let totalCo2Year = 0;
+    let totalO2Year = 0;
+    let type1Count = 0;
+    let type2Count = 0;
+    let heritageCount = 0;
+
+    trees.forEach((t) => {
+      const calc = calculateAllometricCarbon(t);
+      totalBiomass += calc.biomassKg;
+      totalCo2Year += calc.co2SequestrationKgYear;
+      totalO2Year += calc.oxygenProductionKgYear;
+
+      const cls = getTreeClassification(t);
+      if (cls.key === 'HERITAGE') heritageCount++;
+      else if (cls.key === 'TYPE_2') type2Count++;
+      else type1Count++;
+    });
+
+    return {
+      totalBiomassTon: (totalBiomass / 1000).toFixed(2),
+      totalCo2TonYear: (totalCo2Year / 1000).toFixed(2),
+      totalO2TonYear: (totalO2Year / 1000).toFixed(2),
+      type1Count,
+      type2Count,
+      heritageCount,
+    };
+  }, [trees]);
 
   // Aggregate care activity data for the interactive chart
   const weeklyCareData = useMemo(() => {
@@ -256,6 +288,90 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {stats.totalAnchors}
             </div>
             <div className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium mt-1">Bản ghi On-chain</div>
+          </div>
+        </div>
+
+        {/* 🌿 2 KHỐI MỚI: PHÂN CẤP CÂY THÔNG TƯ 20/2020/TT-BXD & TÍNH TOÁN CARBON ALLOMETRIC */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Khối 1: Phân cấp đô thị */}
+          <div className="bento-card p-4 sm:p-5 dark:bg-[#0c1812] dark:border-emerald-500/20 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Cơ Cấu Phân Cấp Cây (TT 20/2020/TT-BXD)</span>
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">Quy định Pháp lý</span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 text-center">
+                <div className="text-lg font-black text-purple-700 dark:text-purple-300 font-mono">
+                  {ecoAllometricStats.heritageCount}
+                </div>
+                <div className="text-[10px] font-bold text-purple-900 dark:text-purple-200 mt-0.5">Loại 3 (Cổ Thụ)</div>
+                <div className="text-[9px] text-purple-600 dark:text-purple-400 mt-0.5 font-medium">Bảo tồn di sản</div>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-center">
+                <div className="text-lg font-black text-emerald-700 dark:text-emerald-300 font-mono">
+                  {ecoAllometricStats.type2Count}
+                </div>
+                <div className="text-[10px] font-bold text-emerald-900 dark:text-emerald-200 mt-0.5">Loại 2 (Trưởng thành)</div>
+                <div className="text-[9px] text-emerald-600 dark:text-emerald-400 mt-0.5 font-medium">Cắt tỉa mùa bão</div>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 text-center">
+                <div className="text-lg font-black text-blue-700 dark:text-blue-300 font-mono">
+                  {ecoAllometricStats.type1Count}
+                </div>
+                <div className="text-[10px] font-bold text-blue-900 dark:text-blue-200 mt-0.5">Loại 1 (Mới trồng)</div>
+                <div className="text-[9px] text-blue-600 dark:text-blue-400 mt-0.5 font-medium">Chống cọc & tưới</div>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 italic leading-relaxed">
+              * Theo Nghị định 64/2010/NĐ-CP: Cây Loại 3 có đường kính &ge; 50cm hoặc cao &ge; 12m được bảo vệ nghiêm ngặt, cấm tự ý đốn hạ khi chưa có Giấy phép phê duyệt của cơ quan quản lý đô thị.
+            </p>
+          </div>
+
+          {/* Khối 2: Tính toán Carbon & Sinh khối Allometric */}
+          <div className="bento-card p-4 sm:p-5 dark:bg-[#0c1812] dark:border-emerald-500/20 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
+                <Sprout className="w-4 h-4 text-emerald-600 dark:text-[#00FF9D]" />
+                <span>Sinh Khối & Hấp Thụ $CO_2$ Khoa Học (i-Tree Allometric)</span>
+              </span>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                DBH &times; H Model
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center">
+                <div className="text-lg font-black text-emerald-700 dark:text-emerald-400 font-mono">
+                  {ecoAllometricStats.totalBiomassTon} <span className="text-[11px] font-normal text-slate-400">tấn</span>
+                </div>
+                <div className="text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-0.5">Tổng Sinh Khối Gỗ</div>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center">
+                <div className="text-lg font-black text-teal-700 dark:text-teal-400 font-mono">
+                  {ecoAllometricStats.totalCo2TonYear} <span className="text-[11px] font-normal text-slate-400">tấn/năm</span>
+                </div>
+                <div className="text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-0.5">Cô Lập $CO_2$ Tích Lũy</div>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center">
+                <div className="text-lg font-black text-cyan-700 dark:text-cyan-400 font-mono">
+                  {ecoAllometricStats.totalO2TonYear} <span className="text-[11px] font-normal text-slate-400">tấn/năm</span>
+                </div>
+                <div className="text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-0.5">Oxy Tạo Ra Cho Phố</div>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 italic leading-relaxed">
+              * Tính toán chuẩn USDA Forest Service: Dựa trên phương trình allometric lâm sinh $Biomass = 0.0673 \times (\rho \times DBH^2 \times H)^{0.976}$ theo kích thước đường kính ngực và chiều cao thực địa.
+            </p>
           </div>
         </div>
       </div>

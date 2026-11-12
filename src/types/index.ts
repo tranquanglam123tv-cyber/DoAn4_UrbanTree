@@ -19,6 +19,9 @@ export interface User {
 
 export type TreeHealthStatus = 'GOOD' | 'FAIR' | 'POOR' | 'CRITICAL' | 'DEAD';
 
+// Phân cấp cây đô thị theo Thông tư 20/2020/TT-BXD & Nghị định 64/2010/NĐ-CP
+export type UrbanTreeClassification = 'TYPE_1' | 'TYPE_2' | 'HERITAGE';
+
 export interface TreeType {
   id: string;
   name: string;
@@ -26,6 +29,8 @@ export interface TreeType {
   description: string;
   careGuide: string;
   isActive: boolean;
+  prohibitedPlanting?: boolean; // Cấm trồng trên vỉa hè theo quy định đô thị (rễ phá hoại hoặc độc tính)
+  woodDensity?: number; // Tỷ trọng gỗ khô (g/cm3), dùng tính toán hấp thụ CO2 Allometric i-Tree
 }
 
 export interface Tree {
@@ -42,6 +47,8 @@ export interface Tree {
   longitude: number;
   plantedAt: string; // YYYY-MM-DD
   healthStatus: TreeHealthStatus;
+  classification?: UrbanTreeClassification; // Phân cấp loại 1, loại 2 hoặc Cổ thụ di sản (Cấm chặt hạ)
+  canopyDiameterM?: number; // Đường kính tán lá (m) - dùng hiển thị Polygon tán râm & sinh khối
   imageUrl?: string;
   diameterCm?: number;
   heightM?: number;
