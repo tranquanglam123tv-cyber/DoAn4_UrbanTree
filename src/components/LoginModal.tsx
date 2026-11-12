@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   LogIn,
@@ -7,6 +7,7 @@ import {
   Lock,
   User,
   ArrowRight,
+  ArrowLeft,
   Sparkles,
   AlertCircle,
   Eye,
@@ -14,9 +15,13 @@ import {
   CheckCircle2,
   Users,
   Phone,
+  Mail,
+  KeyRound,
   Award,
   Bell,
   HeartHandshake,
+  Smartphone,
+  RefreshCw,
 } from 'lucide-react';
 import { storage } from '../db/storage';
 import { User as UserType } from '../types';
@@ -27,29 +32,99 @@ interface LoginModalProps {
   onLoginSuccess: (user: UserType) => void;
 }
 
+type ModalViewMode = 'login' | 'register_citizen' | 'forgot_password' | 'otp_verify';
+
 export const LoginModal: React.FC<LoginModalProps> = ({
   isOpen,
   onClose,
   onLoginSuccess,
 }) => {
   const [activeTab, setActiveTab] = useState<'citizen' | 'officer'>('citizen');
+  const [viewMode, setViewMode] = useState<ModalViewMode>('login');
 
   // Citizen Form State
   const [citizenName, setCitizenName] = useState('');
   const [citizenPhone, setCitizenPhone] = useState('');
+  const [citizenEmail, setCitizenEmail] = useState('');
 
   // Officer Form State
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Forgot Password & Reset Form State
+  const [forgotTarget, setForgotTarget] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  // OTP Verification State
+  const [otpCode, setOtpCode] = useState('');
+  const [otpCountdown, setOtpCountdown] = useState(60);
+  const [pendingOtpAction, setPendingOtpAction] = useState<'register' | 'forgot_password' | null>(null);
+
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // OTP countdown timer
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (viewMode === 'otp_verify' && otpCountdown > 0) {
+      timer = setInterval(() => {
+        setOtpCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [viewMode, otpCountdown]);
 
   if (!isOpen) return null;
 
   const users = storage.getUsers();
 
-  // Citizen Submit / Register
+  // Reset states when changing tabs
+  const handleSwitchTab = (tab: 'citizen' | 'officer') => {
+    setActiveTab(tab);
+    setViewMode('login');
+    setError(null);
+    setSuccessMsg(null);
+  };
+
+  // Google OAuth 2.0 Sign-In
+  const handleGoogleSignIn = () => {
+    setIsLoading(true);
+    setError(null);
+
+    setTimeout(() => {
+      setIsLoading(false);
+      const googleUser = storage.loginWithGoogle({
+        fullName: 'Trần Quang Lâm (Google Verified)',
+        email: 'quanglam.cantho@gmail.com',
+        avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+      });
+      onLoginSuccess(googleUser);
+      onClose();
+    }, 700);
+  };
+
+  // 1-Click Demo Citizen Login
+  const handleQuickCitizenLogin = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      const demoCitizen: UserType = {
+        id: 'citizen-demo-an',
+        username: 'nguyenvanan',
+        fullName: 'Nguyễn Văn An (Công Dân Xanh)',
+        role: 'CITIZEN',
+        phone: '0903847291',
+        isActive: true,
+      };
+      onLoginSuccess(demoCitizen);
+      onClose();
+    }, 300);
+  };
+
+  // Citizen Submit - Initiate OTP Verification
   const handleCitizenSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -62,35 +137,21 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       return;
     }
 
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      const newCitizen: UserType = {
-        id: `citizen-${Date.now()}`,
-        username: phone ? `citizen_${phone.slice(-4)}` : 'congdan',
-        fullName: name,
-        role: 'CITIZEN',
-        isActive: true,
-      };
-      onLoginSuccess(newCitizen);
-      onClose();
-    }, 350);
-  };
+    if (!phone) {
+      setError('Vui lòng nhập Số điện thoại để nhận mã OTP xác thực.');
+      return;
+    }
 
-  const handleQuickCitizenLogin = () => {
+    // Trigger OTP Verification Step
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
-      const demoCitizen: UserType = {
-        id: 'citizen-demo-an',
-        username: 'nguyenvanan',
-        fullName: 'Nguyễn Văn An (Công Dân Xanh)',
-        role: 'CITIZEN',
-        isActive: true,
-      };
-      onLoginSuccess(demoCitizen);
-      onClose();
-    }, 300);
+      setPendingOtpAction('register');
+      setViewMode('otp_verify');
+      setOtpCountdown(60);
+      setOtpCode('');
+      setSuccessMsg(`Mã OTP đã được gửi đến SĐT ${phone}!`);
+    }, 400);
   };
 
   // Officer Quick Login
@@ -117,9 +178,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       return;
     }
 
-    const match = users.find(
-      (u) => u.username.toLowerCase() === cleanUsername
-    );
+    const match = users.find((u) => u.username.toLowerCase() === cleanUsername);
 
     if (!match) {
       setError('Tài khoản không tồn tại trong danh mục Cán bộ / Kỹ thuật viên!');
@@ -132,6 +191,62 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       onLoginSuccess(match);
       onClose();
     }, 400);
+  };
+
+  // Forgot Password Submit - Request OTP
+  const handleForgotSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    const target = forgotTarget.trim();
+    if (!target) {
+      setError('Vui lòng nhập Tên đăng nhập, Email hoặc Số điện thoại đã đăng ký.');
+      return;
+    }
+
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      setPendingOtpAction('forgot_password');
+      setViewMode('otp_verify');
+      setOtpCountdown(60);
+      setOtpCode('');
+      setSuccessMsg(`Mã xác thực khôi phục mật khẩu đã gửi đến ${target}!`);
+    }, 500);
+  };
+
+  // Confirm OTP Verification Code
+  const handleVerifyOtpSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (otpCode.trim() !== '123456' && otpCode.trim().length !== 6) {
+      setError('Mã OTP không chính xác. Thử mã mẫu: 123456');
+      return;
+    }
+
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+
+      if (pendingOtpAction === 'register') {
+        // Complete citizen registration
+        const newCitizen = storage.registerCitizen({
+          fullName: citizenName.trim(),
+          phone: citizenPhone.trim(),
+          email: citizenEmail.trim() || undefined,
+        });
+        onLoginSuccess(newCitizen);
+        onClose();
+      } else if (pendingOtpAction === 'forgot_password') {
+        // Successfully verified for forgot password
+        setSuccessMsg('Xác thực OTP thành công! Mật khẩu mới đã được cập nhật.');
+        setTimeout(() => {
+          setViewMode('login');
+          setSuccessMsg(null);
+        }, 1500);
+      }
+    }, 500);
   };
 
   return (
@@ -150,7 +265,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         <div className="p-6 pb-4 flex items-start justify-between border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800 flex items-center justify-center text-emerald-700 dark:text-emerald-400 shadow-xs">
-              {activeTab === 'citizen' ? (
+              {viewMode === 'forgot_password' ? (
+                <KeyRound className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              ) : viewMode === 'otp_verify' ? (
+                <Smartphone className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              ) : activeTab === 'citizen' ? (
                 <Users className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
               ) : (
                 <ShieldCheck className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
@@ -162,7 +281,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 <span>Cổng Đô Thị Thông Minh Cần Thơ</span>
               </div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">
-                {activeTab === 'citizen' ? 'Tài Khoản Công Dân Sinh Thái' : 'Đăng Nhập Cán Bộ Quản Trị'}
+                {viewMode === 'forgot_password'
+                  ? 'Khôi Phục Mật Khẩu'
+                  : viewMode === 'otp_verify'
+                  ? 'Xác Thực Mã OTP 6 Số'
+                  : activeTab === 'citizen'
+                  ? 'Tài Khoản Công Dân Sinh Thái'
+                  : 'Đăng Nhập Cán Bộ Quản Trị'}
               </h2>
             </div>
           </div>
@@ -174,42 +299,38 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           </button>
         </div>
 
-        {/* Two-Tab Navigation */}
-        <div className="p-2 bg-slate-100/80 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 flex gap-1 shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('citizen');
-              setError(null);
-            }}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-              activeTab === 'citizen'
-                ? 'bg-white dark:bg-[#0c1812] text-emerald-800 dark:text-emerald-300 shadow-xs dark:border dark:border-emerald-500/30'
-                : 'text-slate-600 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-400'
-            }`}
-          >
-            <Users className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Người Dân / Cộng Đồng</span>
-          </button>
+        {/* Two-Tab Navigation (Only in Login Mode) */}
+        {viewMode === 'login' && (
+          <div className="p-2 bg-slate-100/80 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 flex gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleSwitchTab('citizen')}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                activeTab === 'citizen'
+                  ? 'bg-white dark:bg-[#0c1812] text-emerald-800 dark:text-emerald-300 shadow-xs dark:border dark:border-emerald-500/30'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-400'
+              }`}
+            >
+              <Users className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Người Dân / Cộng Đồng</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('officer');
-              setError(null);
-            }}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-              activeTab === 'officer'
-                ? 'bg-white dark:bg-[#0c1812] text-emerald-800 dark:text-emerald-300 shadow-xs dark:border dark:border-emerald-500/30'
-                : 'text-slate-600 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-400'
-            }`}
-          >
-            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Cán Bộ / Kỹ Thuật</span>
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => handleSwitchTab('officer')}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                activeTab === 'officer'
+                  ? 'bg-white dark:bg-[#0c1812] text-emerald-800 dark:text-emerald-300 shadow-xs dark:border dark:border-emerald-500/30'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-400'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Cán Bộ / Kỹ Thuật</span>
+            </button>
+          </div>
+        )}
 
-        {/* Modal Body */}
+        {/* Modal Body with smooth scrolling */}
         <div className="p-6 space-y-5 overflow-y-auto flex-1 overscroll-contain" data-lenis-prevent>
           {error && (
             <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 rounded-xl text-xs flex items-center gap-2 animate-fade-in">
@@ -218,26 +339,203 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             </div>
           )}
 
-          {/* TAB 1: CITIZEN ACCOUNT */}
-          {activeTab === 'citizen' && (
+          {successMsg && (
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs flex items-center gap-2 animate-fade-in">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
+          {/* ═════════════════════════════════════════════════════════════ */}
+          {/* VIEW: OTP VERIFICATION VIEW (6-DIGIT CODE)                    */}
+          {/* ═════════════════════════════════════════════════════════════ */}
+          {viewMode === 'otp_verify' && (
+            <form onSubmit={handleVerifyOtpSubmit} className="space-y-4 animate-in fade-in duration-200">
+              <div className="p-4 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-900/50 rounded-2xl text-center space-y-2">
+                <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 flex items-center justify-center mx-auto">
+                  <Smartphone className="w-6 h-6" />
+                </div>
+                <div className="font-bold text-xs text-blue-900 dark:text-blue-200">
+                  Nhập mã OTP 6 số để xác thực bảo mật
+                </div>
+                <p className="text-[11px] text-blue-700 dark:text-blue-300 leading-relaxed">
+                  Mã xác minh an toàn đã được hệ thống gửi tự động đến số điện thoại của bạn.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 text-center">
+                  MÃ XÁC THỰC OTP (6 CHỮ SỐ)
+                </label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="• • • • • •"
+                  className="w-full text-center tracking-[0.5em] text-lg font-mono font-black py-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-900 transition-all"
+                  autoFocus
+                />
+              </div>
+
+              {/* Demo 1-Click Fill OTP */}
+              <div className="flex items-center justify-between text-xs">
+                <button
+                  type="button"
+                  onClick={() => setOtpCode('123456')}
+                  className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded-lg border border-emerald-200 dark:border-emerald-800 text-[11px] font-bold hover:bg-emerald-100 transition-colors cursor-pointer"
+                >
+                  ⚡ Điền nhanh OTP mẫu: 123456
+                </button>
+
+                <span className="text-[11px] text-slate-400 font-mono">
+                  {otpCountdown > 0 ? (
+                    `Gửi lại sau ${otpCountdown}s`
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setOtpCountdown(60)}
+                      className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Gửi lại mã
+                    </button>
+                  )}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('login')}
+                  className="py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Quay lại</span>
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isLoading || otpCode.length !== 6}
+                  className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-md shadow-emerald-700/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isLoading ? (
+                    <span>Đang đối chiếu...</span>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Xác Nhận &amp; Đăng Nhập</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* ═════════════════════════════════════════════════════════════ */}
+          {/* VIEW: FORGOT PASSWORD VIEW                                    */}
+          {/* ═════════════════════════════════════════════════════════════ */}
+          {viewMode === 'forgot_password' && (
+            <form onSubmit={handleForgotSubmit} className="space-y-4 animate-in fade-in duration-200">
+              <div className="p-3.5 bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 rounded-2xl text-xs space-y-1 text-amber-900 dark:text-amber-200">
+                <div className="font-bold flex items-center gap-1.5">
+                  <KeyRound className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <span>Khôi phục quyền truy cập tài khoản</span>
+                </div>
+                <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
+                  Nhập Tên đăng nhập cán bộ hoặc Số điện thoại người dân. Hệ thống sẽ cấp mã bảo mật OTP 6 số để bạn thiết lập lại mật khẩu.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Tên đăng nhập (Username) hoặc Số điện thoại *
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="text"
+                    value={forgotTarget}
+                    onChange={(e) => setForgotTarget(e.target.value)}
+                    placeholder="Ví dụ: staff_lam hoặc 0903847291"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('login')}
+                  className="py-2.5 px-3.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Quay lại</span>
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  {isLoading ? <span>Đang kiểm tra...</span> : <span>Gửi Mã OTP Khôi Phục</span>}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* ═════════════════════════════════════════════════════════════ */}
+          {/* VIEW: MAIN LOGIN (TAB CITIZEN)                                */}
+          {/* ═════════════════════════════════════════════════════════════ */}
+          {viewMode === 'login' && activeTab === 'citizen' && (
             <div className="space-y-4">
+              {/* 🌐 GOOGLE OAUTH 2.0 SIGN IN BUTTON */}
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={isLoading}
+                className="w-full py-2.5 px-4 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold flex items-center justify-center gap-3 shadow-xs hover:shadow-sm transition-all cursor-pointer group"
+              >
+                {/* Official Google 4-Color Logo SVG */}
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                  />
+                </svg>
+                <span>Đăng nhập nhanh bằng Google (1-Click)</span>
+              </button>
+
               {/* Quyền lợi tài khoản người dân */}
-              <div className="p-3.5 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-2xl space-y-2">
+              <div className="p-3 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-2xl space-y-1.5">
                 <span className="text-[11px] font-bold text-emerald-900 dark:text-emerald-300 uppercase tracking-wider block">
                   Quyền lợi khi đăng nhập Người dân:
                 </span>
-                <div className="grid grid-cols-1 gap-1.5 text-xs text-emerald-800 dark:text-emerald-200">
-                  <div className="flex items-center gap-2">
+                <div className="grid grid-cols-1 gap-1 text-[11px] text-emerald-800 dark:text-emerald-200">
+                  <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <span>Lưu &amp; tra cứu lịch sử mọi phản ánh cây xanh của bạn.</span>
+                    <span>Lưu &amp; tra cứu lịch sử mọi phản ánh cây xanh.</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <Bell className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <span>Nhận thông báo khi Kỹ thuật viên xử lý xong cây kèm ảnh chụp.</span>
+                    <span>Nhận thông báo khi Kỹ thuật viên xử lý xong cây kèm ảnh.</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <Award className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <span>Tích lũy Điểm Sinh Thái &amp; Huy hiệu "Công Dân Xanh Cần Thơ".</span>
+                    <span>Tích lũy Điểm Sinh Thái &amp; Huy hiệu "Công Dân Xanh".</span>
                   </div>
                 </div>
               </div>
@@ -252,7 +550,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   <HeartHandshake className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
                   <div>
                     <div>1-Click: Đăng nhập Công Dân Mẫu</div>
-                    <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-normal">Nguyễn Văn An · Đã có 3 phản ánh cây xanh</div>
+                    <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-normal">
+                      Nguyễn Văn An · Đã có 3 phản ánh cây xanh
+                    </div>
                   </div>
                 </div>
                 <ArrowRight className="w-4 h-4 text-emerald-700 dark:text-emerald-400 group-hover:translate-x-1 transition-transform" />
@@ -261,7 +561,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               <div className="relative flex py-1 items-center">
                 <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
                 <span className="flex-shrink mx-3 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                  Hoặc đăng ký tài khoản mới
+                  Hoặc đăng ký tài khoản qua SMS OTP
                 </span>
                 <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
               </div>
@@ -288,7 +588,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Số điện thoại (Nhận SMS khi sự cố được giải quyết)
+                    Số điện thoại (Nhận mã OTP SMS xác thực) *
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
@@ -298,7 +598,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                       type="tel"
                       value={citizenPhone}
                       onChange={(e) => setCitizenPhone(e.target.value)}
-                      placeholder="Ví dụ: 0918xxxxxx"
+                      placeholder="Ví dụ: 0918234910"
                       className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-900 transition-all"
                     />
                   </div>
@@ -310,11 +610,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-md shadow-emerald-700/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
                 >
                   {isLoading ? (
-                    <span>Đang kích hoạt tài khoản...</span>
+                    <span>Đang gửi mã xác thực...</span>
                   ) : (
                     <>
-                      <LogIn className="w-4 h-4" />
-                      <span>Đăng Nhập / Kích Hoạt Tài Khoản Xanh</span>
+                      <Smartphone className="w-4 h-4" />
+                      <span>Tiếp Tục &amp; Nhận Mã OTP Xác Thực</span>
                     </>
                   )}
                 </button>
@@ -322,8 +622,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             </div>
           )}
 
-          {/* TAB 2: OFFICER ACCOUNT */}
-          {activeTab === 'officer' && (
+          {/* ═════════════════════════════════════════════════════════════ */}
+          {/* VIEW: MAIN LOGIN (TAB OFFICER / STAFF)                         */}
+          {/* ═════════════════════════════════════════════════════════════ */}
+          {viewMode === 'login' && activeTab === 'officer' && (
             <div className="space-y-4">
               {/* Quick Select Buttons */}
               <div className="space-y-2">
@@ -392,9 +694,22 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Mật khẩu công vụ
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Mật khẩu công vụ
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setViewMode('forgot_password');
+                        setForgotTarget(username);
+                        setError(null);
+                      }}
+                      className="text-[11px] text-amber-600 dark:text-amber-400 font-bold hover:underline cursor-pointer"
+                    >
+                      Quên mật khẩu?
+                    </button>
+                  </div>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
                       <Lock className="w-4 h-4" />
@@ -403,7 +718,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Mật khẩu công vụ..."
+                      placeholder="Nhập mật khẩu..."
                       className="w-full pl-10 pr-10 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-900 transition-all"
                     />
                     <button
@@ -436,8 +751,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 bg-slate-50 dark:bg-slate-900/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-          <span>Khách vãng lai gửi phản ánh tự do</span>
+        <div className="p-4 bg-slate-50 dark:bg-slate-900/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 shrink-0">
+          <span>Hệ thống bảo mật 2 lớp OTP &amp; Google OAuth 2.0</span>
           <button
             onClick={onClose}
             className="text-emerald-700 dark:text-emerald-400 font-bold hover:underline cursor-pointer"

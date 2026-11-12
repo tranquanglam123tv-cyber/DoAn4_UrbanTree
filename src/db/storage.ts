@@ -1367,6 +1367,53 @@ class StorageService {
       incidentBreakdown,
     };
   }
+
+  // 🛡️ CITIZEN AUTHENTICATION & GOOGLE OAUTH 2.0
+  public registerCitizen(data: { fullName: string; phone?: string; email?: string }): User {
+    const id = `citizen-${Date.now()}`;
+    const cleanPhone = (data.phone || '').trim();
+    const username = cleanPhone ? `citizen_${cleanPhone.slice(-4)}` : `citizen_${Date.now().toString().slice(-4)}`;
+    const newCitizen: User = {
+      id,
+      username,
+      fullName: data.fullName.trim(),
+      role: 'CITIZEN',
+      phone: cleanPhone || undefined,
+      email: data.email?.trim() || undefined,
+      authProvider: 'LOCAL',
+      isActive: true,
+    };
+    this.users.push(newCitizen);
+    this.saveAll();
+    this.setActiveUser(newCitizen);
+    return newCitizen;
+  }
+
+  public loginWithGoogle(googleData: { fullName: string; email: string; avatarUrl?: string }): User {
+    const existing = this.users.find((u) => u.email?.toLowerCase() === googleData.email.toLowerCase());
+    if (existing) {
+      this.setActiveUser(existing);
+      return existing;
+    }
+    const id = `citizen-g-${Date.now()}`;
+    const username = googleData.email.split('@')[0];
+    const newCitizen: User = {
+      id,
+      username,
+      fullName: googleData.fullName,
+      email: googleData.email,
+      avatarUrl:
+        googleData.avatarUrl ||
+        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+      role: 'CITIZEN',
+      authProvider: 'GOOGLE',
+      isActive: true,
+    };
+    this.users.push(newCitizen);
+    this.saveAll();
+    this.setActiveUser(newCitizen);
+    return newCitizen;
+  }
 }
 
 export const storage = new StorageService();
