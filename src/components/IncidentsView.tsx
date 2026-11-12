@@ -38,8 +38,12 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
     if (initialTreeId) {
       setActiveSubTab('public_report');
       setReportTreeId(initialTreeId);
+      const tree = trees.find((t) => t.id === initialTreeId);
+      if (tree) {
+        setReportAddress(tree.address);
+      }
     }
-  }, [initialTreeId]);
+  }, [initialTreeId, trees]);
 
   const incidents = storage.getIncidents();
   const trees = storage.getTrees();
@@ -560,6 +564,20 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
             </div>
           ) : (
             <form onSubmit={handleCitizenSubmit} className="space-y-4">
+              {reportTreeId && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-900 animate-fade-in">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                    <span>
+                      Đang phản ánh cho cây: <strong>[{trees.find((t) => t.id === reportTreeId)?.publicCode}]</strong> {trees.find((t) => t.id === reportTreeId)?.displayName}
+                    </span>
+                  </div>
+                  <span className="text-[10px] bg-emerald-200/70 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                    Đã nhận diện QR
+                  </span>
+                </div>
+              )}
+
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
                   Chọn cây xanh liên quan (Nếu có quét mã QR trên cây)

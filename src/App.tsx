@@ -21,6 +21,7 @@ import { TreeFormModal } from './components/TreeFormModal';
 import { CareFormModal } from './components/CareFormModal';
 import { QRScannerModal } from './components/QRScannerModal';
 import { PublicTreeModal } from './components/PublicTreeModal';
+import { LoginModal } from './components/LoginModal';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { SporeBackground } from './components/common/SporeBackground';
 import { storage } from './db/storage';
@@ -58,6 +59,7 @@ export default function App() {
   const [isCareModalOpen, setIsCareModalOpen] = useState(false);
   const [careModalTreeId, setCareModalTreeId] = useState<string | undefined>(undefined);
   const [isQrScannerOpen, setIsQrScannerOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [publicTreeModalTree, setPublicTreeModalTree] = useState<Tree | null>(null);
   const [incidentReportTreeId, setIncidentReportTreeId] = useState<string | undefined>(undefined);
 
@@ -92,15 +94,23 @@ export default function App() {
     };
   }, []);
 
-  // Check URL hash for direct QR code scanning link (e.g. #tree-TREE-001)
+  // Check URL hash for direct QR code scanning link (e.g. #tree-TREE-001 or #report-TREE-001)
   useEffect(() => {
     const checkHash = () => {
       const hash = window.location.hash;
-      if (hash && hash.startsWith('#tree-')) {
-        const publicCode = hash.replace('#tree-', '').trim();
+      if (hash && (hash.startsWith('#tree-') || hash.startsWith('#report-'))) {
+        const publicCode = hash.replace('#tree-', '').replace('#report-', '').trim();
         const tree = storage.getTreeByPublicCode(publicCode);
         if (tree) {
-          setPublicTreeModalTree(tree);
+          if (currentUser.role === 'ADMIN' || currentUser.role === 'STAFF') {
+            // Cán bộ mở mã QR -> Mở hồ sơ quản trị thực địa
+            setSelectedTreeForDetail(tree);
+            showToast(`Nhận diện QR [${tree.publicCode}] cho cán bộ: Mở hồ sơ quản trị.`);
+          } else {
+            // Người dân quét mã QR -> Ra thẳng luôn form gửi phản ánh sự cố cây, không cần đăng nhập!
+            handleReportIncidentForTree(tree);
+            showToast(`Nhận diện QR [${tree.publicCode}]: Mở trực tiếp form gửi phản ánh sự cố (Không cần đăng nhập).`);
+          }
         }
       }
     };
@@ -108,12 +118,33 @@ export default function App() {
     checkHash();
     window.addEventListener('hashchange', checkHash);
     return () => window.removeEventListener('hashchange', checkHash);
-  }, []);
+  }, [currentUser]);
 
   const handleUserChange = (newUser: User) => {
     storage.setActiveUser(newUser);
     setCurrentUser(newUser);
     showToast(`Đã chuyển vai trò: ${newUser.fullName} (${newUser.role})`);
+  };
+
+  const handleLoginSuccess = (user: User) => {
+    storage.setActiveUser(user);
+    setCurrentUser(user);
+    setActiveTab('dashboard');
+    showToast(`Đăng nhập thành công! Chào mừng ${user.fullName} (${user.role}).`);
+  };
+
+  const handleLogout = () => {
+    const citizenUser: User = {
+      id: 'citizen-guest',
+      username: 'nguoidan',
+      fullName: 'Người dân (Công cộng)',
+      role: 'CITIZEN',
+      isActive: true,
+    };
+    storage.setActiveUser(citizenUser);
+    setCurrentUser(citizenUser);
+    setActiveTab('home');
+    showToast('Đã đăng xuất. Bạn đang ở chế độ Người dân công cộng.');
   };
 
   const handleResetSeed = () => {
@@ -157,6 +188,8 @@ export default function App() {
         currentUser={currentUser}
         onUserChange={handleUserChange}
         onOpenQrScanner={() => setIsQrScannerOpen(true)}
+        onOpenLogin={() => setIsLoginModalOpen(true)}
+        onLogout={handleLogout}
         onResetSeed={handleResetSeed}
         isDark={isDark}
         onToggleTheme={toggleTheme}
@@ -167,10 +200,15 @@ export default function App() {
         {/* Trang Chủ (Landing Page công cộng ai cũng xem được) */}
         {activeTab === 'home' && (
           <HomeLandingView
+            currentUser={currentUser}
             onOpenMap={() => setActiveTab('map')}
-            onOpenReport={() => setActiveTab('incidents')}
+            onOpenReport={() => {
+              setIncidentReportTreeId(undefined);
+              setActiveTab('incidents');
+            }}
             onOpenQrScanner={() => setIsQrScannerOpen(true)}
             onOpenAdminDashboard={() => setActiveTab('dashboard')}
+            onOpenLogin={() => setIsLoginModalOpen(true)}
             onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
           />
         )}
@@ -188,10 +226,15 @@ export default function App() {
         {/* Nếu Citizen vào dashboard thì điều hướng về Home */}
         {activeTab === 'dashboard' && currentUser.role === 'CITIZEN' && (
           <HomeLandingView
+            currentUser={currentUser}
             onOpenMap={() => setActiveTab('map')}
-            onOpenReport={() => setActiveTab('incidents')}
+            onOpenReport={() => {
+              setIncidentReportTreeId(undefined);
+              setActiveTab('incidents');
+            }}
             onOpenQrScanner={() => setIsQrScannerOpen(true)}
-            onOpenAdminDashboard={() => showToast('Bạn đang ở vai trò Người dân. Vui lòng chuyển vai trò sang Admin hoặc Staff ở góc trên để vào Dashboard Quản Trị.')}
+            onOpenAdminDashboard={() => setIsLoginModalOpen(true)}
+            onOpenLogin={() => setIsLoginModalOpen(true)}
             onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
           />
         )}
@@ -321,9 +364,9 @@ export default function App() {
               setSelectedTreeForDetail(tree);
               showToast(`Đã nhận diện QR [${tree.publicCode}] cho ${role}: Mở hồ sơ quản trị.`);
             } else {
-              // Citizen: Mở cổng tra cứu công cộng (xem lai lịch & báo cáo sự cố)
-              setPublicTreeModalTree(tree);
-              showToast(`Đã quét QR [${tree.publicCode}]: Mở thông tin công khai & báo cáo sự cố.`);
+              // Citizen: Ra thẳng luôn form gửi phản ánh sự cố cho cây đó, không cần đăng nhập gì hết!
+              handleReportIncidentForTree(tree);
+              showToast(`Đã quét QR [${tree.publicCode}]: Mở trực tiếp form gửi phản ánh sự cố (Không cần đăng nhập).`);
             }
           }}
         />
@@ -340,6 +383,13 @@ export default function App() {
           }}
         />
       )}
+
+      {/* Modal Đăng nhập Cán bộ Quản trị / Kỹ thuật viên */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
 
       {/* 📱 PWA Native Install Banner */}
       <PwaInstallBanner />

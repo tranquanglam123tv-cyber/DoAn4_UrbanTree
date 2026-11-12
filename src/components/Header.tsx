@@ -15,6 +15,8 @@ import {
   Moon,
   Home,
   Sliders,
+  LogIn,
+  LogOut,
 } from 'lucide-react';
 import { Role, User } from '../types';
 import { storage } from '../db/storage';
@@ -25,6 +27,8 @@ interface HeaderProps {
   currentUser: User;
   onUserChange: (user: User) => void;
   onOpenQrScanner: () => void;
+  onOpenLogin: () => void;
+  onLogout: () => void;
   onResetSeed: () => void;
   isDark?: boolean;
   onToggleTheme?: () => void;
@@ -36,6 +40,8 @@ export const Header: React.FC<HeaderProps> = ({
   currentUser,
   onUserChange,
   onOpenQrScanner,
+  onOpenLogin,
+  onLogout,
   onResetSeed,
   isDark,
   onToggleTheme,
@@ -201,59 +207,84 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="hidden sm:inline">Quét QR</span>
             </button>
 
-            {/* Persona Switcher Dropdown */}
-            <div className="relative group">
-              <button className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-slate-50 border border-slate-200/80 rounded-full text-xs font-medium text-slate-700 hover:border-emerald-500 transition-colors">
-                <UserCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span className="hidden md:inline max-w-[90px] truncate">{currentUser.fullName}</span>
-                <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-emerald-600 text-white shrink-0">
-                  {currentUser.role}
-                </span>
-                <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
+            {/* Nút Đăng nhập Cán bộ (nếu là Người dân / Chưa đăng nhập) */}
+            {currentUser.role === 'CITIZEN' ? (
+              <button
+                onClick={onOpenLogin}
+                title="Dành riêng cho Ban Quản Lý và Kỹ Thuật Viên"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-full text-xs font-bold transition-all shadow-xs cursor-pointer border border-slate-700 active:scale-95"
+              >
+                <LogIn className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Đăng nhập</span>
+                <span className="hidden sm:inline text-[10px] text-emerald-300 font-semibold bg-emerald-950/80 px-1.5 py-0.5 rounded-full">Cán bộ</span>
               </button>
+            ) : (
+              /* Persona Badge & Profile Menu (Khi đã đăng nhập Admin hoặc Staff) */
+              <div className="relative group">
+                <button className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-emerald-50 border border-emerald-300/80 rounded-full text-xs font-medium text-emerald-900 hover:border-emerald-500 transition-colors cursor-pointer shadow-xs">
+                  <UserCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span className="hidden md:inline max-w-[100px] truncate font-semibold">{currentUser.fullName}</span>
+                  <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-emerald-700 text-white shrink-0">
+                    {currentUser.role}
+                  </span>
+                  <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
+                </button>
 
-              <div className="absolute right-0 mt-1.5 w-60 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-xl p-2 hidden group-hover:block group-focus-within:block z-50 animate-fade-in">
-                <div className="px-2.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Chuyển vai trò thử nghiệm
+                <div className="absolute right-0 mt-1.5 w-64 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-xl p-2 hidden group-hover:block group-focus-within:block z-50 animate-fade-in">
+                  <div className="px-2.5 py-1.5 border-b border-slate-100 mb-1">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Tài khoản cán bộ
+                    </div>
+                    <div className="text-xs font-bold text-slate-900">{currentUser.fullName}</div>
+                    <div className="text-[10px] text-emerald-700 font-medium">Vai trò: {currentUser.role === 'ADMIN' ? 'Quản trị viên (Toàn quyền)' : 'Kỹ thuật viên thực địa'}</div>
+                  </div>
+
+                  <button
+                    onClick={() => setActiveTab('dashboard')}
+                    className="w-full text-left px-2.5 py-2 text-xs rounded-xl flex items-center gap-2 hover:bg-emerald-50 text-slate-800 font-semibold transition-colors cursor-pointer"
+                  >
+                    <Sliders className="w-4 h-4 text-emerald-600" />
+                    <span>Mở Dashboard Quản Trị</span>
+                  </button>
+
+                  <button
+                    onClick={onOpenLogin}
+                    className="w-full text-left px-2.5 py-2 text-xs rounded-xl flex items-center gap-2 hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer"
+                  >
+                    <LogIn className="w-4 h-4 text-slate-500" />
+                    <span>Đổi tài khoản cán bộ khác</span>
+                  </button>
+
+                  <button
+                    onClick={onLogout}
+                    className="w-full text-left px-2.5 py-2 text-xs rounded-xl flex items-center gap-2 hover:bg-rose-50 text-rose-700 font-semibold transition-colors cursor-pointer border-t border-slate-100 mt-1"
+                  >
+                    <LogOut className="w-4 h-4 text-rose-500" />
+                    <span>Đăng xuất (Về quyền Người dân)</span>
+                  </button>
+
+                  <div className="pt-2 mt-1 border-t border-slate-100">
+                    <div className="px-2.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Chuyển nhanh thử nghiệm
+                    </div>
+                    <button
+                      onClick={() => handleRoleSelect('ADMIN')}
+                      className="w-full text-left px-2.5 py-1.5 text-[11px] rounded-lg hover:bg-slate-50 text-slate-600 flex items-center justify-between"
+                    >
+                      <span>Admin: Đặng Thế Thuận</span>
+                      <span className="text-[8px] px-1 bg-slate-200 rounded">ADMIN</span>
+                    </button>
+                    <button
+                      onClick={() => handleRoleSelect('STAFF')}
+                      className="w-full text-left px-2.5 py-1.5 text-[11px] rounded-lg hover:bg-slate-50 text-slate-600 flex items-center justify-between"
+                    >
+                      <span>Staff: Trần Quang Lâm</span>
+                      <span className="text-[8px] px-1 bg-slate-200 rounded">STAFF</span>
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => handleRoleSelect('ADMIN')}
-                  className={`w-full text-left px-2.5 py-2 text-xs rounded-xl flex items-center justify-between transition-colors ${
-                    currentUser.role === 'ADMIN' ? 'bg-emerald-50 text-emerald-800 font-semibold' : 'text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  <div>
-                    <div className="font-semibold">Đặng Thế Thuận</div>
-                    <div className="text-[10px] text-slate-500">Quản trị viên (Admin)</div>
-                  </div>
-                  <span className="text-[9px] px-1.5 py-0.5 bg-emerald-700 text-white font-bold rounded-full">ADMIN</span>
-                </button>
-                <button
-                  onClick={() => handleRoleSelect('STAFF')}
-                  className={`w-full text-left px-2.5 py-2 text-xs rounded-xl flex items-center justify-between transition-colors ${
-                    currentUser.role === 'STAFF' ? 'bg-emerald-50 text-emerald-800 font-semibold' : 'text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  <div>
-                    <div className="font-semibold">Trần Quang Lâm</div>
-                    <div className="text-[10px] text-slate-500">Kỹ thuật viên (Staff)</div>
-                  </div>
-                  <span className="text-[9px] px-1.5 py-0.5 bg-emerald-600 text-white font-bold rounded-full">STAFF</span>
-                </button>
-                <button
-                  onClick={() => handleRoleSelect('CITIZEN')}
-                  className={`w-full text-left px-2.5 py-2 text-xs rounded-xl flex items-center justify-between transition-colors ${
-                    currentUser.role === 'CITIZEN' ? 'bg-emerald-50 text-emerald-800 font-semibold' : 'text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  <div>
-                    <div className="font-semibold">Người dân</div>
-                    <div className="text-[10px] text-slate-500">Công cộng / Tra cứu / Phản ánh</div>
-                  </div>
-                  <span className="text-[9px] px-1.5 py-0.5 bg-slate-600 text-white font-bold rounded-full">PUBLIC</span>
-                </button>
               </div>
-            </div>
+            )}
 
             {/* Light / Dark Mode Toggle Button */}
             {onToggleTheme && (
