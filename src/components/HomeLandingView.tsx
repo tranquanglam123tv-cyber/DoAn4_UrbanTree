@@ -37,6 +37,7 @@ import { blockchainService } from '../services/blockchainService';
 import { Tree, User } from '../types';
 import { HudBadge } from './common/HudBadge';
 import { PerspectiveTiltShowcase } from './common/PerspectiveTiltShowcase';
+import { TreeGrowthShowcase } from './common/TreeGrowthShowcase';
 
 interface HomeLandingViewProps {
   currentUser?: User;
@@ -111,7 +112,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           Nền tảng số hóa không gian địa lý GIS bảo tồn từng cá thể cây xanh tại Cần Thơ. Hỗ trợ người dân tra cứu thông tin bằng mã QR, gửi phản ánh sự cố khẩn cấp <strong className="text-emerald-700">không cần đăng nhập</strong> và bảo chứng nhật ký chăm sóc trên sổ cái Blockchain bất biến.
         </p>
 
-        {/* Action Button Group cho Đại chúng / Người dân & Nút Dashboard */}
+        {/* Action Button Group cho Đại chúng / Người dân */}
         <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 pt-2">
           {/* 1. Nút mở Bản đồ Cây xanh */}
           <button
@@ -140,24 +141,26 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <QrCode className="w-4 h-4 text-emerald-600" />
             <span>Quét Mã QR Cây</span>
           </button>
+        </div>
 
-          {/* 4. Nút Vào Dashboard Quản Trị / Đăng Nhập Cán Bộ */}
+        {/* Cổng đăng nhập cán bộ đặt tinh tế bên dưới thay vì để nút đen trơ trọi ở giữa */}
+        <div className="pt-1 flex items-center justify-center text-xs text-slate-500 gap-1.5 flex-wrap">
+          <span>Dành cho Cán bộ &amp; Kỹ thuật viên:</span>
           {currentUser && currentUser.role !== 'CITIZEN' ? (
             <button
               onClick={onOpenAdminDashboard}
-              className="flex items-center gap-2 px-5 py-3.5 rounded-full bg-gradient-to-r from-[#174B36] to-[#047857] hover:from-[#133F2E] hover:to-[#065F46] text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 cursor-pointer border border-emerald-400/40"
+              className="font-bold text-emerald-800 hover:text-emerald-900 flex items-center gap-1.5 cursor-pointer bg-emerald-100/70 hover:bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300 transition-colors"
             >
-              <Sliders className="w-4 h-4 text-emerald-300" />
-              <span>Vào Dashboard Quản Trị ({currentUser.role})</span>
-              <ChevronRight className="w-4 h-4" />
+              <Sliders className="w-3.5 h-3.5 text-emerald-700" />
+              <span>Vào Dashboard Quản Trị ({currentUser.role}) ➔</span>
             </button>
           ) : (
             <button
               onClick={onOpenLogin}
-              className="flex items-center gap-2 px-5 py-3.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 cursor-pointer border border-slate-700"
+              className="font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-1 cursor-pointer bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded-full border border-slate-200 transition-colors"
             >
-              <LogIn className="w-4 h-4 text-emerald-400" />
-              <span>Đăng Nhập Cán Bộ</span>
+              <LogIn className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Đăng nhập Cán bộ Quản trị ➔</span>
             </button>
           )}
         </div>
@@ -168,12 +171,12 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         urlBarText="urbantree.cantho.gov.vn/gis/live-radar"
         badgeText="RADAR TRỰC TIẾP GIS CẦN THƠ"
       >
-        <div className="relative min-h-[360px] sm:min-h-[460px] p-4 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 bg-gradient-to-br from-emerald-50/70 via-teal-50/30 to-slate-50">
+        <div className="relative min-h-[380px] sm:min-h-[480px] p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row items-center justify-between gap-6 bg-gradient-to-br from-emerald-50/70 via-teal-50/30 to-slate-50">
           {/* Background Map Visual Simulation */}
           <div className="absolute inset-0 opacity-25 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
 
           {/* Left Hero Card - Quick Stats */}
-          <div className="relative z-10 max-w-sm bg-white/95 backdrop-blur-md p-5 rounded-2xl border border-emerald-100 shadow-xl space-y-4 text-left">
+          <div className="relative z-10 w-full lg:max-w-xs bg-white/95 backdrop-blur-md p-5 rounded-2xl border border-emerald-100 shadow-xl space-y-4 text-left shrink-0">
             <div className="flex items-center gap-2.5">
               <span className="flex h-3 w-3 relative">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -214,9 +217,14 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             </button>
           </div>
 
+          {/* 🌿 CENTER: LIVING TREE GROWTH ANIMATION (TỪ HẠT MẦM ĐẾN ĐẠI THỤ 4.0) */}
+          <div className="relative z-10 flex-1 flex items-center justify-center py-2 w-full">
+            <TreeGrowthShowcase />
+          </div>
+
           {/* Right Hero Card - Sample Tree Tag */}
           {sampleTree && (
-            <div className="relative z-10 max-w-xs bg-white/95 backdrop-blur-md p-4 rounded-2xl border border-emerald-100 shadow-xl text-left space-y-3 hidden sm:block">
+            <div className="relative z-10 w-full lg:max-w-xs bg-white/95 backdrop-blur-md p-4 rounded-2xl border border-emerald-100 shadow-xl text-left space-y-3 shrink-0 hidden md:block">
               <div className="flex items-center justify-between">
                 <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-mono font-bold">
                   {sampleTree.publicCode}
