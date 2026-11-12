@@ -88,15 +88,82 @@ export function getTreeMilestone(tree: Tree): string {
 }
 
 /**
- * Lấy tên Tuyến đường / Dãy cây gom nhóm
+ * Lấy tên Tuyến đường / Dãy cây gom nhóm (Tự động thích ứng linh hoạt theo dữ liệu nhập vào)
  */
 export function getTreeCorridor(tree: Tree): string {
-  if (tree.streetCorridor) return tree.streetCorridor;
-  if (tree.address.includes('Hòa Bình')) return 'Đại Lộ Hòa Bình';
-  if (tree.address.includes('30 Tháng 4') || tree.address.includes('30/4')) return 'Đường 30 Tháng 4';
-  if (tree.address.includes('Lưu Hữu Phước')) return 'Công Viên Lưu Hữu Phước';
-  if (tree.address.includes('Ninh Kiều')) return 'Bến Ninh Kiều';
+  if (tree.streetCorridor && tree.streetCorridor.trim()) return tree.streetCorridor.trim();
+  const addr = tree.address || '';
+  if (addr.includes('Hòa Bình')) return 'Đại Lộ Hòa Bình';
+  if (addr.includes('30 Tháng 4') || addr.includes('30/4')) return 'Đường 30 Tháng 4';
+  if (addr.includes('3 Tháng 2') || addr.includes('3/2')) return 'Đại Lộ 3 Tháng 2';
+  if (addr.includes('Mậu Thân')) return 'Đường Mậu Thân';
+  if (addr.includes('Nguyễn Văn Cừ')) return 'Đường Nguyễn Văn Cừ';
+  if (addr.includes('Lý Tự Trọng')) return 'Đường Lý Tự Trọng';
+  if (addr.includes('Trần Hưng Đạo')) return 'Đường Trần Hưng Đạo';
+  if (addr.includes('Cách Mạng Tháng 8') || addr.includes('CMT8')) return 'Đường Cách Mạng Tháng 8';
+  if (addr.includes('Hai Bà Trưng')) return 'Bến Ninh Kiều (Hai Bà Trưng)';
+  if (addr.includes('Lưu Hữu Phước')) return 'Công Viên Lưu Hữu Phước';
+  if (addr.includes('Phan Đình Phùng')) return 'Đường Phan Đình Phùng';
+  if (addr.includes('Võ Văn Kiệt')) return 'Đại Lộ Võ Văn Kiệt';
+  if (addr.includes('Nguyễn Trãi')) return 'Đường Nguyễn Trãi';
+  if (addr.includes('Trần Phú')) return 'Đường Trần Phú';
+  if (addr.includes('Quang Trung')) return 'Đường Quang Trung';
+
+  // Fallback: Lấy phần đầu của địa chỉ (trước dấu phẩy) nếu là tên đường
+  const firstSegment = addr.split(',')[0]?.trim();
+  if (firstSegment && !firstSegment.startsWith('Số ') && !firstSegment.startsWith('Trước số ')) {
+    return firstSegment;
+  }
   return 'Tuyến Đường Trung Tâm';
+}
+
+/**
+ * 🗺️ Trích xuất Địa phương / Khu vực tổng quát (Quận/Huyện, Tỉnh/Thành phố)
+ * Hỗ trợ lọc đa cấp từ toàn quốc: Cái Răng, Ninh Kiều, Bình Thủy (Cần Thơ), Đà Nẵng, Hà Nội, TP.HCM...
+ */
+export function getTreeGeneralArea(tree: Tree): string {
+  const addr = (tree.address || '').toLowerCase();
+  const corr = (tree.streetCorridor || '').toLowerCase();
+  const full = `${addr} ${corr}`;
+
+  // 1. Các tỉnh/thành phố lớn ngoài Cần Thơ
+  if (full.includes('đà nẵng') || full.includes('da nang')) {
+    if (full.includes('hải châu')) return 'Quận Hải Châu (Đà Nẵng)';
+    if (full.includes('sơn trà')) return 'Quận Sơn Trà (Đà Nẵng)';
+    if (full.includes('ngũ hành sơn')) return 'Quận Ngũ Hành Sơn (Đà Nẵng)';
+    if (full.includes('thanh khê')) return 'Quận Thanh Khê (Đà Nẵng)';
+    return 'TP. Đà Nẵng';
+  }
+  if (full.includes('hà nội') || full.includes('ha noi')) return 'TP. Hà Nội';
+  if (full.includes('hồ chí minh') || full.includes('tp.hcm') || full.includes('sài gòn') || full.includes('saigon')) {
+    return 'TP. Hồ Chí Minh';
+  }
+  if (full.includes('hải phòng') || full.includes('hai phong')) return 'TP. Hải Phòng';
+  if (full.includes('huế') || full.includes('thừa thiên')) return 'TP. Huế';
+
+  // 2. Các Quận/Huyện của TP. Cần Thơ
+  if (full.includes('cái răng') || full.includes('cai rang')) return 'Quận Cái Răng (Cần Thơ)';
+  if (full.includes('bình thủy') || full.includes('binh thuy')) return 'Quận Bình Thủy (Cần Thơ)';
+  if (full.includes('ô môn') || full.includes('o mon')) return 'Quận Ô Môn (Cần Thơ)';
+  if (full.includes('thốt nốt') || full.includes('thot not')) return 'Quận Thốt Nốt (Cần Thơ)';
+  if (full.includes('phong điền') || full.includes('phong dien')) return 'Huyện Phong Điền (Cần Thơ)';
+  if (full.includes('thới lai') || full.includes('thoi lai')) return 'Huyện Thới Lai (Cần Thơ)';
+  if (full.includes('cờ đỏ') || full.includes('co do')) return 'Huyện Cờ Đỏ (Cần Thơ)';
+  if (full.includes('vĩnh thạnh') || full.includes('vinh thanh')) return 'Huyện Vĩnh Thạnh (Cần Thơ)';
+  if (full.includes('ninh kiều') || full.includes('ninh kieu')) return 'Quận Ninh Kiều (Cần Thơ)';
+
+  // 3. Fallback: Tách theo dấu phẩy từ cuối địa chỉ
+  const parts = (tree.address || '').split(',').map((p) => p.trim()).filter(Boolean);
+  if (parts.length >= 2) {
+    const districtPart = parts[parts.length - 2];
+    const cityPart = parts[parts.length - 1];
+    if (districtPart && cityPart && !districtPart.toLowerCase().includes('phường')) {
+      return `${districtPart} (${cityPart})`;
+    }
+    return cityPart || districtPart;
+  }
+
+  return 'Quận Ninh Kiều (Cần Thơ)';
 }
 
 /**

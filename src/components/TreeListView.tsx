@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Trees,
   Search,
@@ -30,6 +30,7 @@ import {
   getTreeMilestone,
   getTreeStreetCode,
   getTreeFullDisplayLabel,
+  getTreeGeneralArea,
   calculateHaversineDistance,
   findNearestTree,
   STREET_CORRIDORS_LIST,
@@ -56,10 +57,15 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
   const treeTypes = storage.getTreeTypes();
 
   const [search, setSearch] = useState('');
+  const [selectedArea, setSelectedArea] = useState<string>('ALL');
   const [selectedType, setSelectedType] = useState<string>('ALL');
   const [selectedHealth, setSelectedHealth] = useState<string>('ALL');
   const [selectedCorridorFilter, setSelectedCorridorFilter] = useState<string>('ALL');
   const [viewMode, setViewMode] = useState<'grid' | 'table' | 'corridor'>('corridor');
+
+  // Pagination State (Tối ưu chống đơ lag khi dữ liệu > 1,000 - 5,000 cây)
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(36);
 
   // GPS Radar State
   const [isScanningGps, setIsScanningGps] = useState(false);
@@ -67,12 +73,39 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
   const [radarUserLocation, setRadarUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [radarToast, setRadarToast] = useState<string | null>(null);
 
+  // 🗺️ Danh sách Địa phương / Khu vực tổng quát (Quận Ninh Kiều, Cái Răng, Bình Thủy, Đà Nẵng...)
+  const availableAreas = useMemo(() => {
+    const counts: { [area: string]: number } = {};
+    trees.forEach((t) => {
+      const a = getTreeGeneralArea(t);
+      counts[a] = (counts[a] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [trees]);
+
+  // 🛣️ Danh sách Tuyến đường / Dãy cây theo khu vực đang chọn
+  const availableCorridors = useMemo(() => {
+    const counts: { [corridor: string]: number } = {};
+    trees.forEach((t) => {
+      if (selectedArea !== 'ALL' && getTreeGeneralArea(t) !== selectedArea) return;
+      const c = getTreeCorridor(t);
+      counts[c] = (counts[c] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [trees, selectedArea]);
+
+  // Reset trang về 1 khi bất kỳ bộ lọc nào thay đổi
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedArea, selectedCorridorFilter, selectedType, selectedHealth, viewMode]);
+
   // Filtered Trees
   const filteredTrees = useMemo(() => {
     return trees.filter((tree) => {
       const streetCode = getTreeStreetCode(tree).toLowerCase();
       const corridor = getTreeCorridor(tree).toLowerCase();
       const milestone = getTreeMilestone(tree).toLowerCase();
+      const area = getTreeGeneralArea(tree);
       const searchLower = search.toLowerCase();
 
       const matchesSearch =
@@ -83,15 +116,23 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
         corridor.includes(searchLower) ||
         milestone.includes(searchLower);
 
+      const matchesArea = selectedArea === 'ALL' || area === selectedArea;
       const matchesType = selectedType === 'ALL' || tree.treeTypeId === selectedType;
       const matchesHealth = selectedHealth === 'ALL' || tree.healthStatus === selectedHealth;
       const matchesCorridor =
         selectedCorridorFilter === 'ALL' ||
         getTreeCorridor(tree) === selectedCorridorFilter;
 
-      return matchesSearch && matchesType && matchesHealth && matchesCorridor;
+      return matchesSearch && matchesArea && matchesType && matchesHealth && matchesCorridor;
     });
-  }, [trees, search, selectedType, selectedHealth, selectedCorridorFilter]);
+  }, [trees, search, selectedArea, selectedType, selectedHealth, selectedCorridorFilter]);
+
+  // Paginated Trees for Grid & Table
+  const totalPages = Math.max(1, Math.ceil(filteredTrees.length / pageSize));
+  const paginatedTrees = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredTrees.slice(start, start + pageSize);
+  }, [filteredTrees, currentPage, pageSize]);
 
   // Grouped by corridor for 'corridor' view
   const groupedCorridors = useMemo(() => {
@@ -271,16 +312,35 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Lọc theo Tuyến Đường */}
+          {/* 📍 Lọc theo Khu Vực / Địa Phương Tổng Quát (Quận Ninh Kiều, Cái Răng, Bình Thủy, Đà Nẵng...) */}
+          <select
+            value={selectedArea}
+            onChange={(e) => {
+              setSelectedArea(e.target.value);
+              setSelectedCorridorFilter('ALL');
+            }}
+            className="px-3 py-1.5 text-xs font-bold border border-emerald-300 dark:border-emerald-700/80 rounded-full bg-emerald-50/80 dark:bg-emerald-950/60 text-emerald-900 dark:text-[#00FF9D] focus:border-emerald-500 shadow-2xs cursor-pointer"
+          >
+            <option value="ALL">📍 Tất cả địa phương ({availableAreas.length} khu vực)</option>
+            {availableAreas.map(([areaName, count]) => (
+              <option key={areaName} value={areaName}>
+                {areaName} ({count} cây)
+              </option>
+            ))}
+          </select>
+
+          {/* 🛣️ Lọc theo Tuyến Đường / Công Viên Đô Thị */}
           <select
             value={selectedCorridorFilter}
             onChange={(e) => setSelectedCorridorFilter(e.target.value)}
             className="px-3 py-1.5 text-xs font-medium border border-slate-200 dark:border-slate-700/80 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500"
           >
-            <option value="ALL">📍 Tất cả tuyến đường</option>
-            {STREET_CORRIDORS_LIST.map((c) => (
-              <option key={c.id} value={c.name}>
-                {c.name} ({c.prefix})
+            <option value="ALL">
+              🛣️ {selectedArea !== 'ALL' ? `Tất cả tuyến ở ${selectedArea.split('(')[0].trim()}` : 'Tất cả tuyến đường'} ({availableCorridors.length})
+            </option>
+            {availableCorridors.map(([cName, count]) => (
+              <option key={cName} value={cName}>
+                {cName} ({count} cây)
               </option>
             ))}
           </select>
@@ -377,7 +437,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
 
                 {/* Linear Sequential Tree Cards Along the Corridor */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {corridorTrees.map((tree, idx) => {
+                  {corridorTrees.slice(0, 24).map((tree, idx) => {
                     const streetCode = getTreeStreetCode(tree);
                     const milestone = getTreeMilestone(tree);
                     const treeType = treeTypes.find((t) => t.id === tree.treeTypeId);
@@ -489,6 +549,23 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                     );
                   })}
                 </div>
+
+                {corridorTrees.length > 24 && (
+                  <div className="mt-4 p-3.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <span className="text-slate-600 dark:text-slate-300">
+                      ⚡ Đang hiển thị 24 cây tiêu biểu (Tuyến này có tổng cộng <strong>{corridorTrees.length}</strong> cây).
+                    </span>
+                    <button
+                      onClick={() => {
+                        setSelectedCorridorFilter(corridorName);
+                        setViewMode('grid');
+                      }}
+                      className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer transition-colors shadow-2xs self-start sm:self-auto"
+                    >
+                      Xem toàn bộ {corridorTrees.length} cây trên tuyến này →
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -498,7 +575,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
         /* 📦 VIEW MODE 2: BENTO GRID VIEW                                           */
         /* ========================================================================= */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredTrees.map((tree) => {
+          {paginatedTrees.map((tree) => {
             const treeType = treeTypes.find((t) => t.id === tree.treeTypeId);
             const streetCode = getTreeStreetCode(tree);
             const milestone = getTreeMilestone(tree);
@@ -669,7 +746,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
-                {filteredTrees.map((tree) => {
+                {paginatedTrees.map((tree) => {
                   const treeType = treeTypes.find((t) => t.id === tree.treeTypeId);
                   const streetCode = getTreeStreetCode(tree);
                   const milestone = getTreeMilestone(tree);
@@ -750,6 +827,48 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* 📄 BỘ ĐIỀU KHIỂN PHÂN TRANG HIỆU NĂNG CAO (PAGINATION CONTROLS) */}
+      {viewMode !== 'corridor' && totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bento-card dark:bg-[#0c1812] dark:border-slate-800 text-xs shadow-xs">
+          <div className="text-slate-500 dark:text-slate-400">
+            Đang xem cây thứ <span className="font-bold text-slate-800 dark:text-slate-200">{(currentPage - 1) * pageSize + 1}</span> – <span className="font-bold text-slate-800 dark:text-slate-200">{Math.min(currentPage * pageSize, filteredTrees.length)}</span> trong tổng số <span className="font-bold text-emerald-600 dark:text-[#00FF9D]">{filteredTrees.length.toLocaleString('vi-VN')}</span> cây
+          </div>
+
+          <div className="flex items-center gap-1.5 self-center sm:self-auto flex-wrap">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors cursor-pointer"
+            >
+              ← Trang trước
+            </button>
+
+            <span className="px-3.5 py-1.5 font-mono font-bold text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 rounded-xl">
+              Trang {currentPage} / {totalPages}
+            </span>
+
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors cursor-pointer"
+            >
+              Trang sau →
+            </button>
+
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="ml-2 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-semibold"
+            >
+              <option value={24}>24 cây / trang</option>
+              <option value={36}>36 cây / trang</option>
+              <option value={60}>60 cây / trang</option>
+              <option value={120}>120 cây / trang</option>
+            </select>
           </div>
         </div>
       )}

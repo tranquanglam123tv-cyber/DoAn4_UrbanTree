@@ -163,6 +163,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
   // 🏛️ Multi-Zone / District Jurisdiction State
   const [selectedZoneId, setSelectedZoneId] = useState<string>('all');
+  const [mapViewportVersion, setMapViewportVersion] = useState<number>(0);
 
   // Selection Drawers
   const [activeSelectedTree, setActiveSelectedTree] = useState<Tree | null>(null);
@@ -232,6 +233,11 @@ export const MapView: React.FC<MapViewProps> = ({
           lat: Number(e.latlng.lat.toFixed(6)),
           lng: Number(e.latlng.lng.toFixed(6)),
         });
+      });
+
+      // Viewport culling on move / zoom
+      map.on('moveend zoomend', () => {
+        setMapViewportVersion((v) => v + 1);
       });
 
       // Click on Map for Pin Add Mode or General clicks
@@ -311,6 +317,12 @@ export const MapView: React.FC<MapViewProps> = ({
 
     // 1. Add Tree Markers
     if (showTrees) {
+      let renderedCount = 0;
+      const map = mapInstanceRef.current;
+      const bounds = map ? map.getBounds().pad(0.2) : null;
+      const zoom = map ? map.getZoom() : 15;
+      const isZoomedOut = zoom < 14;
+
       trees.forEach((tree) => {
         // Zone Filter
         if (selectedZoneId !== 'all') {
@@ -344,6 +356,16 @@ export const MapView: React.FC<MapViewProps> = ({
           const treeSearchable = `${tree.address} ${tree.displayName} ${tree.houseNumberMilestone} ${tree.streetCorridor} ${tree.streetCode} ${tree.publicCode}`.toLowerCase();
           if (!treeSearchable.includes(q)) return;
         }
+
+        // ⚡ GIS High-Performance Viewport Culling (Chống giật lag khi có hàng ngàn cây):
+        if (isZoomedOut && renderedCount >= 300 && activeSelectedTree?.id !== tree.id) {
+          return;
+        }
+        if (!isZoomedOut && bounds && !bounds.contains([tree.latitude, tree.longitude]) && activeSelectedTree?.id !== tree.id) {
+          return;
+        }
+
+        renderedCount++;
 
         const streetCode = getTreeStreetCode(tree);
         const milestone = getTreeMilestone(tree);
@@ -517,6 +539,7 @@ export const MapView: React.FC<MapViewProps> = ({
     selectedLocation,
     searchLocationQuery,
     selectedZoneId,
+    mapViewportVersion,
   ]);
 
   // Handle Location Landmark Select & FlyTo
