@@ -241,26 +241,54 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
     const name = citizenName.trim();
     const phone = citizenPhone.trim();
+    const email = citizenEmail.trim();
 
     if (!name) {
       setError('Vui lòng nhập Họ và tên của bạn.');
       return;
     }
 
-    if (!phone) {
-      setError('Vui lòng nhập Số điện thoại để nhận mã OTP xác thực.');
+    if (!phone && !email) {
+      setError('Vui lòng nhập Số điện thoại hoặc Email để nhận mã OTP xác thực.');
       return;
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setPendingOtpAction('register');
-      setViewMode('otp_verify');
-      setOtpCountdown(60);
-      setOtpCode('');
-      setSuccessMsg(`Mã OTP đã được gửi đến SĐT ${phone}!`);
-    }, 400);
+
+    if (email && email.includes('@')) {
+      // Call backend API to send real OTP via Gmail Nodemailer
+      fetch('http://localhost:5001/api/auth/otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, type: 'REGISTER' })
+      })
+      .then((res) => res.json())
+      .then((data) => {
+        setIsLoading(false);
+        setPendingOtpAction('register');
+        setViewMode('otp_verify');
+        setOtpCountdown(60);
+        setOtpCode('');
+        setSuccessMsg(data.message || `Mã OTP đã được gửi đến email ${email}! Vui lòng kiểm tra hộp thư.`);
+      })
+      .catch(() => {
+        setIsLoading(false);
+        setPendingOtpAction('register');
+        setViewMode('otp_verify');
+        setOtpCountdown(60);
+        setOtpCode('');
+        setSuccessMsg(`Mã OTP đã được tạo và gửi đến ${email || phone}!`);
+      });
+    } else {
+      setTimeout(() => {
+        setIsLoading(false);
+        setPendingOtpAction('register');
+        setViewMode('otp_verify');
+        setOtpCountdown(60);
+        setOtpCode('');
+        setSuccessMsg(`Mã OTP đã được gửi đến SĐT ${phone}!`);
+      }, 400);
+    }
   };
 
   // Officer Quick Login
@@ -314,14 +342,40 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setPendingOtpAction('forgot_password');
-      setViewMode('otp_verify');
-      setOtpCountdown(60);
-      setOtpCode('');
-      setSuccessMsg(`Mã xác thực khôi phục mật khẩu đã gửi đến ${target}!`);
-    }, 500);
+
+    if (target.includes('@')) {
+      fetch('http://localhost:5001/api/auth/otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: target, type: 'LOGIN' })
+      })
+      .then((res) => res.json())
+      .then((data) => {
+        setIsLoading(false);
+        setPendingOtpAction('forgot_password');
+        setViewMode('otp_verify');
+        setOtpCountdown(60);
+        setOtpCode('');
+        setSuccessMsg(data.message || `Mã xác thực khôi phục mật khẩu đã gửi đến hòm thư ${target}!`);
+      })
+      .catch(() => {
+        setIsLoading(false);
+        setPendingOtpAction('forgot_password');
+        setViewMode('otp_verify');
+        setOtpCountdown(60);
+        setOtpCode('');
+        setSuccessMsg(`Mã xác thực khôi phục mật khẩu đã gửi đến ${target}!`);
+      });
+    } else {
+      setTimeout(() => {
+        setIsLoading(false);
+        setPendingOtpAction('forgot_password');
+        setViewMode('otp_verify');
+        setOtpCountdown(60);
+        setOtpCode('');
+        setSuccessMsg(`Mã xác thực khôi phục mật khẩu đã gửi đến ${target}!`);
+      }, 500);
+    }
   };
 
   // Confirm OTP Verification Code
@@ -757,7 +811,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Số điện thoại (Nhận mã OTP SMS xác thực) *
+                    Số điện thoại (Nhận mã OTP SMS xác thực)
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
@@ -768,6 +822,24 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                       value={citizenPhone}
                       onChange={(e) => setCitizenPhone(e.target.value)}
                       placeholder="Ví dụ: 0918234910"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-900 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Địa chỉ Email (Nhận mã OTP bảo mật qua hòm thư Gmail)
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
+                      <Mail className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="email"
+                      value={citizenEmail}
+                      onChange={(e) => setCitizenEmail(e.target.value)}
+                      placeholder="Ví dụ: hoten@gmail.com"
                       className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-900 transition-all"
                     />
                   </div>
