@@ -169,6 +169,21 @@ Trong nghiệp vụ hạ tầng đô thị thông minh cấp quốc gia (Multi-T
   1. **Vai trò Admin (Phòng điều hành / Trung tâm IOC):** Admin ngồi tại văn phòng chỉ làm nhiệm vụ **Điều phối (Dispatching)**: tiếp nhận phản ánh của người dân ➔ sàng lọc tin rác / tin sai ➔ chuyển giao vé công tác và chỉ định Kỹ thuật viên phụ trách địa bàn (`ASSIGNED`). Admin **tuyệt đối không cầm cưa ra đường** nên không thực hiện chụp ảnh hay bấm hoàn tất hiện trường.
   2. **Vai trò Staff (Tổ kỹ thuật thực địa):** Đội ngũ KTV đi xe thang đến hiện trường kiểm tra, cưa tỉa cành gãy, thu dọn rác xanh. Sau khi hoàn thành, KTV sử dụng điện thoại chụp ảnh đối chứng hiện trường sau xử lý và bấm **Nghiệm thu & Ký số On-Chain (RESOLVED)** trực tiếp trên giao diện dành riêng cho Staff (`StaffWorkstationView`).
 
+### Câu 6: Hệ thống phân loại cây đô thị theo tiêu chuẩn pháp lý nào và có cảnh báo cây bảo tồn di sản không?
+- **Trả lời chuẩn luật xây dựng:**
+  - Hệ thống tuân thủ nghiêm ngặt **Thông tư 20/2020/TT-BXD** và **Nghị định 64/2010/NĐ-CP** của Chính phủ:
+    - **Cây Loại 1 (Mới trồng / Cây con):** Đường kính $D < 20cm$, chiều cao $H < 6m$.
+    - **Cây Loại 2 (Trưởng thành):** Đường kính $D: 20-50cm$, chiều cao $H: 6-12m$ (cắt tỉa định kỳ trước mùa mưa bão).
+    - **Cây Loại 3 (Cổ thụ / Di sản bảo tồn):** Đường kính $D \ge 50cm$ hoặc chiều cao $H \ge 12m$.
+  - Trên Thẻ nhôm định danh và Form nhập liệu, hệ thống tự động dán nhãn viền tím nhấp nháy cảnh báo: **🛑 CÂY DI SẢN BẢO TỒN ĐÔ THỊ · NGHIÊM CẤM TỰ Ý ĐỐN HẠ KHI CHƯA CÓ GIẤY PHÉP PHÊ DUYỆT TỪ UBND HOẶC SỞ XÂY DỰNG!**
+
+### Câu 7: Con số hấp thụ CO2 và Sinh khối trên Dashboard được tính theo căn cứ khoa học nào?
+- **Trả lời chuyên gia môi trường:**
+  - Hệ thống KHÔNG dùng số ngẫu nhiên mà tích hợp **Phương trình Allometric lâm sinh chuẩn quốc tế của USDA Forest Service (i-Tree Eco Model)**:
+    $$\text{Biomass (kg)} = 0.0673 \times (\rho \times \text{DBH}^2 \times H)^{0.976}$$
+    *(Trong đó: $\text{DBH}$ là đường kính ngang ngực cm, $H$ là chiều cao m, $\rho$ là tỷ trọng gỗ khô).*
+  - Từ sinh khối tích lũy hàng năm, hệ thống nhân với tỷ lệ Carbon ($50\%$) và tỷ số phân tử $\frac{44}{12}$ để kết xuất chính xác lượng $CO_2$ cô lập (tấn/năm) và lượng Oxy hoàn lưu cho không gian sống đô thị.
+
 ---
 *Tài liệu lưu hành nội bộ đồ án tốt nghiệp UrbanTree - Cần Thơ Smart Eco-GIS 4.0.*
 
