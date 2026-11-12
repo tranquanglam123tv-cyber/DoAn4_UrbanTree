@@ -928,6 +928,30 @@ class StorageService {
     return newTree;
   }
 
+  public async createTreesBulk(items: Array<Omit<Tree, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Tree[]> {
+    const now = new Date().toISOString();
+    const created: Tree[] = [];
+    const baseTime = Date.now();
+
+    for (let i = 0; i < items.length; i++) {
+      const data = items[i];
+      const id = `tree-${baseTime}-${i}`;
+      const newTree: Tree = {
+        ...data,
+        id,
+        createdAt: now,
+        updatedAt: now,
+        payloadVersion: 1,
+        anchorStatus: 'CONFIRMED',
+      };
+      created.push(newTree);
+    }
+
+    this.trees.unshift(...created);
+    this.saveAll();
+    return created;
+  }
+
   public async updateTree(id: string, updates: Partial<Tree>): Promise<Tree> {
     const index = this.trees.findIndex((t) => t.id === id);
     if (index === -1) throw new Error(`Tree ${id} not found`);

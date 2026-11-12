@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import {
   X,
   Trees,
@@ -360,42 +361,66 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, initialCoord
     }
   };
 
-  // 📁 Xử lý đọc File Excel / CSV tải lên
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 📁 Xử lý đọc File GeoJSON (.geojson, .json), Excel (.xlsx, .xls), CSV (.csv)
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploadedFileName(file.name);
     setError(null);
+    const fileNameLower = file.name.toLowerCase();
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const text = event.target?.result as string;
-        const lines = text
-          .split('\n')
-          .map((l) => l.trim())
-          .filter((l) => l.length > 0);
+    try {
+      // 1. Trường hợp file GeoJSON hoặc JSON từ OpenStreetMap
+      if (fileNameLower.endsWith('.geojson') || fileNameLower.endsWith('.json')) {
+        const text = await file.text();
+        const json = JSON.parse(text);
+        const features = Array.isArray(json) ? json : (json.features || []);
 
-        if (lines.length < 2) {
-          setError('File không có dữ liệu hoặc sai định dạng bảng.');
+        if (!Array.isArray(features) || features.length === 0) {
+          setError('File GeoJSON không chứa đối tượng hình học (Feature/Point) hợp lệ.');
           return;
         }
 
         const parsed: any[] = [];
-        for (let i = 1; i < lines.length; i++) {
-          const cols = lines[i].split(',').map((c) => c.trim().replace(/^"|"$/g, ''));
-          if (cols.length < 4) continue;
+        for (let i = 0; i < features.length; i++) {
+          const f = features[i];
+          const coords = f.geometry?.coordinates;
+          if (!coords || !Array.isArray(coords) || coords.length < 2) continue;
 
-          // Cột: MaTuyen, TenHienThi, DiaChi, ViDo, KinhDo, DuongKinh, ChieuCao, SucKhoe
-          const code = cols[0] || `IMPORT-${String(i).padStart(2, '0')}`;
-          const name = cols[1] || `Cây Xanh #${String(i).padStart(2, '0')}`;
-          const addr = cols[2] || 'Đại lộ Hòa Bình, Ninh Kiều, Cần Thơ';
-          const lat = parseFloat(cols[3]) || 10.036829;
-          const lng = parseFloat(cols[4]) || 105.782541;
-          const diam = parseFloat(cols[5]) || 30;
-          const height = parseFloat(cols[6]) || 8;
-          const rawHealth = (cols[7] || 'GOOD').toUpperCase();
+          // Chuẩn GeoJSON: [Kinh độ, Vĩ độ] = [longitude, latitude]
+          const lng = parseFloat(coords[0]);
+          const lat = parseFloat(coords[1]);
+          if (isNaN(lat) || isNaN(lng)) continue;
+
+          const p = f.properties || {};
+          const code =
+            p['Mã Cây (publicCode)'] ||
+            p['publicCode'] ||
+            p['ref'] ||
+            p['@id'] ||
+            f.id ||
+            `CT-OSM-${String(i + 1).padStart(4, '0')}`;
+          const nameVi =
+            p['Tên tiếng Việt (name:vi)'] ||
+            p['Tên (name)'] ||
+            p['species'] ||
+            p['natural'] ||
+            'Cây Xanh';
+          const name =
+            p['Tên Hiển Thị (displayName)'] ||
+            p['displayName'] ||
+            p['name'] ||
+            `Cây ${nameVi} #${String(i + 1).padStart(4, '0')}`;
+          const addr =
+            p['Địa Chỉ (address)'] ||
+            p['address'] ||
+            p['addr:street'] ||
+            `Tọa độ (${lat.toFixed(5)}, ${lng.toFixed(5)}), Ninh Kiều, Cần Thơ`;
+          const diam =
+            parseFloat(p['Đường kính (cm)'] || p['diameter'] || (p.circumference ? p.circumference / 3.14 : 30)) || 30;
+          const height = parseFloat(p['Chiều cao (m)'] || p['height'] || 8) || 8;
+          const rawHealth = String(p['Tình trạng sức khỏe'] || p['healthStatus'] || 'GOOD').toUpperCase();
           const health: TreeHealthStatus = ['GOOD', 'FAIR', 'POOR', 'CRITICAL'].includes(rawHealth)
             ? (rawHealth as TreeHealthStatus)
             : 'GOOD';
@@ -408,23 +433,97 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, initialCoord
             address: addr,
             latitude: lat,
             longitude: lng,
-            diameterCm: diam,
-            heightM: height,
+            diameterCm: Math.round(diam),
+            heightM: Number(height.toFixed(1)),
             healthStatus: health,
           });
         }
 
         if (parsed.length === 0) {
-          setError('Không trích xuất được dòng dữ liệu hợp lệ nào từ file.');
+          setError('Không trích xuất được tọa độ cây nào từ file GeoJSON.');
           return;
         }
 
         setParsedTreesFromFile(parsed);
-      } catch (err: any) {
-        setError('Lỗi khi đọc file: ' + err.message);
+        return;
       }
-    };
-    reader.readAsText(file);
+
+      // 2. Trường hợp file Excel (.xlsx, .xls) hoặc CSV
+      const buffer = await file.arrayBuffer();
+      const wb = XLSX.read(buffer, { type: 'array' });
+      const sheetName = wb.SheetNames.includes('DuLieuCayXanh') ? 'DuLieuCayXanh' : wb.SheetNames[0];
+      const sheet = wb.Sheets[sheetName];
+      const rows: any[] = XLSX.utils.sheet_to_json(sheet);
+
+      if (!rows || rows.length === 0) {
+        setError('File Excel / CSV không có dữ liệu hàng nào.');
+        return;
+      }
+
+      const parsed: any[] = [];
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        const lat = parseFloat(
+          r['Vĩ độ (Latitude)'] || r['latitude'] || r['ViDo'] || r['lat'] || r['Vĩ độ']
+        );
+        const lng = parseFloat(
+          r['Kinh độ (Longitude)'] || r['longitude'] || r['KinhDo'] || r['lng'] || r['lon'] || r['Kinh độ']
+        );
+        if (isNaN(lat) || isNaN(lng)) continue;
+
+        const code =
+          r['Mã Cây (publicCode)'] ||
+          r['publicCode'] ||
+          r['MaTuyen'] ||
+          r['ID'] ||
+          `CT-OSM-${String(i + 1).padStart(4, '0')}`;
+        const name =
+          r['Tên Hiển Thị (displayName)'] ||
+          r['displayName'] ||
+          r['TenHienThi'] ||
+          r['Tên (name)'] ||
+          r['Tên tiếng Việt (name:vi)'] ||
+          `Cây Xanh #${String(i + 1).padStart(4, '0')}`;
+        const addr =
+          r['Địa Chỉ (address)'] ||
+          r['address'] ||
+          r['DiaChi'] ||
+          r['Tuyến đường phụ trách'] ||
+          'TP. Cần Thơ';
+        const diam =
+          parseFloat(r['Đường kính (cm)'] || r['diameterCm'] || r['DuongKinh'] || 30) || 30;
+        const height =
+          parseFloat(r['Chiều cao (m)'] || r['heightM'] || r['ChieuCao'] || r['Chiều cao (height)'] || 8) || 8;
+        const rawHealth = String(
+          r['Tình trạng sức khỏe'] || r['healthStatus'] || r['SucKhoe'] || 'GOOD'
+        ).toUpperCase();
+        const health: TreeHealthStatus = ['GOOD', 'FAIR', 'POOR', 'CRITICAL'].includes(rawHealth)
+          ? (rawHealth as TreeHealthStatus)
+          : 'GOOD';
+
+        parsed.push({
+          publicCode: code,
+          streetCode: code,
+          displayName: name,
+          treeTypeId: treeTypes[0]?.id || 'type-bang',
+          address: addr,
+          latitude: lat,
+          longitude: lng,
+          diameterCm: Math.round(diam),
+          heightM: Number(height.toFixed(1)),
+          healthStatus: health,
+        });
+      }
+
+      if (parsed.length === 0) {
+        setError('Không trích xuất được tọa độ (Vĩ độ / Kinh độ) hợp lệ nào từ file.');
+        return;
+      }
+
+      setParsedTreesFromFile(parsed);
+    } catch (err: any) {
+      setError('Lỗi khi đọc file: ' + err.message);
+    }
   };
 
   // 📥 Tải file mẫu CSV
@@ -527,33 +626,34 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, initialCoord
     setError(null);
 
     try {
-      const createdList: Tree[] = [];
-      for (const item of parsedTreesFromFile) {
-        const newTree = await storage.createTree({
-          publicCode: item.publicCode,
-          streetCode: item.streetCode,
-          streetCorridor: item.address.includes('Hòa Bình')
-            ? 'Đại Lộ Hòa Bình'
-            : item.address.includes('30 Tháng 4')
-            ? 'Đường 30 Tháng 4'
-            : 'Tuyến Phố Đô Thị',
-          houseNumberMilestone: item.address.split(',')[0],
-          displayName: item.displayName,
-          treeTypeId: item.treeTypeId,
-          address: item.address,
-          latitude: item.latitude,
-          longitude: item.longitude,
-          plantedAt: '2023-03-15',
-          healthStatus: item.healthStatus,
-          diameterCm: item.diameterCm,
-          heightM: item.heightM,
-          imageUrl:
-            'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=800&q=80',
-          isActive: true,
-        });
-        createdList.push(newTree);
-      }
+      const itemsToCreate = parsedTreesFromFile.map((item) => ({
+        publicCode: item.publicCode,
+        streetCode: item.streetCode,
+        streetCorridor: item.address.includes('Hòa Bình')
+          ? 'Đại Lộ Hòa Bình'
+          : item.address.includes('30 Tháng 4')
+          ? 'Đường 30 Tháng 4'
+          : item.address.includes('Bình Thủy') || item.address.includes('Võ Văn Kiệt')
+          ? 'Tuyến Võ Văn Kiệt'
+          : item.address.includes('Cái Răng') || item.address.includes('Võ Nguyên Giáp')
+          ? 'Tuyến Võ Nguyên Giáp'
+          : 'Tuyến Phố Đô Thị',
+        houseNumberMilestone: item.address.split(',')[0],
+        displayName: item.displayName,
+        treeTypeId: item.treeTypeId,
+        address: item.address,
+        latitude: item.latitude,
+        longitude: item.longitude,
+        plantedAt: '2023-03-15',
+        healthStatus: item.healthStatus,
+        diameterCm: item.diameterCm,
+        heightM: item.heightM,
+        imageUrl:
+          'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=800&q=80',
+        isActive: true,
+      }));
 
+      const createdList = await storage.createTreesBulk(itemsToCreate);
       setBulkSuccessList(createdList);
       onSaved();
     } catch (err: any) {
@@ -1217,7 +1317,7 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, initialCoord
                   <input
                     type="file"
                     id="excel-csv-file-input"
-                    accept=".csv,.xlsx,.xls,.json"
+                    accept=".geojson,.json,.xlsx,.xls,.csv"
                     onChange={handleFileUpload}
                     className="hidden"
                   />
@@ -1231,14 +1331,14 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, initialCoord
                     <div className="font-bold text-sm text-slate-800 dark:text-slate-100">
                       {uploadedFileName ? (
                         <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 justify-center">
-                          <CheckCircle2 className="w-4 h-4" /> Đã nạp file: {uploadedFileName}
+                          <CheckCircle2 className="w-4 h-4" /> Đã nạp file: {uploadedFileName} ({parsedTreesFromFile.length.toLocaleString('vi-VN')} cây)
                         </span>
                       ) : (
-                        'Chọn hoặc Kéo thả file Excel (.xlsx), CSV (.csv) vào đây'
+                        'Chọn hoặc Kéo thả file GeoJSON (.geojson), Excel (.xlsx), CSV (.csv) vào đây'
                       )}
                     </div>
-                    <p className="text-slate-500 dark:text-slate-400 text-[11px]">
-                      Hỗ trợ định dạng bảng tính khảo sát thực địa: Mã cây, Tên loài, Địa chỉ, Vĩ độ, Kinh độ, Đường kính, Chiều cao, Tình trạng
+                    <p className="text-slate-500 dark:text-slate-400 text-[11px] max-w-xl mx-auto">
+                      Hỗ trợ định dạng GIS OpenStreetMap GeoJSON (.geojson), Bảng tính Excel (.xlsx) khảo sát thực địa: Mã cây, Tên loài, Địa chỉ, Vĩ độ, Kinh độ, Đường kính, Chiều cao, Tình trạng
                     </p>
                   </label>
 
