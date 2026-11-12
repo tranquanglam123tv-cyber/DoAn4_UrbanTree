@@ -28,6 +28,10 @@ export interface TreeType {
 export interface Tree {
   id: string;
   publicCode: string; // e.g. TREE-001
+  streetCode?: string; // e.g. "HB-01", "30T4-02", "LHP-01" (Quy tắc định danh tuyến đường)
+  streetCorridor?: string; // e.g. "Đại Lộ Hòa Bình", "Đường 30 Tháng 4", "Công Viên Lưu Hữu Phước"
+  houseNumberMilestone?: string; // e.g. "Trước số 12 Đại lộ Hòa Bình" (Mốc số nhà)
+  sequenceNumber?: number; // Thứ tự cây trên tuyến (1, 2, 3...)
   treeTypeId: string;
   displayName: string;
   address: string;

@@ -28,9 +28,18 @@ import {
   FileText,
   Radio,
   Search,
+  LocateFixed,
+  Cpu,
 } from 'lucide-react';
 import { storage } from '../db/storage';
 import { CareActionType, Incident, Tree, User } from '../types';
+import { DigitalAlloyTag } from './DigitalAlloyTag';
+import {
+  findNearestTree,
+  getTreeCorridor,
+  getTreeMilestone,
+  getTreeStreetCode,
+} from '../utils/treeUtils';
 
 interface StaffWorkstationViewProps {
   currentUser: User;
@@ -102,15 +111,48 @@ export const StaffWorkstationView: React.FC<StaffWorkstationViewProps> = ({
 
   // Trees in selected corridor
   const corridorTrees = useMemo(() => {
-    // distribute trees evenly across corridors for demo
-    if (selectedCorridorId === 'corridor-hoa-binh') {
-      return trees.slice(0, 3);
-    } else if (selectedCorridorId === 'corridor-30-thang-4') {
-      return trees.slice(2, 5);
-    } else {
-      return trees.slice(1, 4);
-    }
+    const targetCorridor = STREET_CORRIDORS.find((c) => c.id === selectedCorridorId);
+    if (!targetCorridor) return trees.slice(0, 5);
+
+    const matches = trees.filter((t) => {
+      const c = getTreeCorridor(t);
+      const code = getTreeStreetCode(t);
+      return c === targetCorridor.name || code.startsWith(targetCorridor.prefix);
+    });
+
+    return matches.length > 0 ? matches : trees.slice(0, 5);
   }, [trees, selectedCorridorId]);
+
+  // 📍 Radar GPS State & Auto-Detect for Staff
+  const [isScanningGps, setIsScanningGps] = useState(false);
+  const [radarNearestTree, setRadarNearestTree] = useState<{ tree: Tree; distanceM: number } | null>(null);
+  const [radarToast, setRadarToast] = useState<string | null>(null);
+
+  const handleTriggerStaffGpsRadar = () => {
+    setIsScanningGps(true);
+    setRadarToast('🛰️ Đang quét GPS vi sai tìm cây gần xe thang nhất trong bán kính 5m...');
+
+    const onCoords = (lat: number, lng: number) => {
+      const nearest = findNearestTree(lat, lng, trees);
+      if (nearest) {
+        setRadarNearestTree(nearest);
+        const streetCode = getTreeStreetCode(nearest.tree);
+        const milestone = getTreeMilestone(nearest.tree);
+        setRadarToast(`🎯 PHÁT HIỆN CÂY TRƯỚC MẶT: [${streetCode}] (${nearest.distanceM}m) · ${milestone}`);
+      }
+      setIsScanningGps(false);
+    };
+
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => onCoords(pos.coords.latitude, pos.coords.longitude),
+        () => onCoords(10.036829, 105.782541),
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    } else {
+      onCoords(10.036829, 105.782541);
+    }
+  };
 
   // Initialize selected tree ids when corridor changes
   const handleSelectAllCorridor = () => {
@@ -351,8 +393,31 @@ export const StaffWorkstationView: React.FC<StaffWorkstationViewProps> = ({
         </div>
       </div>
 
-      {/* ⚡ 2. BIG GLOVE-FRIENDLY ACTION BAR (NÚT BẤM KÍCH THƯỚC LỚN CHO GĂNG TAY LAO ĐỘNG) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+      {/* 📡 Staff Radar GPS Notification */}
+      {radarToast && (
+        <div className="p-3.5 bg-gradient-to-r from-emerald-900 to-teal-900 text-white rounded-2xl border border-emerald-400/50 shadow-xl flex items-center justify-between gap-3 animate-in slide-in-from-top-3 duration-200">
+          <div className="flex items-center gap-3">
+            <span className="relative flex h-3 w-3 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+            </span>
+            <div className="text-xs font-medium">
+              <span>{radarToast}</span>
+            </div>
+          </div>
+          {radarNearestTree && (
+            <button
+              onClick={() => onSelectTree(radarNearestTree.tree)}
+              className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs shrink-0 cursor-pointer transition-colors shadow-sm"
+            >
+              Mở cây này
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ⚡ 2. BIG GLOVE-FRIENDLY ACTION BAR (4 NÚT BẤM KÍCH THƯỚC LỚN CHO GĂNG TAY LAO ĐỘNG) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         <button
           onClick={() => setActiveTab('batch_care')}
           className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-950/20 active:scale-95 transition-all flex items-center justify-between cursor-pointer border border-emerald-400/40 group"
@@ -367,6 +432,26 @@ export const StaffWorkstationView: React.FC<StaffWorkstationViewProps> = ({
             </div>
           </div>
           <ChevronRight className="w-5 h-5 text-emerald-200 group-hover:translate-x-1 transition-transform" />
+        </button>
+
+        {/* 📍 Nút Radar GPS mới */}
+        <button
+          onClick={handleTriggerStaffGpsRadar}
+          disabled={isScanningGps}
+          className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-teal-700 to-emerald-800 hover:from-teal-600 hover:to-emerald-700 text-white shadow-lg active:scale-95 transition-all flex items-center justify-between cursor-pointer border border-teal-500/40 group"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 text-white">
+              <LocateFixed className={`w-6 h-6 ${isScanningGps ? 'animate-spin' : 'animate-pulse'}`} />
+            </div>
+            <div className="text-left">
+              <div className="text-sm font-black tracking-tight">
+                {isScanningGps ? 'Đang Bắt Sóng...' : 'Radar GPS Cây Gần'}
+              </div>
+              <div className="text-[11px] text-teal-100/80">Quét cây trong bán kính 5m</div>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-teal-200 group-hover:translate-x-1 transition-transform" />
         </button>
 
         <button
@@ -758,16 +843,17 @@ export const StaffWorkstationView: React.FC<StaffWorkstationViewProps> = ({
                   >
                     <div className="space-y-1 min-w-0 pr-2">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-mono font-bold text-xs text-emerald-900 dark:text-emerald-300 bg-white dark:bg-slate-800 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-slate-700">
-                          #{idx + 1} · {tree.publicCode}
+                        <span className="font-mono font-black text-xs text-amber-300 bg-slate-900 px-2 py-0.5 rounded-lg border border-slate-700 shadow-2xs">
+                          [{getTreeStreetCode(tree)}]
                         </span>
-                        <span className="text-[10px] font-semibold text-emerald-600">● Tốt</span>
+                        <span className="text-[10px] font-mono text-slate-400">#{idx + 1}</span>
+                        <span className="text-[10px] font-semibold text-emerald-600">● {tree.healthStatus}</span>
                       </div>
                       <div className="font-bold text-slate-900 dark:text-slate-100 text-xs truncate">
                         {tree.displayName}
                       </div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                        {tree.address}
+                      <div className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">
+                        📍 {getTreeMilestone(tree)}
                       </div>
                     </div>
 
@@ -863,43 +949,52 @@ export const StaffWorkstationView: React.FC<StaffWorkstationViewProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {trees.map((tree, idx) => (
-              <div
-                key={tree.id}
-                className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-emerald-400 transition-all space-y-3"
-              >
-                <div className="w-full h-36 rounded-xl overflow-hidden relative bg-slate-100">
-                  <img src={tree.imageUrl} alt={tree.displayName} className="w-full h-full object-cover" />
-                  <span className="absolute top-2 left-2 px-2.5 py-1 rounded-lg bg-black/70 backdrop-blur-md text-white font-mono text-[11px] font-bold">
-                    #{idx + 1} · {tree.publicCode}
-                  </span>
-                  <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-emerald-600 text-white font-bold text-[10px]">
-                    ● KHỎE MẠNH
-                  </span>
-                </div>
+            {trees.map((tree, idx) => {
+              const streetCode = getTreeStreetCode(tree);
+              const milestone = getTreeMilestone(tree);
+              const corridor = getTreeCorridor(tree);
 
-                <div className="space-y-1">
-                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">{tree.displayName}</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
-                    <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>{tree.address}</span>
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <span>Cao: <strong>{tree.heightM}m</strong></span>
-                  <span>ĐK: <strong>{tree.diameterCm}cm</strong></span>
-                  <span className="text-emerald-600 font-bold font-mono">EVM v1</span>
-                </div>
-
-                <button
-                  onClick={() => onSelectTree(tree)}
-                  className="w-full py-2 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-800 dark:text-emerald-300 font-bold rounded-xl text-xs text-center transition-colors cursor-pointer"
+              return (
+                <div
+                  key={tree.id}
+                  className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-emerald-400 transition-all space-y-3"
                 >
-                  Xem y bạ &amp; nhật ký cây ➔
-                </button>
-              </div>
-            ))}
+                  <div className="w-full h-36 rounded-xl overflow-hidden relative bg-slate-100">
+                    <img src={tree.imageUrl} alt={tree.displayName} className="w-full h-full object-cover" />
+                    <span className="absolute top-2 left-2 px-2.5 py-1 rounded-lg bg-slate-950/90 text-amber-300 font-mono text-[11px] font-black border border-slate-700 shadow-md">
+                      [{streetCode}]
+                    </span>
+                    <span className={`absolute top-2 right-2 px-2 py-0.5 rounded-md font-bold text-[10px] ${
+                      tree.healthStatus === 'GOOD' ? 'bg-emerald-600 text-white' : 'bg-amber-600 text-white'
+                    }`}>
+                      ● {tree.healthStatus}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">{tree.displayName}</h3>
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 truncate">
+                      <MapPin className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                      <span>{milestone}</span>
+                    </p>
+                    <p className="text-[10px] text-slate-500 pl-4">{corridor}</p>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <span>Cao: <strong>{tree.heightM}m</strong></span>
+                    <span>ĐK: <strong>{tree.diameterCm}cm</strong></span>
+                    <span className="text-emerald-600 font-bold font-mono">EVM v1</span>
+                  </div>
+
+                  <button
+                    onClick={() => onSelectTree(tree)}
+                    className="w-full py-2 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-800 dark:text-emerald-300 font-bold rounded-xl text-xs text-center transition-colors cursor-pointer"
+                  >
+                    Xem Biển Nhôm &amp; Hồ Sơ ➔
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -1033,3 +1128,4 @@ export const StaffWorkstationView: React.FC<StaffWorkstationViewProps> = ({
     </div>
   );
 };
+

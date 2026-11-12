@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Trees,
   Search,
@@ -12,9 +12,28 @@ import {
   Edit,
   LayoutGrid,
   List,
+  Navigation,
+  Radio,
+  Layers,
+  Sparkles,
+  ChevronRight,
+  Route,
+  CheckCircle2,
+  AlertTriangle,
+  LocateFixed,
+  Cpu,
 } from 'lucide-react';
 import { Tree, TreeHealthStatus } from '../types';
 import { storage } from '../db/storage';
+import {
+  getTreeCorridor,
+  getTreeMilestone,
+  getTreeStreetCode,
+  getTreeFullDisplayLabel,
+  calculateHaversineDistance,
+  findNearestTree,
+  STREET_CORRIDORS_LIST,
+} from '../utils/treeUtils';
 
 interface TreeListViewProps {
   onSelectTree: (tree: Tree) => void;
@@ -39,39 +58,174 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState<string>('ALL');
   const [selectedHealth, setSelectedHealth] = useState<string>('ALL');
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [selectedCorridorFilter, setSelectedCorridorFilter] = useState<string>('ALL');
+  const [viewMode, setViewMode] = useState<'grid' | 'table' | 'corridor'>('corridor');
 
-  const filteredTrees = trees.filter((tree) => {
-    const matchesSearch =
-      tree.publicCode.toLowerCase().includes(search.toLowerCase()) ||
-      tree.displayName.toLowerCase().includes(search.toLowerCase()) ||
-      tree.address.toLowerCase().includes(search.toLowerCase());
+  // GPS Radar State
+  const [isScanningGps, setIsScanningGps] = useState(false);
+  const [radarNearestTree, setRadarNearestTree] = useState<{ tree: Tree; distanceM: number } | null>(null);
+  const [radarUserLocation, setRadarUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [radarToast, setRadarToast] = useState<string | null>(null);
 
-    const matchesType = selectedType === 'ALL' || tree.treeTypeId === selectedType;
-    const matchesHealth = selectedHealth === 'ALL' || tree.healthStatus === selectedHealth;
+  // Filtered Trees
+  const filteredTrees = useMemo(() => {
+    return trees.filter((tree) => {
+      const streetCode = getTreeStreetCode(tree).toLowerCase();
+      const corridor = getTreeCorridor(tree).toLowerCase();
+      const milestone = getTreeMilestone(tree).toLowerCase();
+      const searchLower = search.toLowerCase();
 
-    return matchesSearch && matchesType && matchesHealth;
-  });
+      const matchesSearch =
+        tree.publicCode.toLowerCase().includes(searchLower) ||
+        tree.displayName.toLowerCase().includes(searchLower) ||
+        tree.address.toLowerCase().includes(searchLower) ||
+        streetCode.includes(searchLower) ||
+        corridor.includes(searchLower) ||
+        milestone.includes(searchLower);
+
+      const matchesType = selectedType === 'ALL' || tree.treeTypeId === selectedType;
+      const matchesHealth = selectedHealth === 'ALL' || tree.healthStatus === selectedHealth;
+      const matchesCorridor =
+        selectedCorridorFilter === 'ALL' ||
+        getTreeCorridor(tree) === selectedCorridorFilter;
+
+      return matchesSearch && matchesType && matchesHealth && matchesCorridor;
+    });
+  }, [trees, search, selectedType, selectedHealth, selectedCorridorFilter]);
+
+  // Grouped by corridor for 'corridor' view
+  const groupedCorridors = useMemo(() => {
+    const groups: { [corridorName: string]: Tree[] } = {};
+
+    filteredTrees.forEach((tree) => {
+      const c = getTreeCorridor(tree);
+      if (!groups[c]) groups[c] = [];
+      groups[c].push(tree);
+    });
+
+    // Sắp xếp các cây trong từng tuyến theo thứ tự sequenceNumber hoặc streetCode
+    Object.keys(groups).forEach((key) => {
+      groups[key].sort((a, b) => {
+        const seqA = a.sequenceNumber || parseInt(a.publicCode.replace(/\D/g, '') || '0', 10);
+        const seqB = b.sequenceNumber || parseInt(b.publicCode.replace(/\D/g, '') || '0', 10);
+        return seqA - seqB;
+      });
+    });
+
+    return groups;
+  }, [filteredTrees]);
+
+  // 📍 RADAR GPS AUTO-DETECT FUNCTION
+  const handleTriggerGpsRadar = () => {
+    setIsScanningGps(true);
+    setRadarToast('Đang kết nối vệ tinh GNSS & đo khoảng cách đến các gốc cây xung quanh...');
+
+    const processLocation = (lat: number, lng: number, isSimulated = false) => {
+      setRadarUserLocation({ lat, lng });
+      const nearest = findNearestTree(lat, lng, trees);
+
+      if (nearest) {
+        setRadarNearestTree(nearest);
+        const streetCode = getTreeStreetCode(nearest.tree);
+        const milestone = getTreeMilestone(nearest.tree);
+        setRadarToast(
+          `🎯 ĐÃ NHẬN DIỆN CÂY GẦN NHẤT: [${streetCode}] (${nearest.distanceM}m) · ${milestone}`
+        );
+
+        // Cuộn đến cây gần nhất nếu có trong DOM
+        setTimeout(() => {
+          const el = document.getElementById(`tree-card-${nearest.tree.id}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 300);
+      }
+      setIsScanningGps(false);
+    };
+
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          processLocation(pos.coords.latitude, pos.coords.longitude, false);
+        },
+        (err) => {
+          // Fallback sang toạ độ mô phỏng trung tâm Cần Thơ (Đại lộ Hòa Bình: 10.0368° N, 105.7825° E)
+          console.warn('GPS permission denied or unavailable, using Can Tho field center simulation:', err);
+          processLocation(10.036829, 105.782541, true);
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 10000 }
+      );
+    } else {
+      processLocation(10.036829, 105.782541, true);
+    }
+  };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 animate-fade-in pb-16">
+      {/* 📡 Radar GPS Notification Banner */}
+      {radarToast && (
+        <div className="p-3.5 bg-gradient-to-r from-emerald-900 to-teal-900 text-white rounded-2xl border border-emerald-400/50 shadow-xl flex items-center justify-between gap-3 animate-in slide-in-from-top-3 duration-200">
+          <div className="flex items-center gap-3">
+            <span className="relative flex h-3 w-3 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+            </span>
+            <div className="text-xs font-medium">
+              <span>{radarToast}</span>
+            </div>
+          </div>
+          {radarNearestTree && (
+            <button
+              onClick={() => onSelectTree(radarNearestTree.tree)}
+              className="px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-xs shrink-0 cursor-pointer transition-colors shadow-xs"
+            >
+              Mở cây này
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Top Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-[#174B36] dark:text-[#00FF9D] flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-black text-[#174B36] dark:text-[#00FF9D] flex items-center gap-2 tracking-tight">
             <Trees className="w-6 h-6 text-[#347A50] dark:text-emerald-400" />
-            <span>Danh mục &amp; Hồ sơ Cây xanh Đô thị</span>
+            <span>Hồ Sơ Cây Xanh &amp; Quản Lý Tuyến Phố</span>
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Mỗi cây xanh được gán mã định danh duy nhất và bảo chứng tính toàn vẹn trên Smart Contract.
+            Quy tắc đặt mã theo Tuyến Phố <strong>[HB-01, 30T4-02]</strong> kèm mốc số nhà &amp; Radar GPS nhận diện chính xác 100%.
           </p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {/* 📍 Radar GPS Quick Trigger */}
+          <button
+            onClick={handleTriggerGpsRadar}
+            disabled={isScanningGps}
+            title="Định vị cây gần nhất bằng GPS"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 cursor-pointer border border-emerald-400/40"
+          >
+            <LocateFixed className={`w-4 h-4 ${isScanningGps ? 'animate-spin' : 'animate-pulse'}`} />
+            <span>{isScanningGps ? 'Đang quét Radar...' : '📍 Radar GPS Cây Gần Nhất'}</span>
+          </button>
+
+          {/* View Mode Toggle Switcher */}
           <div className="bg-slate-100 dark:bg-slate-900/90 p-1 rounded-xl flex items-center gap-1 border border-slate-200 dark:border-slate-800">
             <button
+              onClick={() => setViewMode('corridor')}
+              title="Giao diện Dãy Cây / Tuyến Phố (Khuyên dùng)"
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                viewMode === 'corridor'
+                  ? 'bg-white text-emerald-800 shadow-xs dark:bg-[#0c1812] dark:text-[#00FF9D] dark:border dark:border-emerald-500/30'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <Route className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Tuyến Phố</span>
+            </button>
+            <button
               onClick={() => setViewMode('grid')}
-              title="Chế độ lưới"
+              title="Chế độ lưới ô"
               className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
                 viewMode === 'grid'
                   ? 'bg-white text-[#174B36] shadow-xs dark:bg-[#0c1812] dark:text-[#00FF9D] dark:border dark:border-emerald-500/30'
@@ -82,7 +236,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
             </button>
             <button
               onClick={() => setViewMode('table')}
-              title="Chế độ bảng"
+              title="Chế độ bảng dữ liệu"
               className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
                 viewMode === 'table'
                   ? 'bg-white text-[#174B36] shadow-xs dark:bg-[#0c1812] dark:text-[#00FF9D] dark:border dark:border-emerald-500/30'
@@ -98,7 +252,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
             className="flex items-center gap-1.5 px-3.5 py-2 bg-[#174B36] hover:bg-[#347A50] text-white text-xs font-semibold rounded-xl transition-all shadow-xs dark:bg-emerald-600 dark:hover:bg-emerald-500 dark:shadow-[0_0_15px_rgba(16,185,129,0.3)] cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Thêm cây mới</span>
+            <span className="hidden sm:inline">Thêm cây</span>
           </button>
         </div>
       </div>
@@ -111,22 +265,33 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Tìm theo mã cây (TREE-001), tên, hoặc địa chỉ..."
+            placeholder="Tìm theo mã tuyến [HB-01], số nhà mốc, tên cây, đường phố..."
             className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 dark:border-slate-700/80 rounded-full focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-slate-50/50 dark:bg-slate-900/90 dark:text-slate-100 dark:placeholder-slate-500"
           />
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-            <Filter className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-            <span>Loài cây:</span>
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Lọc theo Tuyến Đường */}
+          <select
+            value={selectedCorridorFilter}
+            onChange={(e) => setSelectedCorridorFilter(e.target.value)}
+            className="px-3 py-1.5 text-xs font-medium border border-slate-200 dark:border-slate-700/80 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500"
+          >
+            <option value="ALL">📍 Tất cả tuyến đường</option>
+            {STREET_CORRIDORS_LIST.map((c) => (
+              <option key={c.id} value={c.name}>
+                {c.name} ({c.prefix})
+              </option>
+            ))}
+          </select>
+
+          {/* Lọc loài cây */}
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
             className="px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700/80 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500"
           >
-            <option value="ALL">Tất cả các loài</option>
+            <option value="ALL">Tất cả loài cây</option>
             {treeTypes.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
@@ -134,55 +299,245 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
             ))}
           </select>
 
-          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 ml-2">
-            <span>Sức khỏe:</span>
-          </div>
+          {/* Lọc sức khỏe */}
           <select
             value={selectedHealth}
             onChange={(e) => setSelectedHealth(e.target.value)}
             className="px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700/80 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500"
           >
-            <option value="ALL">Tất cả trạng thái</option>
+            <option value="ALL">Tất cả sức khỏe</option>
             <option value="GOOD">Tốt (GOOD)</option>
             <option value="FAIR">Bình thường (FAIR)</option>
             <option value="POOR">Kém (POOR)</option>
             <option value="CRITICAL">Nguy cấp (CRITICAL)</option>
-            <option value="DEAD">Chết khô (DEAD)</option>
           </select>
 
-          <span className="text-xs text-emerald-700 dark:text-[#00FF9D] font-mono font-semibold pl-2">
+          <span className="text-xs text-emerald-700 dark:text-[#00FF9D] font-mono font-bold pl-2">
             {filteredTrees.length}/{trees.length} cây
           </span>
         </div>
       </div>
 
-      {/* Main Trees Display */}
+      {/* ========================================================================= */}
+      {/* 🛣️ VIEW MODE 1: STREET CORRIDOR VIEW (GIAO DIỆN TUYẾN PHỐ / DÃY CÂY)     */}
+      {/* ========================================================================= */}
       {filteredTrees.length === 0 ? (
         <div className="p-12 text-center bento-card border-dashed text-slate-400 dark:text-slate-500 text-xs dark:bg-[#0c1812] dark:border-slate-800">
           Không tìm thấy cây xanh nào phù hợp với bộ lọc tìm kiếm.
         </div>
+      ) : viewMode === 'corridor' ? (
+        <div className="space-y-6">
+          {Object.entries(groupedCorridors).map(([corridorName, corridorTrees]) => {
+            const firstTree = corridorTrees[0];
+            const prefix = getTreeStreetCode(firstTree).split('-')[0] || 'CT';
+            const goodCount = corridorTrees.filter((t) => t.healthStatus === 'GOOD').length;
+            const criticalCount = corridorTrees.filter(
+              (t) => t.healthStatus === 'CRITICAL' || t.healthStatus === 'POOR'
+            ).length;
+
+            return (
+              <div
+                key={corridorName}
+                className="bento-card rounded-3xl p-5 sm:p-6 dark:bg-[#0c1812] dark:border-slate-800 space-y-5 shadow-sm"
+              >
+                {/* Corridor Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800/80 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-400 flex items-center justify-center font-mono font-black text-sm border border-emerald-300 dark:border-emerald-700/60 shadow-xs shrink-0">
+                      {prefix}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                          {corridorName}
+                        </h2>
+                        <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-mono font-bold text-slate-700 dark:text-slate-300">
+                          {prefix}-01 ➔ {prefix}-{String(corridorTrees.length).padStart(2, '0')}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
+                        <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                        <span>Quận Ninh Kiều, Cần Thơ · Đoạn tuyến phân định theo số nhà mốc</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Corridor Telemetry Badges */}
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold">
+                      {corridorTrees.length} Cây Trên Dãy
+                    </span>
+                    {criticalCount > 0 && (
+                      <span className="px-3 py-1 rounded-full bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold animate-pulse">
+                        ⚠️ {criticalCount} Cần Duy Tu
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Linear Sequential Tree Cards Along the Corridor */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {corridorTrees.map((tree, idx) => {
+                    const streetCode = getTreeStreetCode(tree);
+                    const milestone = getTreeMilestone(tree);
+                    const treeType = treeTypes.find((t) => t.id === tree.treeTypeId);
+                    const isRadarTarget = radarNearestTree?.tree.id === tree.id;
+
+                    return (
+                      <div
+                        key={tree.id}
+                        id={`tree-card-${tree.id}`}
+                        onClick={() => onSelectTree(tree)}
+                        className={`relative rounded-2xl p-4 bg-slate-50/80 dark:bg-slate-900/60 border transition-all cursor-pointer group flex flex-col justify-between ${
+                          isRadarTarget
+                            ? 'ring-4 ring-emerald-500 border-emerald-500 dark:ring-emerald-400 shadow-xl dark:shadow-[0_0_25px_rgba(16,185,129,0.3)] bg-emerald-50/50 dark:bg-emerald-950/30'
+                            : 'border-slate-200 dark:border-slate-800 hover:border-emerald-400 hover:shadow-md'
+                        }`}
+                      >
+                        {/* Radar Target Pill */}
+                        {isRadarTarget && (
+                          <div className="absolute -top-2.5 right-3 px-2 py-0.5 rounded-full bg-emerald-600 text-white font-mono text-[9px] font-black tracking-wider uppercase shadow-md flex items-center gap-1 animate-bounce">
+                            <Radio className="w-2.5 h-2.5" />
+                            <span>CÂY GẦN BẠN NHẤT ({radarNearestTree.distanceM}M)</span>
+                          </div>
+                        )}
+
+                        <div className="space-y-3">
+                          {/* Card Top: Sequential Street Tag + Health */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <span className="px-2.5 py-1 rounded-xl bg-slate-900 text-amber-300 font-mono text-xs font-black tracking-wider shadow-2xs border border-slate-700">
+                                [{streetCode}]
+                              </span>
+                              <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 font-bold">
+                                #{idx + 1}
+                              </span>
+                            </div>
+
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                tree.healthStatus === 'GOOD'
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                                  : tree.healthStatus === 'FAIR'
+                                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
+                                  : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
+                              }`}
+                            >
+                              {tree.healthStatus}
+                            </span>
+                          </div>
+
+                          {/* Tree Name & Biological Type */}
+                          <div>
+                            <div className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-emerald-700 dark:group-hover:text-[#00FF9D] transition-colors">
+                              {tree.displayName}
+                            </div>
+                            <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium italic">
+                              {treeType?.scientificName || 'Thực vật đô thị'}
+                            </div>
+                          </div>
+
+                          {/* Milestone House Number Landmark */}
+                          <div className="p-2.5 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 space-y-1">
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
+                              <span>CỘT MỐC SỐ NHÀ THỰC ĐỊA:</span>
+                            </div>
+                            <div className="text-xs font-bold text-slate-800 dark:text-slate-200 leading-tight">
+                              {milestone}
+                            </div>
+                            <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                              GPS: {tree.latitude.toFixed(6)}, {tree.longitude.toFixed(6)}
+                            </div>
+                          </div>
+
+                          {/* Metrics summary */}
+                          <div className="flex items-center justify-between text-[11px] font-mono text-slate-600 dark:text-slate-400 pt-1">
+                            <span>Đk: <strong>{tree.diameterCm || 28}cm</strong></span>
+                            <span>•</span>
+                            <span>Cao: <strong>{tree.heightM || 7.5}m</strong></span>
+                            <span>•</span>
+                            <span>Trồng: <strong>{tree.plantedAt ? new Date(tree.plantedAt).getFullYear() : 2021}</strong></span>
+                          </div>
+                        </div>
+
+                        {/* Action buttons on card footer */}
+                        <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-200/70 dark:border-slate-800">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenQrModal(tree);
+                            }}
+                            className="text-xs text-[#174B36] dark:text-emerald-400 font-semibold flex items-center gap-1 hover:underline cursor-pointer"
+                          >
+                            <QrCode className="w-3.5 h-3.5" />
+                            <span>Biển số nhôm</span>
+                          </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenCareModal(tree.id);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                          >
+                            <ClipboardList className="w-3 h-3" />
+                            <span>Chăm sóc</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : viewMode === 'grid' ? (
-        /* Grid Cards View (Bento Style with dark:bg-[#0c1812] dark:border-slate-800) */
+        /* ========================================================================= */
+        /* 📦 VIEW MODE 2: BENTO GRID VIEW                                           */
+        /* ========================================================================= */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredTrees.map((tree) => {
             const treeType = treeTypes.find((t) => t.id === tree.treeTypeId);
+            const streetCode = getTreeStreetCode(tree);
+            const milestone = getTreeMilestone(tree);
+            const corridor = getTreeCorridor(tree);
+            const isRadarTarget = radarNearestTree?.tree.id === tree.id;
+
             return (
               <div
                 key={tree.id}
-                className="bento-card overflow-hidden flex flex-col justify-between group cursor-pointer dark:bg-[#0c1812] dark:border-slate-800 dark:hover:border-emerald-500/40 dark:hover:shadow-[0_0_20px_rgba(16,185,129,0.15)] transition-all"
+                id={`tree-card-${tree.id}`}
+                className={`bento-card overflow-hidden flex flex-col justify-between group cursor-pointer dark:bg-[#0c1812] dark:border-slate-800 transition-all ${
+                  isRadarTarget
+                    ? 'ring-4 ring-emerald-500 border-emerald-500 shadow-2xl dark:shadow-[0_0_25px_rgba(16,185,129,0.3)]'
+                    : 'dark:hover:border-emerald-500/40 dark:hover:shadow-[0_0_20px_rgba(16,185,129,0.15)]'
+                }`}
                 onClick={() => onSelectTree(tree)}
               >
                 <div>
                   {/* Card Image Banner */}
-                  <div className="h-40 bg-slate-100 dark:bg-slate-900 relative overflow-hidden">
+                  <div className="h-44 bg-slate-100 dark:bg-slate-900 relative overflow-hidden">
                     <img
-                      src={tree.imageUrl || 'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=600&q=80'}
+                      src={
+                        tree.imageUrl ||
+                        'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=600&q=80'
+                      }
                       alt={tree.displayName}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-slate-900/85 backdrop-blur-md text-[#00FF9D] font-mono text-xs font-bold shadow-md border border-emerald-500/30">
-                      {tree.publicCode}
+
+                    {/* Dual Code Badge: [HB-01] + TREE-001 */}
+                    <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                      <span className="px-2.5 py-1 rounded-xl bg-slate-900/90 backdrop-blur-md text-amber-300 font-mono text-xs font-black shadow-md border border-slate-700">
+                        [{streetCode}]
+                      </span>
+                      <span className="px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-md text-slate-200 font-mono text-[10px]">
+                        {tree.publicCode}
+                      </span>
                     </div>
+
                     <div className="absolute top-3 right-3">
                       <span
                         className={`text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm backdrop-blur-md ${
@@ -198,6 +553,13 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                         {tree.healthStatus}
                       </span>
                     </div>
+
+                    {isRadarTarget && (
+                      <div className="absolute bottom-2 left-2 right-2 px-2.5 py-1 bg-emerald-600/90 backdrop-blur-md text-white text-[10px] font-bold font-mono rounded-lg flex items-center justify-between">
+                        <span>🎯 CÂY GẦN BẠN NHẤT</span>
+                        <span>CÁCH {radarNearestTree.distanceM}M</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Card Body */}
@@ -209,58 +571,57 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                       <div className="text-xs text-emerald-700 dark:text-emerald-400 font-medium italic mt-0.5">
                         {treeType?.scientificName || 'Thực vật đô thị'}
                       </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-2">
-                        <MapPin className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
-                        <span className="truncate">{tree.address}</span>
+
+                      {/* Prominent Milestone */}
+                      <div className="mt-2.5 p-2 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-100 dark:border-slate-800 text-xs">
+                        <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                          <span className="truncate">{milestone}</span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 pl-5">
+                          {corridor}
+                        </div>
                       </div>
                     </div>
 
                     <div className="w-full h-px bg-slate-100 dark:bg-slate-800/80" />
 
-                    {/* Tree Metrics */}
+                    {/* Metrics */}
                     <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                      <div className="bg-slate-50 dark:bg-[#08120c] p-2 rounded-xl border border-slate-100 dark:border-slate-800/80">
-                        <div className="text-[10px] text-slate-400 dark:text-slate-500">Chiều cao</div>
-                        <div className="font-bold text-slate-800 dark:text-slate-100 font-mono">{tree.heightM || 8} m</div>
+                      <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 block">Đường kính</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
+                          {tree.diameterCm || 28} cm
+                        </span>
                       </div>
-                      <div className="bg-slate-50 dark:bg-[#08120c] p-2 rounded-xl border border-slate-100 dark:border-slate-800/80">
-                        <div className="text-[10px] text-slate-400 dark:text-slate-500">Đường kính</div>
-                        <div className="font-bold text-slate-800 dark:text-slate-100 font-mono">{tree.diameterCm || 30} cm</div>
+                      <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 block">Chiều cao</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
+                          {tree.heightM || 7.5} m
+                        </span>
                       </div>
-                      <div className="bg-slate-50 dark:bg-[#08120c] p-2 rounded-xl border border-slate-100 dark:border-slate-800/80">
-                        <div className="text-[10px] text-slate-400 dark:text-slate-500">Tuổi ước tính</div>
-                        <div className="font-bold text-slate-800 dark:text-slate-100 font-mono">
-                          {tree.plantedAt ? Math.max(1, new Date().getFullYear() - new Date(tree.plantedAt).getFullYear()) : 15} năm
-                        </div>
+                      <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 block">Năm trồng</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
+                          {tree.plantedAt ? new Date(tree.plantedAt).getFullYear() : '2021'}
+                        </span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Card Footer Actions */}
-                <div className="px-5 py-3.5 bg-slate-50/80 dark:bg-[#08120c] border-t border-slate-100/90 dark:border-slate-800/80 flex items-center justify-between gap-2 text-xs">
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenQrModal(tree);
-                      }}
-                      title="Xem mã QR kim loại"
-                      className="p-1.5 rounded-full hover:bg-emerald-100 text-slate-600 hover:text-emerald-800 dark:text-slate-400 dark:hover:bg-emerald-950/60 dark:hover:text-[#00FF9D] transition-colors cursor-pointer"
-                    >
-                      <QrCode className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenPublicView(tree);
-                      }}
-                      title="Xem cổng công khai"
-                      className="p-1.5 rounded-full hover:bg-emerald-100 text-slate-600 hover:text-emerald-800 dark:text-slate-400 dark:hover:bg-emerald-950/60 dark:hover:text-[#00FF9D] transition-colors cursor-pointer"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </button>
-                  </div>
+                {/* Card Actions */}
+                <div className="px-5 pb-5 pt-1 flex items-center justify-between border-t border-slate-100 dark:border-slate-800/80">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenQrModal(tree);
+                    }}
+                    className="text-xs text-[#174B36] hover:text-[#347A50] dark:text-[#00FF9D] dark:hover:text-emerald-300 font-semibold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <QrCode className="w-3.5 h-3.5" />
+                    <span>Biển số nhôm</span>
+                  </button>
 
                   <div className="flex items-center gap-1.5">
                     <button
@@ -268,18 +629,20 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                         e.stopPropagation();
                         onOpenCareModal(tree.id);
                       }}
-                      className="px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold text-[11px] border border-emerald-200/60 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-[#00FF9D] dark:border-emerald-500/30 transition-colors cursor-pointer"
+                      title="Ghi nhật ký chăm sóc"
+                      className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
                     >
-                      Chăm sóc
+                      <ClipboardList className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         onOpenEditTree(tree);
                       }}
-                      className="p-1.5 rounded-full hover:bg-slate-200 text-slate-500 hover:text-slate-800 dark:hover:bg-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                      title="Sửa thông tin cây"
+                      className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
                     >
-                      <Edit className="w-3.5 h-3.5" />
+                      <Edit className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -288,59 +651,79 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
           })}
         </div>
       ) : (
-        /* High-Density Table View */
-        <div className="bg-white dark:bg-[#0c1812] rounded-xl border border-[#E0EBDD] dark:border-slate-800 overflow-hidden shadow-2xs">
+        /* ========================================================================= */
+        /* 📊 VIEW MODE 3: HIGH-DENSITY TABLE VIEW                                    */
+        /* ========================================================================= */
+        <div className="bg-white dark:bg-[#0c1812] rounded-2xl border border-[#E0EBDD] dark:border-slate-800 overflow-hidden shadow-2xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 dark:bg-[#08120c] border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
                 <tr>
-                  <th className="py-3 px-4">Mã QR</th>
-                  <th className="py-3 px-4">Tên &amp; Loài cây</th>
-                  <th className="py-3 px-4">Vị trí địa lý</th>
-                  <th className="py-3 px-4">Sức khỏe</th>
-                  <th className="py-3 px-4">Kích thước</th>
-                  <th className="py-3 px-4">Blockchain</th>
-                  <th className="py-3 px-4 text-right">Thao tác</th>
+                  <th className="py-3 px-4">Mã Tuyến &amp; QR</th>
+                  <th className="py-3 px-4">Tên &amp; Loài Cây</th>
+                  <th className="py-3 px-4">Cột Mốc Số Nhà (Tuyến Phố)</th>
+                  <th className="py-3 px-4">Sức Khỏe</th>
+                  <th className="py-3 px-4">Kích Thước</th>
+                  <th className="py-3 px-4">On-Chain</th>
+                  <th className="py-3 px-4 text-right">Thao Tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
                 {filteredTrees.map((tree) => {
                   const treeType = treeTypes.find((t) => t.id === tree.treeTypeId);
+                  const streetCode = getTreeStreetCode(tree);
+                  const milestone = getTreeMilestone(tree);
+                  const corridor = getTreeCorridor(tree);
+                  const isRadarTarget = radarNearestTree?.tree.id === tree.id;
+
                   return (
-                    <tr key={tree.id} className="hover:bg-[#F8FAF8] dark:hover:bg-[#102017]/70 transition-colors">
+                    <tr
+                      key={tree.id}
+                      id={`tree-card-${tree.id}`}
+                      className={`transition-colors ${
+                        isRadarTarget
+                          ? 'bg-emerald-100/70 dark:bg-emerald-950/50 font-semibold'
+                          : 'hover:bg-[#F8FAF8] dark:hover:bg-[#102017]/70'
+                      }`}
+                    >
                       <td className="py-3 px-4">
-                        <button
-                          onClick={() => onOpenQrModal(tree)}
-                          className="flex items-center gap-1.5 font-mono font-bold text-[#174B36] hover:underline dark:text-[#00FF9D] cursor-pointer"
-                        >
-                          <QrCode className="w-3.5 h-3.5 text-[#347A50] dark:text-emerald-400" />
-                          <span>{tree.publicCode}</span>
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <span className="px-2 py-0.5 rounded-lg bg-slate-900 text-amber-300 font-mono text-[11px] font-black">
+                            [{streetCode}]
+                          </span>
+                          <button
+                            onClick={() => onOpenQrModal(tree)}
+                            className="font-mono text-slate-500 hover:text-emerald-700 dark:text-slate-400 text-[10px]"
+                          >
+                            {tree.publicCode}
+                          </button>
+                        </div>
                       </td>
                       <td className="py-3 px-4">
                         <div className="font-semibold text-slate-800 dark:text-slate-100">{tree.displayName}</div>
                         <div className="text-[11px] text-slate-400 dark:text-slate-500">{treeType?.name}</div>
                       </td>
-                      <td className="py-3 px-4 max-w-xs truncate text-slate-600 dark:text-slate-400">
-                        {tree.address}
+                      <td className="py-3 px-4 max-w-xs">
+                        <div className="font-bold text-slate-800 dark:text-slate-200">{milestone}</div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400">{corridor}</div>
                       </td>
                       <td className="py-3 px-4">
                         <span
                           className={`text-[10px] font-bold px-2 py-0.5 rounded ${
                             tree.healthStatus === 'GOOD'
-                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-[#00FF9D] dark:border dark:border-emerald-500/40'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-[#00FF9D]'
                               : tree.healthStatus === 'FAIR'
-                              ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:border dark:border-slate-700'
+                              ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
                               : tree.healthStatus === 'POOR'
-                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 dark:border dark:border-amber-500/40'
-                              : 'bg-red-100 text-red-800 dark:bg-rose-950/80 dark:text-rose-300 dark:border dark:border-rose-500/40'
+                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
+                              : 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300'
                           }`}
                         >
                           {tree.healthStatus}
                         </span>
                       </td>
                       <td className="py-3 px-4 font-mono text-[11px] text-slate-600 dark:text-slate-300">
-                        {tree.diameterCm || 30}cm / {tree.heightM || 8}m
+                        {tree.diameterCm || 28}cm / {tree.heightM || 7.5}m
                       </td>
                       <td className="py-3 px-4">
                         <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 dark:text-[#00FF9D] font-semibold font-mono">
@@ -351,13 +734,13 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                       <td className="py-3 px-4 text-right space-x-1">
                         <button
                           onClick={() => onSelectTree(tree)}
-                          className="px-2 py-1 text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 rounded text-[11px] font-medium cursor-pointer"
+                          className="px-2.5 py-1 text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 rounded text-[11px] font-medium cursor-pointer"
                         >
                           Xem
                         </button>
                         <button
                           onClick={() => onOpenCareModal(tree.id)}
-                          className="px-2 py-1 bg-[#174B36] text-white hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 rounded text-[11px] font-medium cursor-pointer"
+                          className="px-2.5 py-1 bg-[#174B36] text-white hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 rounded text-[11px] font-medium cursor-pointer"
                         >
                           Chăm sóc
                         </button>

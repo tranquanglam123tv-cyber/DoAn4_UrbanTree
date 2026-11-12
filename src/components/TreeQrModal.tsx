@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { X, Download, Printer, QrCode, ExternalLink, Check } from 'lucide-react';
+import { X, Download, Printer, QrCode, ExternalLink, Check, Cpu, Tag } from 'lucide-react';
 import { Tree } from '../types';
 import { downloadQrCode, generateQrDataUrl } from '../services/qrService';
+import { DigitalAlloyTag } from './DigitalAlloyTag';
+import { getTreeCorridor, getTreeMilestone, getTreeStreetCode } from '../utils/treeUtils';
 
 interface TreeQrModalProps {
   tree: Tree | null;
@@ -12,6 +14,7 @@ interface TreeQrModalProps {
 export const TreeQrModal: React.FC<TreeQrModalProps> = ({ tree, onClose, onOpenPublicView }) => {
   const [qrUrl, setQrUrl] = useState<string>('');
   const [copied, setCopied] = useState(false);
+  const [displayMode, setDisplayMode] = useState<'alloy_tag' | 'qr'>('alloy_tag');
 
   useEffect(() => {
     if (tree) {
@@ -41,12 +44,16 @@ export const TreeQrModal: React.FC<TreeQrModalProps> = ({ tree, onClose, onOpenP
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-[#E0EBDD] dark:bg-emerald-950/80 text-[#174B36] dark:text-emerald-400 dark:border dark:border-emerald-800/50 rounded-lg">
-              <QrCode className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-slate-900 text-amber-300 font-mono text-xs font-black flex items-center justify-center border border-slate-700 shadow-xs">
+              {getTreeStreetCode(tree)}
             </div>
             <div>
-              <h2 className="text-sm font-bold text-[#174B36] dark:text-emerald-400">Mã QR Định danh Cây xanh</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">{tree.publicCode}</p>
+              <h2 className="text-sm font-bold text-[#174B36] dark:text-emerald-400">
+                Định Danh Biển Số &amp; Mã QR Cây
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                [{getTreeStreetCode(tree)}] · {tree.publicCode}
+              </p>
             </div>
           </div>
           <button
@@ -57,40 +64,70 @@ export const TreeQrModal: React.FC<TreeQrModalProps> = ({ tree, onClose, onOpenP
           </button>
         </div>
 
-        {/* Placard Preview Content */}
+        {/* Display Mode Switcher */}
+        <div className="px-6 pt-3 flex items-center gap-2">
+          <button
+            onClick={() => setDisplayMode('alloy_tag')}
+            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+              displayMode === 'alloy_tag'
+                ? 'bg-slate-900 text-amber-300 border-slate-700 shadow-xs'
+                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-transparent hover:bg-slate-200'
+            }`}
+          >
+            🔩 Biển Nhôm Đóng Thân Cây
+          </button>
+          <button
+            onClick={() => setDisplayMode('qr')}
+            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+              displayMode === 'qr'
+                ? 'bg-emerald-700 text-white border-emerald-800 shadow-xs'
+                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-transparent hover:bg-slate-200'
+            }`}
+          >
+            📄 Thẻ In Giấy / Decal QR
+          </button>
+        </div>
+
+        {/* Content */}
         <div className="p-6 text-center space-y-4">
-          <div className="p-5 border-2 border-dashed border-[#347A50]/40 dark:border-emerald-500/40 rounded-2xl bg-[#F8FAF8] dark:bg-[#091811] space-y-3 print:border-solid">
-            <div className="text-[11px] font-bold tracking-widest text-[#174B36] dark:text-emerald-400 uppercase">
-              UBND TP. CẦN THƠ · QUẢN LÝ CÂY XANH ĐÔ THỊ
-            </div>
-
-            {/* QR Image */}
-            <div className="flex justify-center">
-              {qrUrl ? (
-                <img
-                  src={qrUrl}
-                  alt={`QR Code ${tree.publicCode}`}
-                  className="w-48 h-48 bg-white p-2 rounded-xl shadow-xs border border-slate-200 dark:border-emerald-500/30"
-                />
-              ) : (
-                <div className="w-48 h-48 bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-slate-400 text-xs">
-                  Đang tạo mã QR...
-                </div>
-              )}
-            </div>
-
-            <div>
-              <div className="text-lg font-bold text-[#174B36] dark:text-emerald-400 font-mono tracking-wider">
-                {tree.publicCode}
+          {displayMode === 'alloy_tag' ? (
+            <DigitalAlloyTag tree={tree} size="md" showActions={true} />
+          ) : (
+            <div className="p-5 border-2 border-dashed border-[#347A50]/40 dark:border-emerald-500/40 rounded-2xl bg-[#F8FAF8] dark:bg-[#091811] space-y-3 print:border-solid">
+              <div className="text-[11px] font-bold tracking-widest text-[#174B36] dark:text-emerald-400 uppercase">
+                UBND TP. CẦN THƠ · QUẢN LÝ CÂY XANH ĐÔ THỊ
               </div>
-              <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">{tree.displayName}</div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">{tree.address}</div>
-            </div>
 
-            <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 text-[10px] text-slate-500 dark:text-slate-400">
-              Quét mã QR để xem hồ sơ cây hoặc gửi phản ánh sự cố trực tiếp
+              {/* QR Image */}
+              <div className="flex justify-center">
+                {qrUrl ? (
+                  <img
+                    src={qrUrl}
+                    alt={`QR Code ${tree.publicCode}`}
+                    className="w-48 h-48 bg-white p-2 rounded-xl shadow-xs border border-slate-200 dark:border-emerald-500/30"
+                  />
+                ) : (
+                  <div className="w-48 h-48 bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-slate-400 text-xs">
+                    Đang tạo mã QR...
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div className="text-xl font-black text-amber-700 dark:text-amber-400 font-mono tracking-wider">
+                  [{getTreeStreetCode(tree)}]
+                </div>
+                <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{tree.displayName}</div>
+                <div className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                  📍 {getTreeMilestone(tree)}
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 text-[10px] text-slate-500 dark:text-slate-400">
+                Quét mã QR để xem hồ sơ cây hoặc gửi phản ánh sự cố trực tiếp
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Public URL Box */}
           <div className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg text-xs">

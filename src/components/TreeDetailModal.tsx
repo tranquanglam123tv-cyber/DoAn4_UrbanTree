@@ -16,6 +16,8 @@ import {
 import { CareRecord, Incident, Tree, TreeHealthStatus, VerificationResult } from '../types';
 import { storage } from '../db/storage';
 import { blockchainService } from '../services/blockchainService';
+import { DigitalAlloyTag } from './DigitalAlloyTag';
+import { getTreeCorridor, getTreeMilestone, getTreeStreetCode } from '../utils/treeUtils';
 
 interface TreeDetailModalProps {
   tree: Tree | null;
@@ -36,13 +38,16 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
   onOpenPublicView,
   onTreeUpdated,
 }) => {
-  const [activeTab, setActiveTab] = useState<'info' | 'care' | 'incidents' | 'blockchain'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'tag' | 'care' | 'incidents' | 'blockchain'>('info');
   const [verifyResult, setVerifyResult] = useState<VerificationResult | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [tamperMessage, setTamperMessage] = useState<string | null>(null);
 
   if (!tree) return null;
 
+  const streetCode = getTreeStreetCode(tree);
+  const milestone = getTreeMilestone(tree);
+  const corridor = getTreeCorridor(tree);
   const treeType = storage.getTreeTypeById(tree.treeTypeId);
   const careRecords = storage.getCareRecords(tree.id);
   const incidents = storage.getIncidents().filter((i) => i.treeId === tree.id);
@@ -79,11 +84,14 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
         {/* Header */}
         <div className="px-6 py-4 bg-[#174B36] dark:bg-[#091b12] dark:border-b dark:border-emerald-500/30 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/10 dark:bg-emerald-900/40 flex items-center justify-center text-[#F3E8B2] dark:text-emerald-400 font-mono text-xs font-bold border border-white/10 dark:border-emerald-500/30">
-              {tree.publicCode}
+            <div className="w-11 h-11 rounded-xl bg-white/10 dark:bg-emerald-900/40 flex flex-col items-center justify-center text-[#F3E8B2] dark:text-emerald-400 font-mono text-xs font-black border border-white/10 dark:border-emerald-500/30 shadow-xs">
+              <span>{streetCode}</span>
             </div>
             <div>
               <h2 className="text-base font-bold flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-mono text-xs font-black border border-emerald-400/30">
+                  [{streetCode}]
+                </span>
                 <span>{tree.displayName}</span>
                 <span
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -99,7 +107,9 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
                   {tree.healthStatus}
                 </span>
               </h2>
-              <p className="text-xs text-white/70">{treeType?.name} ({treeType?.scientificName})</p>
+              <p className="text-xs text-white/80 mt-0.5">
+                <strong className="text-amber-200">{milestone}</strong> · {corridor}
+              </p>
             </div>
           </div>
 
@@ -128,10 +138,10 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 px-6 bg-slate-50 dark:bg-slate-900/80 text-xs font-medium shrink-0">
+        <div className="flex border-b border-slate-200 dark:border-slate-800 px-6 bg-slate-50 dark:bg-slate-900/80 text-xs font-medium shrink-0 overflow-x-auto scrollbar-none">
           <button
             onClick={() => setActiveTab('info')}
-            className={`py-2.5 px-3 border-b-2 transition-colors cursor-pointer ${
+            className={`py-2.5 px-3 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
               activeTab === 'info'
                 ? 'border-[#174B36] dark:border-emerald-400 text-[#174B36] dark:text-emerald-400 font-bold'
                 : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
@@ -140,8 +150,19 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
             Thông tin thực địa
           </button>
           <button
+            onClick={() => setActiveTab('tag')}
+            className={`py-2.5 px-3 border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+              activeTab === 'tag'
+                ? 'border-[#174B36] dark:border-emerald-400 text-[#174B36] dark:text-emerald-400 font-bold'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-amber-500" />
+            <span>Biển số nhôm vật lý Ảo</span>
+          </button>
+          <button
             onClick={() => setActiveTab('care')}
-            className={`py-2.5 px-3 border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer ${
+            className={`py-2.5 px-3 border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeTab === 'care'
                 ? 'border-[#174B36] dark:border-emerald-400 text-[#174B36] dark:text-emerald-400 font-bold'
                 : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
@@ -152,7 +173,7 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('incidents')}
-            className={`py-2.5 px-3 border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer ${
+            className={`py-2.5 px-3 border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeTab === 'incidents'
                 ? 'border-[#174B36] dark:border-emerald-400 text-[#174B36] dark:text-emerald-400 font-bold'
                 : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
@@ -163,7 +184,7 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('blockchain')}
-            className={`py-2.5 px-3 border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer ${
+            className={`py-2.5 px-3 border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeTab === 'blockchain'
                 ? 'border-[#174B36] dark:border-emerald-400 text-[#174B36] dark:text-emerald-400 font-bold'
                 : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
@@ -225,6 +246,32 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
                     <div className="font-semibold text-[#174B36] dark:text-emerald-400 mb-1">Đặc tính sinh học & Hướng dẫn:</div>
                     <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-[11px]">{treeType?.careGuide}</p>
                   </div>
+
+                  {/* Physical Aluminum Tag Highlight Card */}
+                  <div
+                    onClick={() => setActiveTab('tag')}
+                    className="p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800 flex items-center justify-between cursor-pointer hover:border-emerald-500 transition-all shadow-xs group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-slate-800 text-amber-300 flex items-center justify-center font-mono font-black text-xs border border-slate-600 shadow-2xs">
+                        {streetCode}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 flex items-center gap-1.5">
+                          <span>Biển Số Nhôm Đóng Thân Cây Vật Lý</span>
+                          <span className="text-[10px] px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 rounded font-mono font-bold">
+                            Alloy Tag
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Đối chiếu tại hiện trường: {milestone}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold group-hover:translate-x-0.5 transition-transform">
+                      Mở biển →
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -255,6 +302,22 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* 🔩 BIỂN SỐ NHÔM VẬT LÝ ẢO (DIGITAL ALLOY TAG) */}
+          {activeTab === 'tag' && (
+            <div className="space-y-4">
+              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-xs text-amber-900 dark:text-amber-300">
+                <div className="font-bold flex items-center gap-1.5 mb-0.5">
+                  <span>💡 Mô phỏng Biển Nhôm Đóng Thân Cây Thực Tế</span>
+                </div>
+                <p className="text-[11px] text-amber-800 dark:text-amber-200/90 leading-relaxed">
+                  Tại hiện trường, mỗi gốc cây được đóng một biển nhôm dập chìm chống chịu thời tiết. Kỹ thuật viên đối chiếu số hiệu <strong>[{streetCode}]</strong>, mã QR quang học và cột mốc <strong>{milestone}</strong> để xác định chính xác 100% cây cần can thiệp mà không sợ nhầm giữa các cây cùng loài trên tuyến.
+                </p>
+              </div>
+
+              <DigitalAlloyTag tree={tree} size="lg" showActions={true} />
             </div>
           )}
 
