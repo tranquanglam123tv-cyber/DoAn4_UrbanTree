@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, Play, Pause, RotateCcw, Sprout, Leaf, Trees, ShieldCheck, QrCode } from 'lucide-react';
+import { Sparkles, Play, Pause, RotateCcw } from 'lucide-react';
 
 export const TreeGrowthShowcase: React.FC = () => {
   // Continuous growth progress from 0 (seed) to 1 (full canopy tree)
-  const [progress, setProgress] = useState<number>(0);
+  const [progress, setProgress] = useState<number>(0.2); // bắt đầu nhẹ từ mầm
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const animRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(performance.now());
   const holdTimerRef = useRef<number>(0);
 
-  // Growth loop: runs smoothly via requestAnimationFrame
+  // Smooth biological growth loop
   useEffect(() => {
     if (!isPlaying) return;
 
@@ -18,18 +18,18 @@ export const TreeGrowthShowcase: React.FC = () => {
       lastTimeRef.current = now;
 
       setProgress((prev) => {
-        // If reached full tree (1.0), hold for 2.8 seconds before looping back to seed
+        // If reached full tree (1.0), hold for 3.2 seconds before gently restarting
         if (prev >= 1.0) {
           holdTimerRef.current += dt;
-          if (holdTimerRef.current > 2.8) {
+          if (holdTimerRef.current > 3.2) {
             holdTimerRef.current = 0;
-            return 0; // restart from seed!
+            return 0; // restart cycle
           }
           return 1.0;
         }
 
-        // Smooth growth speed: complete in ~6.5 seconds
-        const next = prev + dt / 6.5;
+        // Smooth growth speed: complete in ~8.0 seconds for super smooth observation
+        const next = prev + dt / 8.0;
         return Math.min(next, 1.0);
       });
 
@@ -44,8 +44,34 @@ export const TreeGrowthShowcase: React.FC = () => {
     };
   }, [isPlaying]);
 
-  // Derived growth stage info
-  const stageIndex = progress < 0.25 ? 0 : progress < 0.55 ? 1 : progress < 0.82 ? 2 : 3;
+  // Cubic easing function for natural acceleration/deceleration
+  const easeOutCubic = (x: number): number => 1 - Math.pow(1 - x, 3);
+  const easeInOutQuad = (x: number): number => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
+
+  // Growth factors calculated smoothly across the entire 0 -> 1 timeline (NO sudden disappearing!)
+  // 1. Seed & root factor: active at start
+  const rootGrowth = Math.min(progress / 0.35, 1.0);
+  const seedFade = Math.max(0, 1.0 - progress / 0.3);
+
+  // 2. Trunk growth: continuous from 0.05 to 1.0
+  const trunkProgress = Math.max(0, (progress - 0.05) / 0.95);
+  const trunkScaleY = easeOutCubic(trunkProgress); // 0 to 1
+  const trunkScaleX = 0.35 + trunkProgress * 0.65; // thickness increases
+
+  // 3. Branches growth: smoothly extend from 0.25 to 1.0
+  const branchProgress = Math.max(0, (progress - 0.22) / 0.78);
+  const branchScale = easeOutCubic(branchProgress);
+
+  // 4. Foliage ALWAYS present once stem emerges (>0.08), growing continuously!
+  const foliageProgress = Math.max(0, (progress - 0.08) / 0.92);
+  const foliageScale = easeOutCubic(foliageProgress); // 0 to 1
+  const foliageOpacity = Math.min(1.0, foliageProgress * 3); // fades in quickly and stays lush
+
+  // 5. Mature extras (QR badge, glowing eco spores)
+  const matureFactor = Math.max(0, (progress - 0.7) / 0.3);
+
+  // Stage classification for labels
+  const stageIndex = progress < 0.22 ? 0 : progress < 0.52 ? 1 : progress < 0.82 ? 2 : 3;
 
   const STAGE_META = [
     {
@@ -56,13 +82,13 @@ export const TreeGrowthShowcase: React.FC = () => {
     },
     {
       title: 'Chồi Non Vươn Thẳng',
-      desc: 'Đâm chồi, mở lá mầm non xanh mướt đón nắng sông Hậu',
+      desc: 'Thân vươn cao, tán lá non xanh mướt đung đưa đón nắng',
       tag: 'GIAI ĐOẠN 2: CHỒI NON',
       color: 'text-emerald-700 bg-emerald-50 border-emerald-200',
     },
     {
       title: 'Cây Sinh Trưởng & Vươn Nhánh',
-      desc: 'Thân hóa gỗ vững chắc, phân nhánh tỏa bóng vỉa hè',
+      desc: 'Phân nhánh xum xuê, tạo bóng mát vỉa hè tuyến phố',
       tag: 'GIAI ĐOẠN 3: SINH TRƯỞNG',
       color: 'text-teal-700 bg-teal-50 border-teal-200',
     },
@@ -80,16 +106,6 @@ export const TreeGrowthShowcase: React.FC = () => {
   const currentHeight = (0.15 + progress * 11.65).toFixed(1);
   const currentCanopy = (0.1 + progress * 8.4).toFixed(1);
   const currentCo2 = (0.1 + progress * 48.1).toFixed(1);
-
-  // Easing curves for realistic biological growth
-  // 1. Sprout emergence: rapid early rise
-  const sproutFactor = Math.min(progress / 0.25, 1.0);
-  // 2. Trunk growth: starts after sprout
-  const trunkGrowth = Math.max(0, Math.min((progress - 0.15) / 0.55, 1.0));
-  // 3. Foliage explosion: blooms as branches spread
-  const foliageFactor = Math.max(0, Math.min((progress - 0.35) / 0.55, 1.0));
-  // 4. Full maturity extras (QR tag, glowing spores)
-  const matureFactor = Math.max(0, Math.min((progress - 0.75) / 0.25, 1.0));
 
   const handleSeek = (targetProgress: number) => {
     setProgress(targetProgress);
@@ -117,11 +133,11 @@ export const TreeGrowthShowcase: React.FC = () => {
         {/* Ambient Halo behind foliage */}
         <div
           className="absolute inset-0 rounded-full bg-radial from-emerald-400/25 via-teal-300/10 to-transparent blur-2xl pointer-events-none transition-transform duration-700"
-          style={{ transform: `scale(${0.4 + foliageFactor * 0.8})` }}
+          style={{ transform: `scale(${0.3 + foliageScale * 0.9})` }}
         />
 
-        {/* Floating eco-spores (active when foliage expands) */}
-        {foliageFactor > 0.4 && (
+        {/* Floating eco-spores (active when tree is lush) */}
+        {foliageScale > 0.3 && (
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <span className="absolute left-1/4 top-1/4 w-2 h-2 rounded-full bg-amber-300/80 animate-ping" style={{ animationDuration: '3s' }} />
             <span className="absolute right-1/4 top-1/3 w-2.5 h-2.5 rounded-full bg-emerald-400/80 animate-pulse" style={{ animationDuration: '2s' }} />
@@ -171,7 +187,7 @@ export const TreeGrowthShowcase: React.FC = () => {
             </filter>
           </defs>
 
-          {/* 1. MOUND / GROUND BASE */}
+          {/* 1. GROUND MOUND & SOIL BASE */}
           <ellipse cx="160" cy="242" rx="90" ry="14" fill="#dcfce7" />
           <ellipse cx="160" cy="245" rx="70" ry="9" fill="#15803d" opacity="0.25" />
           <ellipse cx="160" cy="247" rx="40" ry="5" fill="#14532d" opacity="0.4" />
@@ -182,157 +198,111 @@ export const TreeGrowthShowcase: React.FC = () => {
           <path d="M182 242 Q185 231 189 226 Q185 235 180 242 Z" fill="#10b981" />
           <path d="M174 241 Q176 233 179 229 Q176 235 172 241 Z" fill="#059669" />
 
-          {/* 2. UNDERGROUND ROOTS (Pulsing and branching as seed develops) */}
-          <g opacity={Math.max(0.2, 1.0 - progress * 0.7)}>
+          {/* 2. UNDERGROUND ROOTS (Smoothly branching) */}
+          <g opacity={Math.max(0.25, 1.0 - progress * 0.6)}>
             {/* Primary Taproot */}
             <path
-              d="M160 245 Q158 260 156 276"
+              d={`M160 245 Q158 ${245 + rootGrowth * 18} 156 ${245 + rootGrowth * 32}`}
               stroke="#059669"
-              strokeWidth={2.5 + sproutFactor * 1.5}
+              strokeWidth={2 + rootGrowth * 1.5}
               fill="none"
               strokeLinecap="round"
             />
             {/* Left Lateral Root */}
             <path
-              d="M160 246 Q142 258 122 268"
+              d={`M160 246 Q145 ${246 + rootGrowth * 12} ${160 - rootGrowth * 36} ${246 + rootGrowth * 22}`}
               stroke="#10b981"
-              strokeWidth={2}
+              strokeWidth={1.8}
               fill="none"
               strokeLinecap="round"
             />
             {/* Right Lateral Root */}
             <path
-              d="M160 246 Q178 258 198 266"
+              d={`M160 246 Q175 ${246 + rootGrowth * 12} ${160 + rootGrowth * 38} ${246 + rootGrowth * 20}`}
               stroke="#10b981"
-              strokeWidth={2}
+              strokeWidth={1.8}
               fill="none"
               strokeLinecap="round"
             />
-            {/* Fibrous fine roots */}
-            {progress < 0.4 && (
-              <>
-                <path d="M140 256 Q130 264 116 270" stroke="#34d399" strokeWidth="1.2" fill="none" />
-                <path d="M176 256 Q188 264 204 272" stroke="#34d399" strokeWidth="1.2" fill="none" />
-              </>
-            )}
             {/* Golden seed embryo */}
-            {progress < 0.25 && (
-              <circle cx="160" cy="245" r={5 - progress * 10} fill="#f59e0b" filter="url(#glowEffect)" />
+            {seedFade > 0 && (
+              <circle cx="160" cy="245" r={4.5 * seedFade} fill="#f59e0b" filter="url(#glowEffect)" />
             )}
           </g>
 
-          {/* 3. TENDER SPROUT (Active during stage 0 & 1) */}
-          {progress < 0.45 && (
-            <g
-              style={{
-                opacity: 1 - Math.max(0, (progress - 0.3) / 0.15),
-                transformOrigin: '160px 244px',
-              }}
-            >
-              {/* Green curved sprout stem */}
-              <path
-                d={`M160 245 C158 ${245 - sproutFactor * 35} 162 ${245 - sproutFactor * 65} 160 ${245 - sproutFactor * 85}`}
-                stroke="#10b981"
-                strokeWidth={3 + sproutFactor * 2}
-                fill="none"
-                strokeLinecap="round"
-              />
-              {/* Young leaves opening */}
-              {sproutFactor > 0.3 && (
-                <>
-                  <path
-                    d={`M160 ${245 - sproutFactor * 85} C150 ${245 - sproutFactor * 95} 138 ${245 - sproutFactor * 90} 142 ${245 - sproutFactor * 75} C148 ${245 - sproutFactor * 82} 158 ${245 - sproutFactor * 83} 160 ${245 - sproutFactor * 85}`}
-                    fill="url(#leafHighlight)"
-                  />
-                  <path
-                    d={`M160 ${245 - sproutFactor * 85} C170 ${245 - sproutFactor * 95} 182 ${245 - sproutFactor * 90} 178 ${245 - sproutFactor * 75} C172 ${245 - sproutFactor * 82} 162 ${245 - sproutFactor * 83} 160 ${245 - sproutFactor * 85}`}
-                    fill="#10b981"
-                  />
-                </>
-              )}
-            </g>
-          )}
+          {/* 3. TRUNK & BARK (Smoothly growing upwards) */}
+          <g
+            style={{
+              transformOrigin: '160px 245px',
+              transform: `scale(${trunkScaleX}, ${trunkScaleY})`,
+            }}
+          >
+            {/* Organic Trunk with smooth curve and root flare */}
+            <path
+              d="M148 245 C150 210 146 175 152 140 C156 115 154 95 160 75 C166 95 164 115 168 140 C174 175 170 210 172 245 C165 244 155 244 148 245 Z"
+              fill="url(#barkGradient)"
+            />
 
-          {/* 4. MATURE ORGANIC TRUNK & BRANCHES (Grows smoothly from 0.15 to 1.0) */}
-          {progress > 0.15 && (
-            <g
-              style={{
-                transformOrigin: '160px 245px',
-                transform: `scale(${0.3 + trunkGrowth * 0.7})`,
-                opacity: Math.min(1.0, (progress - 0.15) / 0.1),
-              }}
-            >
-              {/* Organic Trunk with natural curves & bark root flare */}
-              <path
-                d="M148 245 C149 210 144 175 152 140 C156 115 154 95 160 75 C166 95 164 115 168 140 C176 175 171 210 172 245 C165 244 155 244 148 245 Z"
-                fill="url(#barkGradient)"
-              />
+            {/* Left Primary Branch */}
+            <path
+              d={`M154 150 C140 135 125 125 ${160 - branchScale * 55} ${145 - branchScale * 25} C122 136 138 148 153 162 Z`}
+              fill="url(#barkGradient)"
+              opacity={branchScale}
+            />
 
-              {/* Left Primary Bough */}
-              {trunkGrowth > 0.3 && (
-                <path
-                  d="M154 150 C140 135 125 125 105 120 C122 136 138 148 153 162 Z"
-                  fill="url(#barkGradient)"
+            {/* Right Primary Branch */}
+            <path
+              d={`M166 145 C180 130 196 122 ${160 + branchScale * 56} ${140 - branchScale * 22} C198 134 182 145 167 158 Z`}
+              fill="url(#barkGradient)"
+              opacity={branchScale}
+            />
+
+            {/* Upper secondary boughs */}
+            {branchScale > 0.4 && (
+              <>
+                <path d="M156 110 C146 95 132 86 120 80 C130 92 142 102 156 118 Z" fill="url(#barkGradient)" opacity={branchScale} />
+                <path d="M164 105 C174 90 188 82 200 78 C190 90 178 98 164 114 Z" fill="url(#barkGradient)" opacity={branchScale} />
+              </>
+            )}
+
+            {/* QR Aluminum Physical Badge mounted on trunk */}
+            {matureFactor > 0.1 && (
+              <g style={{ opacity: matureFactor }}>
+                <rect
+                  x="154"
+                  y="180"
+                  width="12"
+                  height="14"
+                  rx="2"
+                  fill="#ffffff"
+                  stroke="#059669"
+                  strokeWidth="1.2"
+                  filter="url(#glowEffect)"
                 />
-              )}
+                <rect x="156.5" y="182.5" width="3" height="3" fill="#064e3b" />
+                <rect x="160.5" y="182.5" width="3" height="3" fill="#064e3b" />
+                <rect x="156.5" y="186.5" width="3" height="3" fill="#064e3b" />
+                <rect x="161.5" y="187.5" width="2" height="2" fill="#10b981" />
+              </g>
+            )}
+          </g>
 
-              {/* Right Primary Bough */}
-              {trunkGrowth > 0.35 && (
-                <path
-                  d="M166 145 C180 130 196 122 216 118 C198 134 182 145 167 158 Z"
-                  fill="url(#barkGradient)"
-                />
-              )}
-
-              {/* Upper secondary boughs */}
-              {trunkGrowth > 0.6 && (
-                <>
-                  <path d="M156 110 C146 95 132 86 118 80 C130 92 142 102 156 118 Z" fill="url(#barkGradient)" />
-                  <path d="M164 105 C174 90 188 82 202 78 C190 90 178 98 164 114 Z" fill="url(#barkGradient)" />
-                </>
-              )}
-
-              {/* High-tech QR Physical Badge mounted on trunk */}
-              {matureFactor > 0.2 && (
-                <g style={{ opacity: matureFactor }}>
-                  {/* Aluminum tag plate */}
-                  <rect
-                    x="154"
-                    y="180"
-                    width="12"
-                    height="14"
-                    rx="2"
-                    fill="#ffffff"
-                    stroke="#059669"
-                    strokeWidth="1.2"
-                    filter="url(#glowEffect)"
-                  />
-                  {/* QR Pattern Representation */}
-                  <rect x="156.5" y="182.5" width="3" height="3" fill="#064e3b" />
-                  <rect x="160.5" y="182.5" width="3" height="3" fill="#064e3b" />
-                  <rect x="156.5" y="186.5" width="3" height="3" fill="#064e3b" />
-                  <rect x="161.5" y="187.5" width="2" height="2" fill="#10b981" />
-                </g>
-              )}
-            </g>
-          )}
-
-          {/* 5. GORGEOUS MULTI-LAYER CANOPY (Expands dynamically like real foliage) */}
-          {foliageFactor > 0.05 && (
+          {/* 4. ALWAYS-LUSH GREEN FOLIAGE (Attaches directly to stem/branches and blooms seamlessly!) */}
+          {foliageScale > 0 && (
             <g
               style={{
-                transformOrigin: '160px 100px',
-                transform: `scale(${0.15 + foliageFactor * 0.85})`,
-                opacity: foliageFactor,
+                // Anchor position follows the top of the trunk as it rises
+                transformOrigin: `160px ${245 - trunkScaleY * 165}px`,
+                transform: `scale(${foliageScale})`,
+                opacity: foliageOpacity,
               }}
-              className="transition-all duration-300"
             >
               {/* Back Shadow Canopy Clouds */}
               <circle cx="160" cy="85" r="58" fill="url(#canopyBackGrad)" opacity="0.95" />
               <circle cx="115" cy="115" r="48" fill="url(#canopyBackGrad)" opacity="0.92" />
               <circle cx="205" cy="110" r="50" fill="url(#canopyBackGrad)" opacity="0.92" />
 
-              {/* Midtone Vibrant Clouds */}
+              {/* Midtone Vibrant Foliage Clouds */}
               <circle cx="140" cy="95" r="46" fill="url(#canopyFrontGrad)" />
               <circle cx="180" cy="90" r="48" fill="url(#canopyFrontGrad)" />
               <circle cx="160" cy="60" r="42" fill="url(#canopyFrontGrad)" />
@@ -352,6 +322,20 @@ export const TreeGrowthShowcase: React.FC = () => {
               <ellipse cx="160" cy="22" rx="12" ry="7" fill="#6ee7b7" />
               <ellipse cx="115" cy="55" rx="9" ry="5" fill="#34d399" transform="rotate(-40 115 55)" />
               <ellipse cx="205" cy="52" rx="9" ry="5" fill="#6ee7b7" transform="rotate(40 205 52)" />
+            </g>
+          )}
+
+          {/* Special young leaves cluster for sprout stage (guarantees green lushness even when tiny!) */}
+          {foliageScale < 0.45 && (
+            <g
+              style={{
+                transformOrigin: `160px ${245 - trunkScaleY * 165}px`,
+                opacity: 1 - foliageScale * 2,
+              }}
+            >
+              <ellipse cx="150" cy={245 - trunkScaleY * 165} rx="16" ry="10" fill="#34d399" transform={`rotate(-28 150 ${245 - trunkScaleY * 165})`} />
+              <ellipse cx="170" cy={245 - trunkScaleY * 165} rx="16" ry="10" fill="#10b981" transform={`rotate(28 170 ${245 - trunkScaleY * 165})`} />
+              <ellipse cx="160" cy={245 - trunkScaleY * 178} rx="14" ry="16" fill="#6ee7b7" />
             </g>
           )}
         </svg>
@@ -396,7 +380,7 @@ export const TreeGrowthShowcase: React.FC = () => {
             🌱 Mầm
           </button>
           <button
-            onClick={() => handleSeek(0.4)}
+            onClick={() => handleSeek(0.38)}
             className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
               stageIndex === 1
                 ? 'bg-emerald-600 text-white shadow-xs'
@@ -406,7 +390,7 @@ export const TreeGrowthShowcase: React.FC = () => {
             🌿 Chồi
           </button>
           <button
-            onClick={() => handleSeek(0.7)}
+            onClick={() => handleSeek(0.68)}
             className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
               stageIndex === 2
                 ? 'bg-emerald-600 text-white shadow-xs'
