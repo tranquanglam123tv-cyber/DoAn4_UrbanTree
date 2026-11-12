@@ -207,16 +207,15 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="hidden sm:inline">Quét QR</span>
             </button>
 
-            {/* Nút Đăng nhập Cán bộ (nếu là Người dân / Chưa đăng nhập) */}
+            {/* Nút Đăng nhập hệ thống (Người dân / Cán bộ) */}
             {currentUser.role === 'CITIZEN' ? (
               <button
                 onClick={onOpenLogin}
-                title="Dành riêng cho Ban Quản Lý và Kỹ Thuật Viên"
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-full text-xs font-bold transition-all shadow-xs cursor-pointer border border-slate-700 active:scale-95"
+                title="Đăng nhập tài khoản Người dân hoặc Cán bộ quản lý"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-full text-xs font-bold transition-all shadow-xs cursor-pointer border border-emerald-600 active:scale-95"
               >
-                <LogIn className="w-3.5 h-3.5 text-emerald-400" />
+                <LogIn className="w-3.5 h-3.5 text-emerald-200" />
                 <span>Đăng nhập</span>
-                <span className="hidden sm:inline text-[10px] text-emerald-300 font-semibold bg-emerald-950/80 px-1.5 py-0.5 rounded-full">Cán bộ</span>
               </button>
             ) : (
               /* Persona Badge & Profile Menu (Khi đã đăng nhập Admin hoặc Staff) */

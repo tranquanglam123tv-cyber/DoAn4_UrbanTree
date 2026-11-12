@@ -242,7 +242,104 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         </div>
       </PerspectiveTiltShowcase>
 
-      {/* 🏢 3. VỀ TỔ CHỨC CHỦ QUẢN & SỨ MỆNH PHÁT TRIỂN CẦN THƠ */}
+      {/* 📢 3. HƯỚNG DẪN NGƯỜI DÂN BÁO CÁO SỰ CỐ (ĐẶT NGAY SAU RADAR ĐỂ DÂN DỄ THẤY) */}
+      <section className="bg-gradient-to-br from-emerald-900 via-emerald-950 to-teal-950 text-white rounded-3xl p-6 sm:p-12 relative overflow-hidden shadow-2xl">
+        {/* Glow decoration */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 space-y-8">
+          <div className="max-w-2xl space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-800/80 border border-emerald-600/50 text-emerald-200 text-xs font-bold uppercase tracking-wider">
+              <Users className="w-3.5 h-3.5 text-emerald-400" />
+              <span>DÀNH CHO NGƯỜI DÂN &amp; CỘNG ĐỒNG</span>
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
+              Hướng Dẫn Gửi Phản Ánh Cây Nguy Hiểm
+            </h2>
+            <p className="text-sm sm:text-base text-emerald-100/80 leading-relaxed">
+              Bạn phát hiện cây nghiêng, cành khô vướng dây điện hoặc nứt rễ? Chỉ mất chưa đầy 30 giây để gửi thông tin cho đội cứu hộ - <strong className="text-emerald-300 underline underline-offset-4">hoàn toàn KHÔNG cần tạo tài khoản hay đăng nhập</strong>.
+            </p>
+          </div>
+
+          {/* 4 Bước trực quan */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Step 1 */}
+            <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/10 space-y-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white font-bold flex items-center justify-center text-sm shadow-md">
+                1
+              </div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                <QrCode className="w-4 h-4 text-emerald-400" />
+                Quét QR Hoặc Bấm Nút
+              </h3>
+              <p className="text-xs text-emerald-100/70 leading-relaxed">
+                Đưa camera điện thoại quét mã QR đóng trên thân cây. Hệ thống sẽ tự nhận diện đúng cây đó. Hoặc bấm trực tiếp nút "Phản Ánh Sự Cố".
+              </p>
+            </div>
+
+            {/* Step 2 */}
+            <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/10 space-y-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white font-bold flex items-center justify-center text-sm shadow-md">
+                2
+              </div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                <Camera className="w-4 h-4 text-emerald-400" />
+                Chụp Ảnh Hiện Trường
+              </h3>
+              <p className="text-xs text-emerald-100/70 leading-relaxed">
+                Chụp 1-2 bức ảnh rõ cành gãy, thân nghiêng hoặc vỏ cây bị mối mọt để cán bộ kỹ thuật đánh giá phương án xe nâng cắt tỉa.
+              </p>
+            </div>
+
+            {/* Step 3 */}
+            <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/10 space-y-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white font-bold flex items-center justify-center text-sm shadow-md">
+                3
+              </div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                <MapPin className="w-4 h-4 text-emerald-400" />
+                Xác Nhận Vị Trí GPS
+              </h3>
+              <p className="text-xs text-emerald-100/70 leading-relaxed">
+                Hệ thống tự động điền địa chỉ và vị trí bản đồ Cần Thơ. Bạn có thể để lại số điện thoại (tùy chọn) để nhận SMS thông báo khi hoàn thành.
+              </p>
+            </div>
+
+            {/* Step 4 */}
+            <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/10 space-y-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white font-bold flex items-center justify-center text-sm shadow-md">
+                4
+              </div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                Nhận Mã &amp; Xử Lý
+              </h3>
+              <p className="text-xs text-emerald-100/70 leading-relaxed">
+                Nhận ngay Mã phản ánh (Ví dụ: <code className="bg-emerald-950 px-1 py-0.5 rounded text-emerald-300 font-mono">INC-71044</code>). Đội cứu hộ sẽ đến hiện trường xử lý.
+              </p>
+            </div>
+          </div>
+
+          {/* Action CTA Box */}
+          <div className="p-6 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="space-y-1 text-center sm:text-left">
+              <div className="text-base font-bold text-white">Bạn đang ở gần một cây có nguy cơ mất an toàn?</div>
+              <div className="text-xs text-emerald-200">Gửi ngay thông tin để bảo vệ an toàn cho người tham gia giao thông.</div>
+            </div>
+            <button
+              onClick={onOpenReport}
+              className="px-6 py-3 bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-extrabold text-xs sm:text-sm rounded-full shadow-lg transition-transform active:scale-95 flex items-center gap-2 cursor-pointer shrink-0"
+            >
+              <Send className="w-4 h-4" />
+              <span>Gửi Phản Ánh Ngay (Không Cần Đăng Nhập)</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* 🏢 4. VỀ TỔ CHỨC CHỦ QUẢN & SỨ MỆNH PHÁT TRIỂN CẦN THƠ */}
       <section className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/90 shadow-sm space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-100 pb-6">
           <div className="space-y-2">
@@ -407,104 +504,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         </div>
       </section>
 
-      {/* 📢 5. HƯỚNG DẪN NGƯỜI DÂN BÁO CÁO SỰ CỐ (KHÔNG CẦN ĐĂNG NHẬP) */}
-      <section className="bg-gradient-to-br from-emerald-900 via-emerald-950 to-teal-950 text-white rounded-3xl p-6 sm:p-12 relative overflow-hidden shadow-2xl">
-        {/* Glow decoration */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 space-y-8">
-          <div className="max-w-2xl space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-800/80 border border-emerald-600/50 text-emerald-200 text-xs font-bold uppercase tracking-wider">
-              <Users className="w-3.5 h-3.5 text-emerald-400" />
-              <span>DÀNH CHO NGƯỜI DÂN &amp; CỘNG ĐỒNG</span>
-            </div>
-            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
-              Hướng Dẫn Gửi Phản Ánh Cây Nguy Hiểm
-            </h2>
-            <p className="text-sm sm:text-base text-emerald-100/80 leading-relaxed">
-              Bạn phát hiện cây nghiêng, cành khô vướng dây điện hoặc nứt rễ? Chỉ mất chưa đầy 30 giây để gửi thông tin cho đội cứu hộ - <strong className="text-emerald-300 underline underline-offset-4">hoàn toàn KHÔNG cần tạo tài khoản hay đăng nhập</strong>.
-            </p>
-          </div>
-
-          {/* 4 Bước trực quan */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Step 1 */}
-            <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/10 space-y-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white font-bold flex items-center justify-center text-sm shadow-md">
-                1
-              </div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                <QrCode className="w-4 h-4 text-emerald-400" />
-                Quét QR Hoặc Bấm Nút
-              </h3>
-              <p className="text-xs text-emerald-100/70 leading-relaxed">
-                Đưa camera điện thoại quét mã QR đóng trên thân cây. Hệ thống sẽ tự nhận diện đúng cây đó. Hoặc bấm trực tiếp nút "Phản Ánh Sự Cố".
-              </p>
-            </div>
-
-            {/* Step 2 */}
-            <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/10 space-y-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white font-bold flex items-center justify-center text-sm shadow-md">
-                2
-              </div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                <Camera className="w-4 h-4 text-emerald-400" />
-                Chụp Ảnh Hiện Trường
-              </h3>
-              <p className="text-xs text-emerald-100/70 leading-relaxed">
-                Chụp 1-2 bức ảnh rõ cành gãy, thân nghiêng hoặc vỏ cây bị mối mọt để cán bộ kỹ thuật đánh giá phương án xe nâng cắt tỉa.
-              </p>
-            </div>
-
-            {/* Step 3 */}
-            <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/10 space-y-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white font-bold flex items-center justify-center text-sm shadow-md">
-                3
-              </div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-emerald-400" />
-                Xác Nhận Vị Trí GPS
-              </h3>
-              <p className="text-xs text-emerald-100/70 leading-relaxed">
-                Hệ thống tự động điền địa chỉ và vị trí bản đồ Cần Thơ. Bạn có thể để lại số điện thoại (tùy chọn) để nhận SMS thông báo khi hoàn thành.
-              </p>
-            </div>
-
-            {/* Step 4 */}
-            <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/10 space-y-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white font-bold flex items-center justify-center text-sm shadow-md">
-                4
-              </div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                Nhận Mã &amp; Xử Lý
-              </h3>
-              <p className="text-xs text-emerald-100/70 leading-relaxed">
-                Nhận ngay Mã phản ánh (Ví dụ: <code className="bg-emerald-950 px-1 py-0.5 rounded text-emerald-300 font-mono">INC-71044</code>). Đội cứu hộ sẽ đến hiện trường xử lý.
-              </p>
-            </div>
-          </div>
-
-          {/* Action CTA Box */}
-          <div className="p-6 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="space-y-1 text-center sm:text-left">
-              <div className="text-base font-bold text-white">Bạn đang ở gần một cây có nguy cơ mất an toàn?</div>
-              <div className="text-xs text-emerald-200">Gửi ngay thông tin để bảo vệ an toàn cho người tham gia giao thông.</div>
-            </div>
-            <button
-              onClick={onOpenReport}
-              className="px-6 py-3 bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-extrabold text-xs sm:text-sm rounded-full shadow-lg transition-transform active:scale-95 flex items-center gap-2 cursor-pointer shrink-0"
-            >
-              <Send className="w-4 h-4" />
-              <span>Gửi Phản Ánh Ngay (Không Cần Đăng Nhập)</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* 🛠️ 6. QUY TRÌNH VẬN HÀNH THỰC ĐỊA (DÀNH CHO ĐƠN VỊ DUY TU & KỸ THUẬT VIÊN) */}
+      {/* 🛠️ 5. QUY TRÌNH VẬN HÀNH THỰC ĐỊA (DÀNH CHO ĐƠN VỊ DUY TU & KỸ THUẬT VIÊN) */}
       <section className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/90 shadow-sm space-y-8">
         <div className="max-w-2xl space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-800 text-xs font-bold">
