@@ -1322,8 +1322,21 @@ class StorageService {
     actionType: CareActionType;
     notes: string;
     imageUrl?: string;
+    equipmentUsed?: string;
+    chemicalsUsed?: string;
+    targetHealthAfter?: TreeHealthStatus;
   }): Promise<CareRecord[]> {
-    const { treeIds, staffUserId, staffName, actionType, notes, imageUrl } = params;
+    const {
+      treeIds,
+      staffUserId,
+      staffName,
+      actionType,
+      notes,
+      imageUrl,
+      equipmentUsed,
+      chemicalsUsed,
+      targetHealthAfter,
+    } = params;
     const now = new Date().toISOString();
     const createdRecords: CareRecord[] = [];
 
@@ -1333,6 +1346,10 @@ class StorageService {
       if (!tree) continue;
 
       const id = `care-batch-${Date.now()}-${i}`;
+      const afterStatus =
+        targetHealthAfter ||
+        (tree.healthStatus === 'CRITICAL' ? 'POOR' : tree.healthStatus === 'POOR' ? 'FAIR' : 'GOOD');
+
       const newCare: CareRecord = {
         id,
         treeId,
@@ -1340,9 +1357,11 @@ class StorageService {
         staffName,
         actionType,
         healthBefore: tree.healthStatus,
-        healthAfter: tree.healthStatus === 'CRITICAL' ? 'POOR' : tree.healthStatus === 'POOR' ? 'FAIR' : 'GOOD',
+        healthAfter: afterStatus,
         notes: `[Duy tu tuyến phố] ${notes}`,
         imageUrl: imageUrl || tree.imageUrl,
+        equipmentUsed,
+        chemicalsUsed,
         performedAt: now,
         createdAt: now,
       };
