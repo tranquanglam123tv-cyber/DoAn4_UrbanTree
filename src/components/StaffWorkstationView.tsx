@@ -298,31 +298,31 @@ export const StaffWorkstationView: React.FC<StaffWorkstationViewProps> = ({
   return (
     <div className="space-y-6 sm:space-y-8 animate-fade-in pb-20 max-w-7xl mx-auto px-2 sm:px-4">
       {/* 👷 1. SHIFT HERO CARD: FIELD TECHNICIAN COMMAND CENTER */}
-      <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-emerald-500/25 bg-gradient-to-br from-[#071911] via-[#0b281d] to-[#040e09] text-white p-5 sm:p-7">
+      <div className="relative rounded-3xl overflow-hidden shadow-xl dark:shadow-2xl border border-emerald-200/90 dark:border-emerald-500/25 bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/60 dark:from-[#071911] dark:via-[#0b281d] dark:to-[#040e09] text-slate-800 dark:text-white p-5 sm:p-7 transition-colors">
         {/* Ambient Glow Orbs */}
-        <div className="absolute -top-20 -right-20 w-80 h-80 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-20 -left-20 w-72 h-72 bg-teal-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-20 -right-20 w-80 h-80 bg-emerald-400/10 dark:bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-20 -left-20 w-72 h-72 bg-teal-400/10 dark:bg-teal-500/15 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 space-y-6">
           {/* Top Status Strip */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-white/10 pb-4">
             <div className="flex items-center gap-2.5">
-              <span className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-300">
+              <span className="w-3 h-3 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981] dark:shadow-[0_0_8px_#34d399]" />
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
                 CA TRỰC THỰC ĐỊA HOẠT ĐỘNG (07:00 – 17:00)
               </span>
-              <span className="text-white/40">•</span>
-              <span className="text-xs text-emerald-200/80 flex items-center gap-1 font-mono">
-                <Navigation className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-slate-300 dark:text-white/40">•</span>
+              <span className="text-xs text-slate-600 dark:text-emerald-200/80 flex items-center gap-1 font-mono">
+                <Navigation className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>GPS: Q. Ninh Kiều (10.0341° N, 105.7794° E)</span>
               </span>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-1 rounded-full bg-emerald-400/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-mono font-bold">
+              <span className="px-2.5 py-1 rounded-full bg-emerald-100/90 dark:bg-emerald-400/20 border border-emerald-300 dark:border-emerald-400/40 text-emerald-800 dark:text-emerald-300 text-[10px] font-mono font-bold">
                 TỔ XE CƠ ĐỘNG #01
               </span>
-              <span className="px-2.5 py-1 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-300 text-[10px] font-mono font-bold">
+              <span className="px-2.5 py-1 rounded-full bg-amber-100/90 dark:bg-amber-400/20 border border-amber-300 dark:border-amber-400/40 text-amber-800 dark:text-amber-300 text-[10px] font-mono font-bold">
                 XE THANG 14M
               </span>
             </div>
@@ -332,20 +332,20 @@ export const StaffWorkstationView: React.FC<StaffWorkstationViewProps> = ({
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-300 to-amber-300 p-0.5 shadow-xl shrink-0">
-                <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-emerald-400">
+                <div className="w-full h-full bg-emerald-50 dark:bg-slate-950 rounded-[14px] flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                   <Wrench className="w-8 h-8 sm:w-10 sm:h-10" />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <div className="text-[10px] font-mono font-bold text-emerald-300 uppercase tracking-widest flex items-center gap-1">
-                  <Truck className="w-3 h-3 text-emerald-400" />
+                <div className="text-[10px] font-mono font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-widest flex items-center gap-1">
+                  <Truck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                   <span>KỸ THUẬT VIÊN THỰC ĐỊA CHÍNH</span>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                   <span>{currentUser.fullName}</span>
                 </h1>
-                <p className="text-xs text-emerald-100/70">
+                <p className="text-xs text-slate-500 dark:text-emerald-100/70">
                   Đội Quản lý Cây xanh Đô thị TP. Cần Thơ · Trực chiến phòng chống thiên tai
                 </p>
               </div>
@@ -353,38 +353,38 @@ export const StaffWorkstationView: React.FC<StaffWorkstationViewProps> = ({
 
             {/* Shift Metrics */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              <div className="p-3 rounded-2xl bg-white/5 border border-white/10 text-center min-w-[90px]">
-                <div className="text-xl sm:text-2xl font-black text-rose-400 font-mono">
+              <div className="p-3 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 shadow-sm dark:shadow-none text-center min-w-[90px]">
+                <div className="text-xl sm:text-2xl font-black text-rose-600 dark:text-rose-400 font-mono">
                   {reopenedIncidents.length + inProgressIncidents.length}
                 </div>
-                <div className="text-[10px] font-bold text-rose-200/80 uppercase mt-0.5">
+                <div className="text-[10px] font-bold text-slate-600 dark:text-rose-200/80 uppercase mt-0.5">
                   Sự Cố Cần Xử Lý
                 </div>
               </div>
 
-              <div className="p-3 rounded-2xl bg-white/5 border border-white/10 text-center min-w-[90px]">
-                <div className="text-xl sm:text-2xl font-black text-amber-300 font-mono">
+              <div className="p-3 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 shadow-sm dark:shadow-none text-center min-w-[90px]">
+                <div className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-300 font-mono">
                   {reopenedIncidents.length}
                 </div>
-                <div className="text-[10px] font-bold text-amber-200/80 uppercase mt-0.5">
+                <div className="text-[10px] font-bold text-slate-600 dark:text-amber-200/80 uppercase mt-0.5">
                   Dân Khiếu Nại
                 </div>
               </div>
 
-              <div className="p-3 rounded-2xl bg-white/5 border border-white/10 text-center min-w-[90px]">
-                <div className="text-xl sm:text-2xl font-black text-teal-300 font-mono">
+              <div className="p-3 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 shadow-sm dark:shadow-none text-center min-w-[90px]">
+                <div className="text-xl sm:text-2xl font-black text-teal-600 dark:text-teal-300 font-mono">
                   {corridorTrees.length}
                 </div>
-                <div className="text-[10px] font-bold text-teal-200/80 uppercase mt-0.5">
+                <div className="text-[10px] font-bold text-slate-600 dark:text-teal-200/80 uppercase mt-0.5">
                   Cây Trên Tuyến
                 </div>
               </div>
 
-              <div className="p-3 rounded-2xl bg-white/5 border border-white/10 text-center min-w-[90px]">
-                <div className="text-xl sm:text-2xl font-black text-emerald-300 font-mono">
+              <div className="p-3 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 shadow-sm dark:shadow-none text-center min-w-[90px]">
+                <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-300 font-mono">
                   {myCareRecords.length}
                 </div>
-                <div className="text-[10px] font-bold text-emerald-200/80 uppercase mt-0.5">
+                <div className="text-[10px] font-bold text-slate-600 dark:text-emerald-200/80 uppercase mt-0.5">
                   Chứng Chỉ On-Chain
                 </div>
               </div>
@@ -456,18 +456,18 @@ export const StaffWorkstationView: React.FC<StaffWorkstationViewProps> = ({
 
         <button
           onClick={onOpenQrScanner}
-          className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 text-white shadow-lg active:scale-95 transition-all flex items-center justify-between cursor-pointer border border-slate-700/80 group"
+          className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 dark:from-slate-900 dark:to-slate-800 dark:hover:from-slate-800 dark:hover:to-slate-700 text-white shadow-lg active:scale-95 transition-all flex items-center justify-between cursor-pointer border border-blue-400/40 dark:border-slate-700/80 group"
         >
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0 text-emerald-400">
+            <div className="w-12 h-12 rounded-xl bg-white/20 dark:bg-emerald-500/20 border border-white/30 dark:border-emerald-500/40 flex items-center justify-center shrink-0 text-white dark:text-emerald-400">
               <QrCode className="w-6 h-6 group-hover:scale-110 transition-transform" />
             </div>
             <div className="text-left">
               <div className="text-sm font-black tracking-tight">Quét QR Trước Mặt</div>
-              <div className="text-[11px] text-slate-300">Mở camera nhận diện ngay</div>
+              <div className="text-[11px] text-blue-100/90 dark:text-slate-300">Mở camera nhận diện ngay</div>
             </div>
           </div>
-          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
+          <ChevronRight className="w-5 h-5 text-blue-200 dark:text-slate-400 group-hover:translate-x-1 transition-transform" />
         </button>
 
         <button
