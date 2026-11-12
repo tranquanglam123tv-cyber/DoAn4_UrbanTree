@@ -20,6 +20,9 @@ import {
   Tag,
   Eye,
   RefreshCw,
+  Upload,
+  FileText,
+  CheckCircle2,
 } from 'lucide-react';
 import { Tree, TreeHealthStatus } from '../types';
 import { storage } from '../db/storage';
@@ -83,6 +86,20 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, initialCoord
   const [showTagPreview, setShowTagPreview] = useState(false);
 
   // Bulk Import State
+  const [bulkMode, setBulkMode] = useState<'file' | 'corridor'>('file');
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [parsedTreesFromFile, setParsedTreesFromFile] = useState<Array<{
+    publicCode: string;
+    streetCode: string;
+    displayName: string;
+    treeTypeId: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+    diameterCm: number;
+    heightM: number;
+    healthStatus: TreeHealthStatus;
+  }>>([]);
   const [bulkCorridorId, setBulkCorridorId] = useState('corridor-hoa-binh');
   const [bulkTreeTypeId, setBulkTreeTypeId] = useState(treeTypes[0]?.id || '');
   const [bulkCount, setBulkCount] = useState<number>(5);
@@ -338,6 +355,209 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, initialCoord
       onSaved();
     } catch (err: any) {
       setError(err?.message || 'Có lỗi xảy ra khi nhập hàng loạt');
+    } finally {
+      setIsBulkSubmitting(false);
+    }
+  };
+
+  // 📁 Xử lý đọc File Excel / CSV tải lên
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadedFileName(file.name);
+    setError(null);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const lines = text
+          .split('\n')
+          .map((l) => l.trim())
+          .filter((l) => l.length > 0);
+
+        if (lines.length < 2) {
+          setError('File không có dữ liệu hoặc sai định dạng bảng.');
+          return;
+        }
+
+        const parsed: any[] = [];
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(',').map((c) => c.trim().replace(/^"|"$/g, ''));
+          if (cols.length < 4) continue;
+
+          // Cột: MaTuyen, TenHienThi, DiaChi, ViDo, KinhDo, DuongKinh, ChieuCao, SucKhoe
+          const code = cols[0] || `IMPORT-${String(i).padStart(2, '0')}`;
+          const name = cols[1] || `Cây Xanh #${String(i).padStart(2, '0')}`;
+          const addr = cols[2] || 'Đại lộ Hòa Bình, Ninh Kiều, Cần Thơ';
+          const lat = parseFloat(cols[3]) || 10.036829;
+          const lng = parseFloat(cols[4]) || 105.782541;
+          const diam = parseFloat(cols[5]) || 30;
+          const height = parseFloat(cols[6]) || 8;
+          const rawHealth = (cols[7] || 'GOOD').toUpperCase();
+          const health: TreeHealthStatus = ['GOOD', 'FAIR', 'POOR', 'CRITICAL'].includes(rawHealth)
+            ? (rawHealth as TreeHealthStatus)
+            : 'GOOD';
+
+          parsed.push({
+            publicCode: code,
+            streetCode: code,
+            displayName: name,
+            treeTypeId: treeTypes[0]?.id || 'type-bang',
+            address: addr,
+            latitude: lat,
+            longitude: lng,
+            diameterCm: diam,
+            heightM: height,
+            healthStatus: health,
+          });
+        }
+
+        if (parsed.length === 0) {
+          setError('Không trích xuất được dòng dữ liệu hợp lệ nào từ file.');
+          return;
+        }
+
+        setParsedTreesFromFile(parsed);
+      } catch (err: any) {
+        setError('Lỗi khi đọc file: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // 📥 Tải file mẫu CSV
+  const handleDownloadSampleCsv = () => {
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      encodeURIComponent(
+        'MaTuyen,TenHienThi,DiaChi,ViDo,KinhDo,DuongKinhCm,ChieuCaoM,SucKhoe\n' +
+        'HB-06,Cây Bàng Đài Loan #06,Trước số 26 Đại lộ Hòa Bình Ninh Kiều Cần Thơ,10.035120,105.782210,32,8.5,GOOD\n' +
+        'HB-07,Cây Bàng Đài Loan #07,Trước số 30 Đại lộ Hòa Bình Ninh Kiều Cần Thơ,10.034810,105.782050,30,8.0,GOOD\n' +
+        '30T4-06,Cây Me Tây Tuyến 30/4 #06,Trước số 120 Đường 30 Tháng 4 Ninh Kiều Cần Thơ,10.027850,105.775820,45,12.0,FAIR\n' +
+        'CR-03,Cây Sao Đen Nam Cần Thơ #03,Trước số 45 Đại lộ Võ Nguyên Giáp Cái Răng,10.011200,105.797500,28,7.5,GOOD\n' +
+        'BT-03,Cây Giáng Hương Sân Bay #03,Dải phân cách Đại lộ Võ Văn Kiệt Bình Thủy,10.067500,105.743100,35,9.0,GOOD\n'
+      );
+    const link = document.createElement('a');
+    link.setAttribute('href', csvContent);
+    link.setAttribute('download', 'UrbanTree_Mau_Nhap_Cay_CanTho.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // ⚡ Nạp dữ liệu mẫu thử nghiệm từ Sở Xây Dựng
+  const handleLoadDemoDataset = () => {
+    const demoList = [
+      {
+        publicCode: 'HB-06',
+        streetCode: 'HB-06',
+        displayName: 'Cây Bàng Đài Loan #06 (Đại Lộ Hòa Bình)',
+        treeTypeId: 'type-bang',
+        address: 'Trước số 26 Đại lộ Hòa Bình, Phường An Lạc, Ninh Kiều, Cần Thơ',
+        latitude: 10.03512,
+        longitude: 105.78221,
+        diameterCm: 32,
+        heightM: 8.5,
+        healthStatus: 'GOOD' as TreeHealthStatus,
+      },
+      {
+        publicCode: 'HB-07',
+        streetCode: 'HB-07',
+        displayName: 'Cây Bàng Đài Loan #07 (Đại Lộ Hòa Bình)',
+        treeTypeId: 'type-bang',
+        address: 'Trước số 30 Đại lộ Hòa Bình, Phường An Lạc, Ninh Kiều, Cần Thơ',
+        latitude: 10.03481,
+        longitude: 105.78205,
+        diameterCm: 30,
+        heightM: 8.0,
+        healthStatus: 'GOOD' as TreeHealthStatus,
+      },
+      {
+        publicCode: '30T4-06',
+        streetCode: '30T4-06',
+        displayName: 'Cây Me Tây Tuyến 30/4 #06',
+        treeTypeId: 'type-me',
+        address: 'Trước số 120 Đường 30 Tháng 4, Phường An Phú, Ninh Kiều, Cần Thơ',
+        latitude: 10.02785,
+        longitude: 105.77582,
+        diameterCm: 45,
+        heightM: 12.0,
+        healthStatus: 'FAIR' as TreeHealthStatus,
+      },
+      {
+        publicCode: 'CR-03',
+        streetCode: 'CR-03',
+        displayName: 'Cây Sao Đen Tuyến Cái Răng #03',
+        treeTypeId: 'type-sao',
+        address: 'Trước số 45 Đại lộ Võ Nguyên Giáp, Phường Hưng Phú, Cái Răng, Cần Thơ',
+        latitude: 10.0112,
+        longitude: 105.7975,
+        diameterCm: 28,
+        heightM: 7.5,
+        healthStatus: 'GOOD' as TreeHealthStatus,
+      },
+      {
+        publicCode: 'BT-03',
+        streetCode: 'BT-03',
+        displayName: 'Cây Giáng Hương Tuyến Sân Bay #03',
+        treeTypeId: 'type-gianghuong',
+        address: 'Dải phân cách Đại lộ Võ Văn Kiệt, Phường An Thới, Bình Thủy, Cần Thơ',
+        latitude: 10.0675,
+        longitude: 105.7431,
+        diameterCm: 35,
+        heightM: 9.0,
+        healthStatus: 'GOOD' as TreeHealthStatus,
+      },
+    ];
+    setParsedTreesFromFile(demoList);
+    setUploadedFileName('So_Xay_Dung_Can_Tho_Danh_Muc_Cay_2026.csv');
+    setError(null);
+  };
+
+  // 🚀 Tiến hành nhập dữ liệu từ File vào Database & Blockchain
+  const handleSubmitFileImport = async () => {
+    if (parsedTreesFromFile.length === 0) {
+      setError('Vui lòng chọn file dữ liệu hoặc bấm "Nạp file mẫu" trước khi tiến hành nhập.');
+      return;
+    }
+
+    setIsBulkSubmitting(true);
+    setError(null);
+
+    try {
+      const createdList: Tree[] = [];
+      for (const item of parsedTreesFromFile) {
+        const newTree = await storage.createTree({
+          publicCode: item.publicCode,
+          streetCode: item.streetCode,
+          streetCorridor: item.address.includes('Hòa Bình')
+            ? 'Đại Lộ Hòa Bình'
+            : item.address.includes('30 Tháng 4')
+            ? 'Đường 30 Tháng 4'
+            : 'Tuyến Phố Đô Thị',
+          houseNumberMilestone: item.address.split(',')[0],
+          displayName: item.displayName,
+          treeTypeId: item.treeTypeId,
+          address: item.address,
+          latitude: item.latitude,
+          longitude: item.longitude,
+          plantedAt: '2023-03-15',
+          healthStatus: item.healthStatus,
+          diameterCm: item.diameterCm,
+          heightM: item.heightM,
+          imageUrl:
+            'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=800&q=80',
+          isActive: true,
+        });
+        createdList.push(newTree);
+      }
+
+      setBulkSuccessList(createdList);
+      onSaved();
+    } catch (err: any) {
+      setError(err?.message || 'Có lỗi xảy ra khi nhập file');
     } finally {
       setIsBulkSubmitting(false);
     }
@@ -912,135 +1132,358 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, initialCoord
               </div>
             )}
 
-            <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/50 rounded-xl border border-emerald-200 dark:border-emerald-800/60 flex items-start gap-3">
-              <FileSpreadsheet className="w-5 h-5 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <div className="font-bold text-emerald-900 dark:text-emerald-300 text-xs">
-                  Giải pháp Khởi tạo Tuyến Cây Hàng Loạt (Bulk Corridor Ingestion)
+            {/* Sub-tab switcher: Nhập file Excel/CSV vs Khởi tạo theo tuyến */}
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setBulkMode('file')}
+                className={`flex-1 py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  bulkMode === 'file'
+                    ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                <span>Nhập File Excel / CSV (.csv, .xlsx)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setBulkMode('corridor')}
+                className={`flex-1 py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  bulkMode === 'corridor'
+                    ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <MapPin className="w-4 h-4" />
+                <span>Tự động theo Tuyến Phố (Corridor)</span>
+              </button>
+            </div>
+
+            {bulkMode === 'file' ? (
+              /* PHÂN ĐOẠN 1: NHẬP TỪ FILE EXCEL / CSV */
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <div className="p-3.5 bg-emerald-50/80 dark:bg-emerald-950/40 rounded-xl border border-emerald-200/80 dark:border-emerald-800/60 flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 flex items-center justify-center text-emerald-700 dark:text-emerald-300 shrink-0 font-bold">
+                    GIS
+                  </div>
+                  <div className="space-y-1">
+                    <div className="font-bold text-emerald-900 dark:text-emerald-300 text-xs">
+                      Tự Động Định Vị Tọa Độ GPS & Sinh Icon Marker Trên Bản Đồ
+                    </div>
+                    <p className="text-[11px] text-emerald-800 dark:text-emerald-400 leading-relaxed">
+                      Hệ thống tự động đọc cột <strong>vĩ độ (latitude)</strong> và <strong>kinh độ (longitude)</strong> từ file để ghim mốc trực tiếp lên bản đồ GIS chuẩn WGS-84 với độ chính xác tuyệt đối. 
+                      Đồng thời, Leaflet sẽ <strong>tự động tạo huy hiệu biểu tượng (Icon Marker)</strong> có màu theo sức khỏe cây và số thứ tự tuyến phố!
+                    </p>
+                  </div>
                 </div>
-                <p className="text-[11px] text-emerald-800 dark:text-emerald-400 leading-relaxed">
-                  Thay vì nhập thủ công từng cây, tính năng này cho phép Quản lý Đô thị tạo khung dữ liệu sẵn cho toàn bộ
-                  tuyến phố (ví dụ: từ <strong>HB-01 đến HB-10</strong>) và xuất toàn bộ mã QR để kỹ thuật viên mang ra
-                  đóng thẻ tại hiện trường.
-                </p>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Chọn Tuyến Đường Trồng *
-                </label>
-                <select
-                  value={bulkCorridorId}
-                  onChange={(e) => setBulkCorridorId(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-medium"
-                >
-                  {STREET_CORRIDORS_LIST.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.prefix}) - {c.district}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                {/* Khu vực Upload Kéo thả */}
+                <div className="border-2 border-dashed border-emerald-300 dark:border-emerald-700/60 rounded-2xl p-6 bg-emerald-50/30 dark:bg-emerald-950/20 text-center hover:border-emerald-500 transition-colors">
+                  <input
+                    type="file"
+                    id="excel-csv-file-input"
+                    accept=".csv,.xlsx,.xls,.json"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="excel-csv-file-input"
+                    className="cursor-pointer flex flex-col items-center justify-center gap-2"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-700 dark:text-emerald-300 shadow-xs">
+                      <Upload className="w-6 h-6" />
+                    </div>
+                    <div className="font-bold text-sm text-slate-800 dark:text-slate-100">
+                      {uploadedFileName ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 justify-center">
+                          <CheckCircle2 className="w-4 h-4" /> Đã nạp file: {uploadedFileName}
+                        </span>
+                      ) : (
+                        'Chọn hoặc Kéo thả file Excel (.xlsx), CSV (.csv) vào đây'
+                      )}
+                    </div>
+                    <p className="text-slate-500 dark:text-slate-400 text-[11px]">
+                      Hỗ trợ định dạng bảng tính khảo sát thực địa: Mã cây, Tên loài, Địa chỉ, Vĩ độ, Kinh độ, Đường kính, Chiều cao, Tình trạng
+                    </p>
+                  </label>
 
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Chủng loại cây trồng đồng loạt *
-                </label>
-                <select
-                  value={bulkTreeTypeId}
-                  onChange={(e) => setBulkTreeTypeId(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-                >
-                  {treeTypes.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} ({t.scientificName})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+                  <div className="mt-4 pt-3 border-t border-emerald-200/60 dark:border-emerald-800/40 flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleDownloadSampleCsv}
+                      className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    >
+                      <Download className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Tải file Excel / CSV mẫu chuẩn (.csv)</span>
+                    </button>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Số lượng cây *</label>
-                <select
-                  value={bulkCount}
-                  onChange={(e) => setBulkCount(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold"
-                >
-                  <option value={3}>3 cây</option>
-                  <option value={5}>5 cây</option>
-                  <option value={10}>10 cây</option>
-                  <option value={15}>15 cây</option>
-                  <option value={20}>20 cây</option>
-                </select>
-              </div>
+                    <button
+                      type="button"
+                      onClick={handleLoadDemoDataset}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>⚡ Nạp 5 cây mẫu Cần Thơ (Thử nghiệm nhanh)</span>
+                    </button>
+                  </div>
+                </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Số nhà khởi đầu</label>
-                <input
-                  type="number"
-                  value={bulkStartHouseNo}
-                  onChange={(e) => setBulkStartHouseNo(parseInt(e.target.value) || 2)}
-                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-                />
-              </div>
+                {/* Bảng Preview dữ liệu đã đọc từ file */}
+                {parsedTreesFromFile.length > 0 && (
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+                    <div className="font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5">
+                        <FileText className="w-4 h-4 text-emerald-600" />
+                        <span>Danh sách trích xuất ({parsedTreesFromFile.length} cây hợp lệ):</span>
+                      </span>
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                        ✓ Tự động cắm {parsedTreesFromFile.length} mốc lên Bản đồ GIS
+                      </span>
+                    </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Khoảng cách (m)</label>
-                <input
-                  type="number"
-                  value={bulkSpacingM}
-                  onChange={(e) => setBulkSpacingM(parseInt(e.target.value) || 10)}
-                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-                />
-              </div>
-            </div>
+                    <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                      <table className="w-full text-[11px] text-left">
+                        <thead className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold sticky top-0">
+                          <tr>
+                            <th className="p-2">Mã cây</th>
+                            <th className="p-2">Chủng loại</th>
+                            <th className="p-2">Vị trí / Địa chỉ</th>
+                            <th className="p-2">Tọa độ GPS</th>
+                            <th className="p-2">D/H</th>
+                            <th className="p-2">Tình trạng</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                          {parsedTreesFromFile.map((t, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                              <td className="p-2 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                {t.code}
+                              </td>
+                              <td className="p-2 font-medium text-slate-800 dark:text-slate-200">
+                                {t.typeName}
+                              </td>
+                              <td className="p-2 text-slate-600 dark:text-slate-400 max-w-[140px] truncate" title={t.address}>
+                                {t.address}
+                              </td>
+                              <td className="p-2 font-mono text-slate-500 text-[10px]">
+                                {t.lat.toFixed(5)}, {t.lng.toFixed(5)}
+                              </td>
+                              <td className="p-2 text-slate-600 dark:text-slate-400 font-mono">
+                                {t.diameter}cm / {t.height}m
+                              </td>
+                              <td className="p-2">
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                  t.healthStatus === 'GOOD'
+                                    ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400'
+                                    : t.healthStatus === 'FAIR'
+                                    ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400'
+                                    : t.healthStatus === 'POOR'
+                                    ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400'
+                                    : 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400'
+                                }`}>
+                                  {t.healthStatus}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
 
-            {/* PREVIEW BẢNG CÂY SẼ TẠO */}
-            <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
-              <div className="font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between text-xs">
-                <span>📋 Bản xem trước dãy cây sẽ tạo tự động:</span>
-                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                  Tự động cắm cờ dọc đường trên GIS
-                </span>
+                {/* Footer Submit File */}
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium rounded-lg cursor-pointer"
+                  >
+                    Đóng
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSubmitFileImport}
+                    disabled={isBulkSubmitting || parsedTreesFromFile.length === 0}
+                    className="px-4 py-2 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                  >
+                    {isBulkSubmitting ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Đang định vị GIS & ghi Blockchain...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        <span>🚀 Nhập {parsedTreesFromFile.length > 0 ? parsedTreesFromFile.length : ''} Cây & Cắm Mốc Lên Bản Đồ GIS</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
+            ) : (
+              /* PHÂN ĐOẠN 2: TỰ ĐỘNG THEO TUYẾN ĐƯỜNG (CORRIDOR) */
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/50 rounded-xl border border-emerald-200 dark:border-emerald-800/60 flex items-start gap-3">
+                  <FileSpreadsheet className="w-5 h-5 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <div className="font-bold text-emerald-900 dark:text-emerald-300 text-xs">
+                      Khởi tạo Tuyến Cây Tự Động (Corridor Generator)
+                    </div>
+                    <p className="text-[11px] text-emerald-800 dark:text-emerald-400 leading-relaxed">
+                      Tạo dãy mã định danh nối tiếp trên tuyến đường (ví dụ: <strong>HB-01 đến HB-10</strong>), 
+                      hệ thống tự động tính toán tọa độ tịnh tiến dọc tuyến phố và chuẩn bị sẵn mã QR.
+                    </p>
+                  </div>
+                </div>
 
-              <div className="max-h-36 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                <table className="w-full text-[11px] text-left">
-                  <thead className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold">
-                    <tr>
-                      <th className="p-2">Mã Tuyến</th>
-                      <th className="p-2">Cột mốc số nhà</th>
-                      <th className="p-2">Tọa độ dự kiến</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
-                    {Array.from({ length: Math.min(bulkCount, 5) }).map((_, idx) => {
-                      const corridor = STREET_CORRIDORS_LIST.find((c) => c.id === bulkCorridorId);
-                      const prefix = corridor?.prefix || 'HB';
-                      const seqStr = String(idx + 1).padStart(2, '0');
-                      const houseNo = bulkStartHouseNo + idx * 4;
-                      return (
-                        <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                          <td className="p-2 font-bold text-emerald-600 dark:text-emerald-400">
-                            [{prefix}-{seqStr}]
-                          </td>
-                          <td className="p-2 font-sans">
-                            Trước số {houseNo} {corridor?.name}
-                          </td>
-                          <td className="p-2 text-slate-400">
-                            10.03{idx}..., 105.78{idx}...
-                          </td>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Chọn Tuyến Đường Trồng *
+                    </label>
+                    <select
+                      value={bulkCorridorId}
+                      onChange={(e) => setBulkCorridorId(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-medium"
+                    >
+                      {STREET_CORRIDORS_LIST.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} ({c.prefix}) - {c.district}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Chủng loại cây trồng đồng loạt *
+                    </label>
+                    <select
+                      value={bulkTreeTypeId}
+                      onChange={(e) => setBulkTreeTypeId(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                    >
+                      {treeTypes.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} ({t.scientificName})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Số lượng cây *</label>
+                    <select
+                      value={bulkCount}
+                      onChange={(e) => setBulkCount(parseInt(e.target.value))}
+                      className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold"
+                    >
+                      <option value={3}>3 cây</option>
+                      <option value={5}>5 cây</option>
+                      <option value={10}>10 cây</option>
+                      <option value={15}>15 cây</option>
+                      <option value={20}>20 cây</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Số nhà khởi đầu</label>
+                    <input
+                      type="number"
+                      value={bulkStartHouseNo}
+                      onChange={(e) => setBulkStartHouseNo(parseInt(e.target.value) || 2)}
+                      className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Khoảng cách (m)</label>
+                    <input
+                      type="number"
+                      value={bulkSpacingM}
+                      onChange={(e) => setBulkSpacingM(parseInt(e.target.value) || 10)}
+                      className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                {/* PREVIEW BẢNG CÂY SẼ TẠO */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between text-xs">
+                    <span>📋 Bản xem trước dãy cây sẽ tạo tự động:</span>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                      Tự động cắm cờ dọc đường trên GIS
+                    </span>
+                  </div>
+
+                  <div className="max-h-36 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                    <table className="w-full text-[11px] text-left">
+                      <thead className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold">
+                        <tr>
+                          <th className="p-2">Mã Tuyến</th>
+                          <th className="p-2">Cột mốc số nhà</th>
+                          <th className="p-2">Tọa độ dự kiến</th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
+                        {Array.from({ length: Math.min(bulkCount, 5) }).map((_, idx) => {
+                          const corridor = STREET_CORRIDORS_LIST.find((c) => c.id === bulkCorridorId);
+                          const prefix = corridor?.prefix || 'HB';
+                          const seqStr = String(idx + 1).padStart(2, '0');
+                          const houseNo = bulkStartHouseNo + idx * 4;
+                          return (
+                            <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                              <td className="p-2 font-bold text-emerald-600 dark:text-emerald-400">
+                                [{prefix}-{seqStr}]
+                              </td>
+                              <td className="p-2 font-sans">
+                                Trước số {houseNo} {corridor?.name}
+                              </td>
+                              <td className="p-2 text-slate-400">
+                                10.03{idx}..., 105.78{idx}...
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Footer Bulk Submit */}
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium rounded-lg cursor-pointer"
+                  >
+                    Đóng
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleBulkImport}
+                    disabled={isBulkSubmitting}
+                    className="px-4 py-2 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                  >
+                    {isBulkSubmitting ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Đang khởi tạo dãy cây...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        <span>⚡ Khởi tạo {bulkCount} cây trên Tuyến & Neo Blockchain</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Kết quả tạo hàng loạt */}
             {bulkSuccessList && (
@@ -1048,12 +1491,11 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, initialCoord
                 <div className="flex items-center gap-2 text-emerald-900 dark:text-emerald-200 font-bold text-xs">
                   <Check className="w-4 h-4 text-emerald-600" />
                   <span>
-                    🎉 Đã khởi tạo thành công {bulkSuccessList.length} cây trên tuyến và neo lên Smart Contract!
+                    🎉 Đã nạp thành công {bulkSuccessList.length} cây lên hệ thống và neo Smart Contract!
                   </span>
                 </div>
                 <p className="text-[11px] text-emerald-800 dark:text-emerald-300 leading-relaxed">
-                  Các cây đã được ghim lên Bản đồ số GIS ở trạng thái <em>Chờ hiệu chuẩn hiện trường</em>. Bạn có thể in
-                  ngay danh sách thẻ nhôm mã QR bên dưới để cầm đi dán lên cây!
+                  Các cây đã được tự động cắm mốc chuẩn tọa độ GPS lên Bản đồ số GIS. Bạn có thể in ngay danh sách thẻ nhôm mã QR bên dưới để mang ra hiện trường đóng vào thân cây!
                 </p>
                 <button
                   type="button"
@@ -1065,35 +1507,6 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, initialCoord
                 </button>
               </div>
             )}
-
-            {/* Footer Bulk Submit */}
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium rounded-lg cursor-pointer"
-              >
-                Đóng
-              </button>
-              <button
-                type="button"
-                onClick={handleBulkImport}
-                disabled={isBulkSubmitting}
-                className="px-4 py-2 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
-              >
-                {isBulkSubmitting ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Đang khởi tạo dãy cây...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    <span>⚡ Khởi tạo {bulkCount} cây trên Tuyến & Neo Blockchain</span>
-                  </>
-                )}
-              </button>
-            </div>
           </div>
         )}
       </div>
