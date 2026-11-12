@@ -200,68 +200,73 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="space-y-8 animate-fade-in pb-16">
-      {/* 🧭 Top Admin Dashboard Header Bar (Quick Action Bar) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bento-card p-5 sm:p-6 bg-gradient-to-r from-emerald-950/10 via-transparent to-transparent dark:from-[#091a11] dark:via-[#0c1812] dark:to-[#08120c] dark:bg-[#0c1812] dark:border-emerald-500/20 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-600 text-white font-bold text-[10px] uppercase tracking-wider dark:bg-emerald-500/20 dark:text-[#00FF9D] dark:border dark:border-emerald-500/30">
+      {/* 🧭 Top Admin Dashboard Header Bar (Smart Bento Header) */}
+      <div className="bento-card p-5 sm:p-6 bg-gradient-to-r from-emerald-950/10 via-transparent to-transparent dark:from-[#091a11] dark:via-[#0c1812] dark:to-[#08120c] dark:bg-[#0c1812] dark:border-emerald-500/20 shadow-xs flex flex-col xl:flex-row xl:items-center justify-between gap-5">
+        {/* Left Side: Brand & Title */}
+        <div className="space-y-1.5 max-w-2xl">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-600 text-white font-bold text-[10px] uppercase tracking-wider dark:bg-emerald-500/20 dark:text-[#00FF9D] dark:border dark:border-emerald-500/30">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00FF9D] animate-pulse" />
               ADMIN CONTROL CENTER
             </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400">· Hệ thống điều hành Đô thị thông minh</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">· Hệ thống điều hành Đô thị thông minh</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-            <Sliders className="w-6 h-6 text-emerald-600 dark:text-[#00FF9D]" />
-            <span>Bảng Điều Khiển Quản Trị Hệ Thống (Admin Dashboard)</span>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-[#00FF9D] flex items-center justify-center shrink-0 border border-emerald-200 dark:border-emerald-500/30">
+              <Sliders className="w-4 h-4" />
+            </div>
+            <span>Bảng Điều Khiển Quản Trị Hệ Thống</span>
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
             Giám sát toàn diện hạ tầng cây xanh, phân công xử lý sự cố và kiểm tra tính toàn vẹn Smart Contract.
           </p>
         </div>
 
-        {/* Quick Action Bar Buttons */}
-        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-          {/* Nút Xuất Báo Cáo UBND & Sở Xây Dựng */}
-          <button
-            onClick={() => setShowOfficialReportModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-300 font-bold text-xs transition-colors border border-blue-200 dark:border-blue-800/60 cursor-pointer shadow-2xs"
-          >
-            <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-            <span>Xuất Báo Cáo Sở Xây Dựng</span>
-          </button>
-
-          {onOpenStaffManagement && (
+        {/* Right Side: Grouped & Balanced Action Toolbar */}
+        <div className="flex flex-wrap items-center gap-2.5 self-start xl:self-center shrink-0">
+          {/* Sub-group: Quản lý & Báo cáo */}
+          <div className="flex items-center gap-2">
             <button
-              onClick={onOpenStaffManagement}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 dark:hover:bg-purple-900/60 text-purple-800 dark:text-purple-300 font-bold text-xs transition-colors border border-purple-200 dark:border-purple-800/60 cursor-pointer shadow-2xs"
+              onClick={() => setShowOfficialReportModal(true)}
+              className="h-10 px-3.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-300 font-bold text-xs transition-all border border-blue-200 dark:border-blue-800/60 cursor-pointer shadow-2xs flex items-center gap-1.5 active:scale-95"
+              title="Xuất Báo cáo Thanh tra Định kỳ Sở Xây Dựng (Khổ chuẩn A4)"
             >
-              <Users className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-              <span>Quản Lý Nhân Sự (Staff)</span>
+              <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span>Xuất Báo Cáo A4</span>
             </button>
-          )}
 
-          <button
-            onClick={() => onNavigate('home')}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800/80 dark:hover:bg-slate-700 dark:text-slate-200 font-semibold text-xs transition-colors cursor-pointer border border-slate-200 dark:border-slate-700 shadow-2xs"
-          >
-            <Home className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-            <span>Về Trang Chủ</span>
-          </button>
+            {onOpenStaffManagement && (
+              <button
+                onClick={onOpenStaffManagement}
+                className="h-10 px-3.5 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/50 dark:hover:bg-purple-900/60 text-purple-800 dark:text-purple-300 font-bold text-xs transition-all border border-purple-200 dark:border-purple-800/60 cursor-pointer shadow-2xs flex items-center gap-1.5 active:scale-95"
+                title="Quản lý đội ngũ kỹ thuật viên & phân công địa bàn"
+              >
+                <Users className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <span>Nhân Sự (Staff)</span>
+              </button>
+            )}
+          </div>
 
-          <button
-            onClick={onOpenAddTree}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-slate-950 font-bold text-xs transition-all shadow-md shadow-emerald-600/20 dark:shadow-[0_0_15px_rgba(0,255,157,0.3)] active:scale-95 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Thêm Cây Mới</span>
-          </button>
+          <div className="hidden sm:block w-[1px] h-6 bg-slate-200 dark:bg-slate-800 mx-1" />
 
-          <button
-            onClick={() => onOpenCareModal()}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white hover:bg-emerald-50 text-emerald-800 font-bold text-xs transition-colors border border-emerald-200 shadow-xs cursor-pointer dark:bg-[#0f2319] dark:hover:bg-[#143022] dark:text-emerald-300 dark:border-emerald-500/30 dark:shadow-[0_0_10px_rgba(16,185,129,0.15)]"
-          >
-            <ClipboardList className="w-4 h-4 text-emerald-600 dark:text-[#00FF9D]" />
-            <span>Ghi Chăm Sóc</span>
-          </button>
+          {/* Sub-group: Tác vụ Thực địa */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onOpenCareModal()}
+              className="h-10 px-3.5 rounded-xl bg-white hover:bg-emerald-50/80 text-emerald-800 font-bold text-xs transition-all border border-emerald-200 shadow-xs cursor-pointer dark:bg-[#0c1812] dark:hover:bg-[#12281c] dark:text-emerald-300 dark:border-emerald-500/30 dark:shadow-[0_0_10px_rgba(16,185,129,0.12)] flex items-center gap-1.5 active:scale-95"
+            >
+              <ClipboardList className="w-4 h-4 text-emerald-600 dark:text-[#00FF9D]" />
+              <span>Ghi Chăm Sóc</span>
+            </button>
+
+            <button
+              onClick={onOpenAddTree}
+              className="h-10 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white dark:from-emerald-500 dark:to-teal-500 dark:text-slate-950 font-bold text-xs transition-all shadow-md shadow-emerald-700/20 dark:shadow-[0_0_15px_rgba(0,255,157,0.35)] active:scale-95 cursor-pointer flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>Thêm Cây Mới</span>
+            </button>
+          </div>
         </div>
       </div>
 
