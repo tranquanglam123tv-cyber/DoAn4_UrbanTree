@@ -100,3 +100,4 @@ export function assertPermission(
   );
   return false;
 }
+

@@ -22,6 +22,7 @@ import {
   Save,
   RotateCcw,
   Search,
+  Globe2,
 } from 'lucide-react';
 import { storage } from '../db/storage';
 import { Incident, Tree, User } from '../types';
@@ -31,10 +32,17 @@ import {
   getTreeStreetCode,
   STREET_CORRIDORS_LIST,
 } from '../utils/treeUtils';
-import { CAN_THO_ZONES, getTreeZoneId, UrbanZone } from '../utils/zoneUtils';
+import {
+  NATIONAL_PROVINCES,
+  getTreeProvinceId,
+  getTreeZoneId,
+  getZonesByProvince,
+  UrbanZone,
+} from '../utils/zoneUtils';
 
 export interface LocationLandmark {
   id: string;
+  provinceId: string;
   name: string;
   district: string;
   coords: [number, number];
@@ -42,9 +50,11 @@ export interface LocationLandmark {
   keywords: string[];
 }
 
-export const CAN_THO_LOCATION_LANDMARKS: LocationLandmark[] = [
+export const ALL_LOCATION_LANDMARKS: LocationLandmark[] = [
+  // Cần Thơ
   {
     id: 'luu-huu-phuoc',
+    provinceId: 'can-tho',
     name: 'Công viên Lưu Hữu Phước',
     district: 'Quận Ninh Kiều',
     coords: [10.0368, 105.7825],
@@ -53,6 +63,7 @@ export const CAN_THO_LOCATION_LANDMARKS: LocationLandmark[] = [
   },
   {
     id: 'ben-ninh-kieu',
+    provinceId: 'can-tho',
     name: 'Bến Ninh Kiều & Tượng Bác',
     district: 'Quận Ninh Kiều',
     coords: [10.0345, 105.7882],
@@ -61,6 +72,7 @@ export const CAN_THO_LOCATION_LANDMARKS: LocationLandmark[] = [
   },
   {
     id: 'cau-di-bo',
+    provinceId: 'can-tho',
     name: 'Cầu Đi Bộ Ninh Kiều (Cầu Tình Yêu)',
     district: 'Quận Ninh Kiều',
     coords: [10.0328, 105.7895],
@@ -69,6 +81,7 @@ export const CAN_THO_LOCATION_LANDMARKS: LocationLandmark[] = [
   },
   {
     id: 'song-hau',
+    provinceId: 'can-tho',
     name: 'Công viên Bờ Kè Sông Hậu',
     district: 'Quận Ninh Kiều',
     coords: [10.0465, 105.7915],
@@ -77,6 +90,7 @@ export const CAN_THO_LOCATION_LANDMARKS: LocationLandmark[] = [
   },
   {
     id: 'dh-can-tho',
+    provinceId: 'can-tho',
     name: 'ĐH Cần Thơ Khu II (Đường 3/2)',
     district: 'Quận Ninh Kiều',
     coords: [10.0312, 105.7691],
@@ -85,6 +99,7 @@ export const CAN_THO_LOCATION_LANDMARKS: LocationLandmark[] = [
   },
   {
     id: 'vincom-30-4',
+    provinceId: 'can-tho',
     name: 'Tuyến Vincom Plaza (Đường 30/4)',
     district: 'Quận Ninh Kiều',
     coords: [10.0288, 105.7761],
@@ -93,6 +108,7 @@ export const CAN_THO_LOCATION_LANDMARKS: LocationLandmark[] = [
   },
   {
     id: 'cai-rang-bridge',
+    provinceId: 'can-tho',
     name: 'Cầu Cần Thơ & Đại lộ Võ Nguyên Giáp',
     district: 'Quận Cái Răng',
     coords: [10.0125, 105.7982],
@@ -101,6 +117,7 @@ export const CAN_THO_LOCATION_LANDMARKS: LocationLandmark[] = [
   },
   {
     id: 'san-bay-binh-thuy',
+    provinceId: 'can-tho',
     name: 'Sân bay Quốc tế Cần Thơ (Võ Văn Kiệt)',
     district: 'Quận Bình Thủy',
     coords: [10.0682, 105.7425],
@@ -109,6 +126,7 @@ export const CAN_THO_LOCATION_LANDMARKS: LocationLandmark[] = [
   },
   {
     id: 'kcn-tra-noc',
+    provinceId: 'can-tho',
     name: 'KCN Trà Nóc & Quốc Lộ 91 (Ô Môn)',
     district: 'Quận Ô Môn',
     coords: [10.1150, 105.6540],
@@ -117,11 +135,135 @@ export const CAN_THO_LOCATION_LANDMARKS: LocationLandmark[] = [
   },
   {
     id: 'my-khanh-pd',
+    provinceId: 'can-tho',
     name: 'KDL Sinh Thái Mỹ Khánh (Phong Điền)',
     district: 'Huyện Phong Điền',
     coords: [9.9920, 105.7050],
     zoom: 16,
     keywords: ['phong điền', 'mỹ khánh', 'nguyễn văn cừ', 'pd-'],
+  },
+
+  // Đà Nẵng
+  {
+    id: 'cau-rong-dn',
+    provinceId: 'da-nang',
+    name: 'Cầu Rồng & Sông Hàn (Bạch Đằng)',
+    district: 'Quận Hải Châu',
+    coords: [16.0610, 108.2268],
+    zoom: 17,
+    keywords: ['cầu rồng', 'bạch đằng', '2 tháng 9', 'hải châu'],
+  },
+  {
+    id: 'bien-my-khe-dn',
+    provinceId: 'da-nang',
+    name: 'Bãi biển Mỹ Khê & Võ Nguyên Giáp',
+    district: 'Quận Sơn Trà',
+    coords: [16.0658, 108.2468],
+    zoom: 17,
+    keywords: ['mỹ khê', 'võ nguyên giáp', 'phạm văn đồng', 'sơn trà'],
+  },
+  {
+    id: 'ngu-hanh-son-dn',
+    provinceId: 'da-nang',
+    name: 'Quần thể Ngũ Hành Sơn & Non Nước',
+    district: 'Quận Ngũ Hành Sơn',
+    coords: [16.0020, 108.2560],
+    zoom: 16,
+    keywords: ['ngũ hành sơn', 'non nước', 'lê văn hiến'],
+  },
+  {
+    id: 'cong-vien-29-3-dn',
+    provinceId: 'da-nang',
+    name: 'Công viên 29/3 (Điện Biên Phủ)',
+    district: 'Quận Thanh Khê',
+    coords: [16.0620, 108.2040],
+    zoom: 17,
+    keywords: ['29 tháng 3', '29/3', 'điện biên phủ', 'thanh khê'],
+  },
+
+  // TP. Hồ Chí Minh
+  {
+    id: 'tao-dan-hcm',
+    provinceId: 'hcm',
+    name: 'Công viên Tao Đàn (Quận 1)',
+    district: 'Quận 1',
+    coords: [10.7745, 106.6920],
+    zoom: 17,
+    keywords: ['tao đàn', 'nguyễn thị minh khai', 'trương định', 'quận 1'],
+  },
+  {
+    id: 'nguyen-hue-hcm',
+    provinceId: 'hcm',
+    name: 'Phố đi bộ Nguyễn Huệ & Lê Duẩn',
+    district: 'Quận 1',
+    coords: [10.7738, 106.7042],
+    zoom: 17,
+    keywords: ['nguyễn huệ', 'lê duẩn', 'lê lợi', 'quận 1'],
+  },
+  {
+    id: 'ho-con-rua-hcm',
+    provinceId: 'hcm',
+    name: 'Hồ Con Rùa & Đại thụ Quận 3',
+    district: 'Quận 3',
+    coords: [10.7825, 106.6960],
+    zoom: 17,
+    keywords: ['hồ con rùa', 'quận 3', 'võ văn tần', 'phạm ngọc thạch'],
+  },
+  {
+    id: 'thu-thiem-hcm',
+    provinceId: 'hcm',
+    name: 'Khu Đô thị Mới Thủ Thiêm',
+    district: 'TP. Thủ Đức',
+    coords: [10.7780, 106.7220],
+    zoom: 16,
+    keywords: ['thủ thiêm', 'mai chí thọ', 'thủ đức'],
+  },
+  {
+    id: 'phu-my-hung-hcm',
+    provinceId: 'hcm',
+    name: 'Hồ Bán Nguyệt Phú Mỹ Hưng',
+    district: 'Quận 7',
+    coords: [10.7285, 106.7195],
+    zoom: 16,
+    keywords: ['phú mỹ hưng', 'nguyễn văn linh', 'quận 7', 'tôn dật tiên'],
+  },
+
+  // TP. Hà Nội
+  {
+    id: 'ho-hoan-kiem-hn',
+    provinceId: 'ha-noi',
+    name: 'Hồ Hoàn Kiếm (Cây Lộc Vừng & Tháp Rùa)',
+    district: 'Quận Hoàn Kiếm',
+    coords: [21.0285, 105.8525],
+    zoom: 17,
+    keywords: ['hoàn kiếm', 'hồ gươm', 'đinh tiên hoàng', 'tràng tiền'],
+  },
+  {
+    id: 'phan-dinh-phung-hn',
+    provinceId: 'ha-noi',
+    name: 'Đường Phan Đình Phùng (Hàng Sấu Cổ Thụ)',
+    district: 'Quận Ba Đình',
+    coords: [21.0405, 105.8390],
+    zoom: 17,
+    keywords: ['phan đình phùng', 'ba đình', 'hoàng diệu'],
+  },
+  {
+    id: 'ho-tay-hn',
+    provinceId: 'ha-noi',
+    name: 'Hồ Tây & Đường Thanh Niên',
+    district: 'Quận Tây Hồ',
+    coords: [21.0515, 105.8360],
+    zoom: 16,
+    keywords: ['hồ tây', 'thanh niên', 'quảng an', 'tây hồ'],
+  },
+  {
+    id: 'cong-vien-cau-giay-hn',
+    provinceId: 'ha-noi',
+    name: 'Công viên Cầu Giấy (Thành Thái)',
+    district: 'Quận Cầu Giấy',
+    coords: [21.0280, 105.7890],
+    zoom: 17,
+    keywords: ['cầu giấy', 'thành thái', 'duy tân'],
   },
 ];
 
@@ -170,6 +312,9 @@ export const MapView: React.FC<MapViewProps> = ({
     return () => clearTimeout(timer);
   }, [searchLocationInput]);
 
+  // 🏙️ Multi-Province / City State
+  const [selectedProvinceId, setSelectedProvinceId] = useState<string>('can-tho');
+
   // 🏛️ Multi-Zone / District Jurisdiction State
   const [selectedZoneId, setSelectedZoneId] = useState<string>('all');
   const [mapViewportVersion, setMapViewportVersion] = useState<number>(0);
@@ -207,14 +352,54 @@ export const MapView: React.FC<MapViewProps> = ({
   const incidents = storage.getIncidents();
   const isAdmin = currentUser.role === 'ADMIN';
 
-  const activeZone = CAN_THO_ZONES.find((z) => z.id === selectedZoneId) || CAN_THO_ZONES[0];
+  // Province & Zone Resolution
+  const activeProvince =
+    NATIONAL_PROVINCES.find((p) => p.id === selectedProvinceId) || NATIONAL_PROVINCES[1];
+  const availableZones = activeProvince.zones;
+  const activeZone =
+    availableZones.find((z) => z.id === selectedZoneId) || availableZones[0];
+
+  // Dynamic tree count by province
+  const treesByProvince = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    trees.forEach((t) => {
+      const pid = getTreeProvinceId(t);
+      counts[pid] = (counts[pid] || 0) + 1;
+    });
+    return counts;
+  }, [trees]);
+
+  // Handle Switch Province & FlyTo
+  const handleSelectProvince = (provId: string) => {
+    setSelectedProvinceId(provId);
+    setSelectedZoneId('all');
+    setSelectedLocation('ALL');
+    setSelectedCorridorFilter('ALL');
+
+    const prov = NATIONAL_PROVINCES.find((p) => p.id === provId) || NATIONAL_PROVINCES[1];
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo(prov.center, prov.zoom, { duration: 1.5 });
+    }
+    showToast(`🗺️ Đã chuyển góc nhìn sang: ${prov.name}`);
+  };
+
+  // Handle Switch Zone & FlyTo
+  const handleSelectZone = (zoneId: string) => {
+    setSelectedZoneId(zoneId);
+    setSelectedLocation('ALL');
+    const zone = availableZones.find((z) => z.id === zoneId);
+    if (zone && mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo(zone.center, zone.zoom, { duration: 1.2 });
+      showToast(`🏛️ Đã chuyển sang khu vực: ${zone.shortName}`);
+    }
+  };
 
   // 1. Initialize Map
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
     if (!mapInstanceRef.current) {
-      // Centered at Can Tho City
+      // Centered at active province/zone
       const map = L.map(mapContainerRef.current, {
         center: activeZone.center,
         zoom: activeZone.zoom,
@@ -339,6 +524,12 @@ export const MapView: React.FC<MapViewProps> = ({
       const isZoomedOut = zoom < 14;
 
       trees.forEach((tree) => {
+        // Province Filter
+        if (selectedProvinceId !== 'all') {
+          const treeProvince = getTreeProvinceId(tree);
+          if (treeProvince !== selectedProvinceId) return;
+        }
+
         // Zone Filter
         if (selectedZoneId !== 'all') {
           const treeZone = getTreeZoneId(tree);
@@ -357,7 +548,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
         // 📍 Bộ lọc Vị trí / Địa điểm (Location Landmark Filter)
         if (selectedLocation !== 'ALL') {
-          const loc = CAN_THO_LOCATION_LANDMARKS.find((l) => l.id === selectedLocation);
+          const loc = ALL_LOCATION_LANDMARKS.find((l) => l.id === selectedLocation);
           if (loc) {
             const treeSearchable = `${tree.address} ${tree.displayName} ${tree.houseNumberMilestone} ${tree.streetCorridor} ${tree.streetCode}`.toLowerCase();
             const matched = loc.keywords.some((k) => treeSearchable.includes(k.toLowerCase()));
@@ -553,6 +744,7 @@ export const MapView: React.FC<MapViewProps> = ({
     selectedCorridorFilter,
     selectedLocation,
     debouncedLocationQuery,
+    selectedProvinceId,
     selectedZoneId,
     mapViewportVersion,
   ]);
@@ -561,7 +753,7 @@ export const MapView: React.FC<MapViewProps> = ({
   const handleSelectLocation = (locId: string) => {
     setSelectedLocation(locId);
     if (locId !== 'ALL') {
-      const loc = CAN_THO_LOCATION_LANDMARKS.find((l) => l.id === locId);
+      const loc = ALL_LOCATION_LANDMARKS.find((l) => l.id === locId);
       if (loc && mapInstanceRef.current) {
         mapInstanceRef.current.flyTo(loc.coords, loc.zoom, { duration: 1.2 });
         showToast(`📍 Đã bay tới vị trí: ${loc.name}`);
@@ -707,24 +899,29 @@ export const MapView: React.FC<MapViewProps> = ({
     );
   };
 
-  // Filtered trees for current zone and active filters
+  // Filtered trees for current province & zone
+  const currentProvinceTrees =
+    selectedProvinceId === 'all'
+      ? trees
+      : trees.filter((t) => getTreeProvinceId(t) === selectedProvinceId);
+
   const currentZoneTrees =
     selectedZoneId === 'all'
-      ? trees
-      : trees.filter((t) => getTreeZoneId(t) === selectedZoneId);
+      ? currentProvinceTrees
+      : currentProvinceTrees.filter((t) => getTreeZoneId(t) === selectedZoneId);
 
   const filteredTrees = currentZoneTrees.filter((tree) => {
     if (selectedHealth !== 'ALL' && tree.healthStatus !== selectedHealth) return false;
     if (selectedCorridorFilter !== 'ALL' && getTreeCorridor(tree) !== selectedCorridorFilter) return false;
     if (selectedLocation !== 'ALL') {
-      const loc = CAN_THO_LOCATION_LANDMARKS.find((l) => l.id === selectedLocation);
+      const loc = ALL_LOCATION_LANDMARKS.find((l) => l.id === selectedLocation);
       if (loc) {
         const text = `${tree.address} ${tree.displayName} ${tree.houseNumberMilestone} ${tree.streetCorridor} ${tree.streetCode}`.toLowerCase();
         if (!loc.keywords.some((k) => text.includes(k.toLowerCase()))) return false;
       }
     }
-    if (searchLocationQuery.trim()) {
-      const q = searchLocationQuery.toLowerCase().trim();
+    if (debouncedLocationQuery.trim()) {
+      const q = debouncedLocationQuery.toLowerCase().trim();
       const text = `${tree.address} ${tree.displayName} ${tree.houseNumberMilestone} ${tree.streetCorridor} ${tree.streetCode} ${tree.publicCode}`.toLowerCase();
       if (!text.includes(q)) return false;
     }
@@ -733,6 +930,33 @@ export const MapView: React.FC<MapViewProps> = ({
 
   const goodTreesCount = currentZoneTrees.filter((t) => t.healthStatus === 'GOOD').length;
   const goodRate = currentZoneTrees.length > 0 ? Math.round((goodTreesCount / currentZoneTrees.length) * 100) : 100;
+
+  // Available corridors dynamic based on current province trees
+  const availableCorridors = React.useMemo(() => {
+    const list: { name: string; prefix: string }[] = [];
+    const seen = new Set<string>();
+
+    currentProvinceTrees.forEach((t) => {
+      const corr = getTreeCorridor(t);
+      if (corr && !seen.has(corr)) {
+        seen.add(corr);
+        const streetCode = getTreeStreetCode(t);
+        const prefix = streetCode ? streetCode.split('-')[0] : 'TP';
+        list.push({ name: corr, prefix });
+      }
+    });
+
+    if (list.length === 0) {
+      return STREET_CORRIDORS_LIST.map((c) => ({ name: c.name, prefix: c.prefix }));
+    }
+    return list;
+  }, [currentProvinceTrees]);
+
+  // Available landmarks filtered by current province
+  const availableLandmarks = React.useMemo(() => {
+    if (selectedProvinceId === 'all') return ALL_LOCATION_LANDMARKS;
+    return ALL_LOCATION_LANDMARKS.filter((l) => l.provinceId === selectedProvinceId);
+  }, [selectedProvinceId]);
 
   return (
     <div className="space-y-3.5 animate-fade-in">
@@ -797,27 +1021,74 @@ export const MapView: React.FC<MapViewProps> = ({
           </div>
         </div>
 
-        {/* Row 2: 🏛️ NÚT ĐỔI / CHỌN KHU VỰC QUẢN LÝ (MULTI-ZONE SELECTOR) */}
-        <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+        {/* Row 2A: 🏙️ BỘ CHỌN TỈNH / THÀNH PHỐ TOÀN QUỐC (NATIONAL PROVINCE SELECTOR) */}
+        <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+            <span className="text-xs font-black text-blue-700 dark:text-blue-400 uppercase tracking-wider shrink-0 flex items-center gap-1.5">
+              <Globe2 className="w-3.5 h-3.5" />
+              <span>Tỉnh / Thành phố:</span>
+            </span>
+
+            {NATIONAL_PROVINCES.map((prov) => {
+              const isProvSelected = selectedProvinceId === prov.id;
+              const provTreeCount =
+                prov.id === 'all' ? trees.length : (treesByProvince[prov.id] || 0);
+
+              return (
+                <button
+                  key={prov.id}
+                  type="button"
+                  onClick={() => handleSelectProvince(prov.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer border ${
+                    isProvSelected
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs ring-2 ring-blue-400/30'
+                      : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900/90 dark:hover:bg-slate-800 dark:text-slate-300 dark:border-slate-800'
+                  }`}
+                >
+                  <span>{prov.shortName}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-black ${
+                      isProvSelected
+                        ? 'bg-white/25 text-white'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    {provTreeCount}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Badge Cơ quan chủ quản theo Tỉnh / Thành */}
+          <div className="hidden sm:flex items-center gap-2 text-[11px] font-bold text-slate-500 dark:text-slate-400 shrink-0">
+            <span className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/50 border border-blue-200/60 dark:border-blue-900 text-blue-800 dark:text-blue-300 font-mono text-[10px] uppercase">
+              {activeProvince.badge}
+            </span>
+          </div>
+        </div>
+
+        {/* Row 2B: 🏛️ QUẬN / HUYỆN & KHU VỰC QUẢN LÝ (DYNAMIC DISTRICTS) */}
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
           <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
             <span className="text-xs font-extrabold text-slate-600 dark:text-slate-300 uppercase tracking-wider shrink-0 flex items-center gap-1">
               <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>Khu vực:</span>
+              <span>Khu vực ({activeProvince.shortName}):</span>
             </span>
 
-            {/* 6 District / Zone Buttons */}
-            {CAN_THO_ZONES.map((zone) => {
+            {/* District / Zone Buttons of Active Province */}
+            {availableZones.map((zone) => {
               const isSelected = selectedZoneId === zone.id;
               const countInZone =
                 zone.id === 'all'
-                  ? trees.length
-                  : trees.filter((t) => getTreeZoneId(t) === zone.id).length;
+                  ? currentProvinceTrees.length
+                  : currentProvinceTrees.filter((t) => getTreeZoneId(t) === zone.id).length;
 
               return (
                 <button
                   key={zone.id}
                   type="button"
-                  onClick={() => setSelectedZoneId(zone.id)}
+                  onClick={() => handleSelectZone(zone.id)}
                   className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer border ${
                     isSelected
                       ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
@@ -860,45 +1131,30 @@ export const MapView: React.FC<MapViewProps> = ({
               <span className="font-semibold text-emerald-800 dark:text-emerald-300">Cây xanh ({filteredTrees.length})</span>
             </label>
 
-            {/* 📍 BỘ LỌC VỊ TRÍ / ĐỊA ĐIỂM (THEO YÊU CẦU CỦA USER) */}
+            {/* 📍 BỘ LỌC VỊ TRÍ / ĐỊA ĐIỂM (ĐỒNG BỘ THEO TỈNH THÀNH) */}
             <select
               value={selectedLocation}
               onChange={(e) => handleSelectLocation(e.target.value)}
-              className="px-3 py-1 text-xs font-bold border border-emerald-300 dark:border-emerald-600/70 rounded-full bg-emerald-50/80 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-2xs"
+              className="px-3 py-1 text-xs font-bold border border-emerald-300 dark:border-emerald-600/70 rounded-full bg-emerald-50/80 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-2xs max-w-[210px] truncate"
               title="Chọn vị trí hoặc địa điểm nổi tiếng để bản đồ tự động bay tới và lọc cây"
             >
               <option value="ALL">📍 Tất cả vị trí / địa điểm</option>
-              <optgroup label="🏛️ Quận Ninh Kiều (Trung tâm)">
-                <option value="luu-huu-phuoc">Công viên Lưu Hữu Phước</option>
-                <option value="ben-ninh-kieu">Bến Ninh Kiều &amp; Tượng Bác</option>
-                <option value="cau-di-bo">Cầu Đi Bộ (Cầu Tình Yêu)</option>
-                <option value="song-hau">Công viên Bờ Kè Sông Hậu</option>
-                <option value="dh-can-tho">Đại học Cần Thơ (Khu II)</option>
-                <option value="vincom-30-4">Khu vực Vincom Plaza (Đường 30/4)</option>
-              </optgroup>
-              <optgroup label="🌉 Quận Cái Răng">
-                <option value="cai-rang-bridge">Cầu Cần Thơ &amp; Đại lộ Võ Nguyên Giáp</option>
-              </optgroup>
-              <optgroup label="✈️ Quận Bình Thủy">
-                <option value="san-bay-binh-thuy">Sân bay Quốc tế Cần Thơ (Võ Văn Kiệt)</option>
-              </optgroup>
-              <optgroup label="🏭 Quận Ô Môn">
-                <option value="kcn-tra-noc">KCN Trà Nóc &amp; Quốc Lộ 91</option>
-              </optgroup>
-              <optgroup label="🍃 Huyện Phong Điền">
-                <option value="my-khanh-pd">KDL Sinh Thái Mỹ Khánh</option>
-              </optgroup>
+              {availableLandmarks.map((loc) => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.name} ({loc.district})
+                </option>
+              ))}
             </select>
 
-            {/* Lọc Tuyến Phố */}
+            {/* Lọc Tuyến Phố (Đồng bộ theo tỉnh thành) */}
             <select
               value={selectedCorridorFilter}
               onChange={(e) => setSelectedCorridorFilter(e.target.value)}
-              className="px-3 py-1 text-xs font-semibold border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 cursor-pointer"
+              className="px-3 py-1 text-xs font-semibold border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 cursor-pointer max-w-[200px] truncate"
             >
               <option value="ALL">🛣️ Tất cả tuyến đường</option>
-              {STREET_CORRIDORS_LIST.map((c) => (
-                <option key={c.id} value={c.name}>
+              {availableCorridors.map((c) => (
+                <option key={c.name} value={c.name}>
                   {c.name} ({c.prefix})
                 </option>
               ))}
