@@ -786,6 +786,24 @@ class StorageService {
         if (storedActiveUser) {
           this.activeUser = JSON.parse(storedActiveUser);
         }
+
+        // Đảm bảo Blockchain Ledger luôn có bản ghi đối soát cho toàn bộ cây mẫu
+        if (blockchainService.getAllAnchors().length === 0) {
+          for (const tree of this.trees) {
+            const { hash, canonicalJson } = computeRecordHash('TREE_PROFILE', tree);
+            tree.payloadVersion = 1;
+            tree.payloadHash = hash;
+            blockchainService.anchorRecord({
+              recordType: 'TREE_PROFILE',
+              recordId: tree.id,
+              hash,
+              canonicalJson,
+            }).then((receipt) => {
+              tree.anchorStatus = receipt.status;
+              tree.txHash = receipt.txHash;
+            });
+          }
+        }
       } else {
         this.resetToDefaults();
       }

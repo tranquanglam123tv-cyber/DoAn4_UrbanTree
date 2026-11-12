@@ -77,21 +77,74 @@ export const BlockchainVerifyView: React.FC = () => {
     }
   };
 
-  const handleTamperSelectedTree = () => {
+  const handleTamperSelectedTree = async () => {
     const tree = storage.getTreeById(selectedRecordId);
     if (!tree) return;
 
-    const newStatus: TreeHealthStatus = tree.healthStatus === 'GOOD' ? 'CRITICAL' : 'GOOD';
+    // 1. Nếu cây chưa có trong Blockchain ledger, lập tức neo trạng thái hợp lệ ban đầu của cây lên Smart Contract trước
+    const existingAnchor = blockchainService.getAnchor('TREE_PROFILE', tree.id);
+    if (!existingAnchor) {
+      const { hash, canonicalJson } = computeRecordHash('TREE_PROFILE', tree);
+      const receipt = await blockchainService.anchorRecord({
+        recordType: 'TREE_PROFILE',
+        recordId: tree.id,
+        hash,
+        canonicalJson,
+      });
+      storage.updateTree(tree.id, {
+        payloadVersion: 1,
+        payloadHash: hash,
+        anchorStatus: receipt.status,
+        txHash: receipt.txHash,
+      });
+    }
+
+    // 2. Thực hiện hành vi "sửa trộm" dữ liệu trong DB (giả mạo tình trạng sức khỏe)
+    const oldStatus = tree.healthStatus;
+    const newStatus: TreeHealthStatus = oldStatus === 'GOOD' ? 'CRITICAL' : 'GOOD';
     storage.tamperTree(tree.id, newStatus);
     setTamperNotice(
-      `Đã cố tình sửa trộm trường "healthStatus" của [${tree.publicCode}] từ "${tree.healthStatus}" thành "${newStatus}" trong DB mà không thực hiện giao dịch Blockchain! Hãy bấm nút "Kiểm tra tính toàn vẹn" bên dưới để quan sát hệ thống phát hiện băm sai lệch (MISMATCH).`
+      `Đã cố tình sửa trộm trường "healthStatus" của [${tree.publicCode}] từ "${oldStatus}" thành "${newStatus}" trong DB mà không thực hiện giao dịch Blockchain! Hãy bấm nút "Kiểm tra tính toàn vẹn" bên dưới để quan sát hệ thống phát hiện băm sai lệch (MISMATCH).`
     );
     setVerifyResult(null);
   };
 
+  const handleAnchorCurrentRecord = async () => {
+    let recordData: any = null;
+    if (selectedRecordType === 'TREE_PROFILE') {
+      recordData = storage.getTreeById(selectedRecordId);
+    } else if (selectedRecordType === 'CARE_RECORD') {
+      recordData = storage.getCareRecords().find((c) => c.id === selectedRecordId);
+    } else {
+      recordData = storage.getIncidentById(selectedRecordId);
+    }
+
+    if (!recordData) return;
+
+    const { hash, canonicalJson } = computeRecordHash(selectedRecordType, recordData);
+    const receipt = await blockchainService.anchorRecord({
+      recordType: selectedRecordType,
+      recordId: selectedRecordId,
+      hash,
+      canonicalJson,
+    });
+
+    if (selectedRecordType === 'TREE_PROFILE') {
+      storage.updateTree(selectedRecordId, {
+        payloadVersion: 1,
+        payloadHash: hash,
+        anchorStatus: receipt.status,
+        txHash: receipt.txHash,
+      });
+    }
+
+    // Chạy lại kiểm tra ngay lập tức để người dùng thấy kết quả VALID
+    await handleVerify();
+  };
+
   const handleRestoreDefaults = () => {
     storage.resetToDefaults();
-    setTamperNotice('Đã khôi phục dữ liệu mẫu gốc từ Blockchain.');
+    setTamperNotice('Đã khôi phục dữ liệu mẫu gốc từ Blockchain. Bản ghi trở về trạng thái nguyên bản.');
     setVerifyResult(null);
   };
 
@@ -274,6 +327,12 @@ export const BlockchainVerifyView: React.FC = () => {
                       <span className="dark:text-rose-300">PHÁT HIỆN GIAN LẬN: MISMATCH (KHÔNG KHỚP)</span>
                     </>
                   )}
+                  {verifyResult.status === 'NOT_ANCHORED' && (
+                    <>
+                      <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                      <span className="dark:text-amber-300">BẢN GHI CHƯA ĐƯỢC NEO LÊN BLOCKCHAIN</span>
+                    </>
+                  )}
                   {verifyResult.status === 'UNAVAILABLE' && (
                     <>
                       <AlertTriangle className="w-5 h-5 text-slate-600 dark:text-slate-400" />
@@ -282,7 +341,13 @@ export const BlockchainVerifyView: React.FC = () => {
                   )}
                 </div>
 
-                <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-black/10 dark:bg-emerald-950/80 dark:text-[#00FF9D] dark:border dark:border-emerald-500/40 font-bold">
+                <span className={`font-mono text-[10px] px-2 py-0.5 rounded font-bold border ${
+                  verifyResult.status === 'VALID'
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-[#00FF9D] dark:border-emerald-500/40'
+                    : verifyResult.status === 'MISMATCH'
+                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-500/40'
+                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-500/40'
+                }`}>
                   {verifyResult.status}
                 </span>
               </div>
@@ -291,10 +356,25 @@ export const BlockchainVerifyView: React.FC = () => {
                 {verifyResult.status === 'VALID' &&
                   'Chuỗi băm SHA-256 từ cơ sở dữ liệu hiện thời hoàn toàn trùng khớp từng byte với bản ghi đã neo trên Smart Contract. Không có bất kỳ sự sửa đổi nào sau khi neo.'}
                 {verifyResult.status === 'MISMATCH' &&
-                  'CẢNH BÁO: Dữ liệu trong cơ sở dữ liệu đã bị ai đó sửa đổi trái phép sau khi giao dịch đã được ghi nhận trên Blockchain! Bằng chứng mã hóa bị sai lệch.'}
+                  'CẢNH BÁO NGUY HIỂM: Dữ liệu trong cơ sở dữ liệu hiện tại đã bị ai đó sửa đổi trái phép sau khi bản ghi đã được khóa trên Smart Contract Blockchain! Chuỗi băm đối soát bị sai lệch.'}
+                {verifyResult.status === 'NOT_ANCHORED' &&
+                  'Bản ghi này hiện chỉ mới tồn tại trong cơ sở dữ liệu nội bộ (Local DB) và chưa từng được đóng dấu băm (Timestamp Proof) trên Smart Contract UrbanTreeRegistry. Bấm nút bên dưới để tiến hành neo lên Blockchain!'}
                 {verifyResult.status === 'UNAVAILABLE' &&
                   'Không thể kết nối đến node Blockchain. Nghiệp vụ lưu trữ cơ sở dữ liệu vẫn an toàn và chuyển sang chế độ đợi đối chiếu (PENDING).'}
               </p>
+
+              {/* Nút neo ngay nếu chưa neo */}
+              {verifyResult.status === 'NOT_ANCHORED' && (
+                <div className="pt-1">
+                  <button
+                    onClick={handleAnchorCurrentRecord}
+                    className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer shadow-xs transition-all active:scale-95"
+                  >
+                    <Link className="w-4 h-4" />
+                    <span>🔗 Neo bản ghi này lên Smart Contract ngay (Anchor on Chain)</span>
+                  </button>
+                </div>
+              )}
 
               {/* Hash comparison boxes */}
               <div className="space-y-2 pt-1">
