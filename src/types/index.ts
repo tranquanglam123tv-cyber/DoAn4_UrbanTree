@@ -12,6 +12,9 @@ export interface User {
   role: Role;
   isActive: boolean;
   avatarUrl?: string;
+  phone?: string;
+  assignedDistrict?: string; // e.g. "Q. Ninh Kiều", "Q. Cái Răng", "Toàn thành phố"
+  teamName?: string; // e.g. "Tổ Kỹ Thuật Số 1 - Phụ Trách Tuyến Hòa Bình"
 }
 
 export type TreeHealthStatus = 'GOOD' | 'FAIR' | 'POOR' | 'CRITICAL' | 'DEAD';

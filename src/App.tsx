@@ -24,6 +24,7 @@ import { PublicTreeModal } from './components/PublicTreeModal';
 import { LoginModal } from './components/LoginModal';
 import { CitizenPortalView } from './components/CitizenPortalView';
 import { StaffWorkstationView } from './components/StaffWorkstationView';
+import { StaffManagementModal } from './components/StaffManagementModal';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { SporeBackground } from './components/common/SporeBackground';
 import { storage } from './db/storage';
@@ -66,6 +67,7 @@ export default function App() {
   const [careModalTreeId, setCareModalTreeId] = useState<string | undefined>(undefined);
   const [isQrScannerOpen, setIsQrScannerOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isStaffManagementOpen, setIsStaffManagementOpen] = useState(false);
   const [publicTreeModalTree, setPublicTreeModalTree] = useState<Tree | null>(null);
   const [incidentReportTreeId, setIncidentReportTreeId] = useState<string | undefined>(undefined);
 
@@ -89,6 +91,7 @@ export default function App() {
     isCareModalOpen ||
     isQrScannerOpen ||
     isLoginModalOpen ||
+    isStaffManagementOpen ||
     publicTreeModalTree
   );
 
@@ -258,6 +261,7 @@ export default function App() {
         onOpenLogin={() => setIsLoginModalOpen(true)}
         onLogout={handleLogout}
         onResetSeed={handleResetSeed}
+        onOpenStaffManagement={() => setIsStaffManagementOpen(true)}
         isDark={isDark}
         onToggleTheme={toggleTheme}
       />
@@ -305,6 +309,7 @@ export default function App() {
             onOpenAddTree={() => setIsAddTreeOpen(true)}
             onOpenCareModal={handleOpenCareModal}
             onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
+            onOpenStaffManagement={() => setIsStaffManagementOpen(true)}
           />
         )}
 
@@ -512,6 +517,15 @@ export default function App() {
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
         onLoginSuccess={handleLoginSuccess}
+      />
+
+      {/* 👥 Modal Quản trị Nhân sự & Đội ngũ KTV (Staff Management) */}
+      <StaffManagementModal
+        isOpen={isStaffManagementOpen}
+        onClose={() => setIsStaffManagementOpen(false)}
+        onUserListChanged={() => {
+          showToast('Đã đồng bộ danh sách nhân sự thành công!');
+        }}
       />
 
       {/* 📱 PWA Native Install Banner */}

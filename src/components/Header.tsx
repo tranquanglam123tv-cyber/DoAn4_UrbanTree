@@ -34,6 +34,7 @@ interface HeaderProps {
   onOpenLogin: () => void;
   onLogout: () => void;
   onResetSeed: () => void;
+  onOpenStaffManagement?: () => void;
   isDark?: boolean;
   onToggleTheme?: () => void;
 }
@@ -47,6 +48,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenLogin,
   onLogout,
   onResetSeed,
+  onOpenStaffManagement,
   isDark,
   onToggleTheme,
 }) => {
@@ -218,6 +220,16 @@ export const Header: React.FC<HeaderProps> = ({
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 animate-pulse shrink-0" />
                   <span>Blockchain</span>
                 </button>
+                {onOpenStaffManagement && (
+                  <button
+                    onClick={onOpenStaffManagement}
+                    className="flex items-center gap-1 xl:gap-1.5 px-2 xl:px-2.5 py-1.5 rounded-full text-[11px] xl:text-xs font-semibold text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/60 transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 border border-purple-200 dark:border-purple-800/60"
+                    title="Quản lý đội ngũ nhân viên & phân công địa bàn"
+                  >
+                    <Users className="w-3.5 h-3.5 shrink-0 text-purple-600 dark:text-purple-400" />
+                    <span>Nhân sự</span>
+                  </button>
+                )}
               </>
             )}
 
@@ -519,6 +531,14 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 Blockchain
               </button>
+              {onOpenStaffManagement && (
+                <button
+                  onClick={onOpenStaffManagement}
+                  className="px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100"
+                >
+                  👥 Quản lý Nhân sự
+                </button>
+              )}
             </>
           )}
 

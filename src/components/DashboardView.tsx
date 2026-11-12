@@ -22,6 +22,8 @@ import {
   Scissors,
   Sprout,
   ShieldAlert,
+  Users,
+  UserPlus,
 } from 'lucide-react';
 import { storage } from '../db/storage';
 import { blockchainService } from '../services/blockchainService';
@@ -32,6 +34,7 @@ interface DashboardViewProps {
   onOpenAddTree: () => void;
   onOpenCareModal: (treeId?: string) => void;
   onSelectTree: (tree: Tree) => void;
+  onOpenStaffManagement?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -39,6 +42,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenAddTree,
   onOpenCareModal,
   onSelectTree,
+  onOpenStaffManagement,
 }) => {
   const stats = storage.getDashboardStats();
   const trees = storage.getTrees();
@@ -131,6 +135,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* Quick Action Bar Buttons */}
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          {onOpenStaffManagement && (
+            <button
+              onClick={onOpenStaffManagement}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 dark:hover:bg-purple-900/60 text-purple-800 dark:text-purple-300 font-bold text-xs transition-colors border border-purple-200 dark:border-purple-800/60 cursor-pointer shadow-2xs"
+            >
+              <Users className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+              <span>Quản Lý Nhân Sự (Staff)</span>
+            </button>
+          )}
+
           <button
             onClick={() => onNavigate('home')}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800/80 dark:hover:bg-slate-700 dark:text-slate-200 font-semibold text-xs transition-colors cursor-pointer border border-slate-200 dark:border-slate-700 shadow-2xs"

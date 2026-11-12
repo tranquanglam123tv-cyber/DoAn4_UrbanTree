@@ -818,6 +818,47 @@ class StorageService {
     return [...this.users];
   }
 
+  public createUser(userData: Omit<User, 'id'>): User {
+    const id = `user-${Date.now()}`;
+    const newUser: User = {
+      ...userData,
+      id,
+    };
+    this.users.push(newUser);
+    if (this.isBrowser()) {
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(this.users));
+    }
+    return newUser;
+  }
+
+  public updateUser(id: string, updates: Partial<User>): User {
+    const idx = this.users.findIndex((u) => u.id === id);
+    if (idx === -1) throw new Error('Không tìm thấy nhân viên');
+    this.users[idx] = { ...this.users[idx], ...updates };
+    if (this.activeUser.id === id) {
+      this.activeUser = { ...this.activeUser, ...updates };
+      if (this.isBrowser()) {
+        localStorage.setItem(ACTIVE_USER_KEY, JSON.stringify(this.activeUser));
+      }
+    }
+    if (this.isBrowser()) {
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(this.users));
+    }
+    return this.users[idx];
+  }
+
+  public deleteUser(id: string): boolean {
+    if (id === 'user-admin') {
+      throw new Error('Không thể xóa tài khoản Quản trị viên gốc (Root Admin)');
+    }
+    const beforeCount = this.users.length;
+    this.users = this.users.filter((u) => u.id !== id);
+    if (this.isBrowser()) {
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(this.users));
+    }
+    return this.users.length < beforeCount;
+  }
+
   // Tree Types
   public getTreeTypes(): TreeType[] {
     return [...this.treeTypes];
