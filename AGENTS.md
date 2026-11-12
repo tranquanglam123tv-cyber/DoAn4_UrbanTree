@@ -115,3 +115,32 @@ figma-cli verify "<id>" --measure      # screenshot + dimensions
 figma-cli a11y audit                   # contrast / touch / text checks
 ```
 <!-- /figma-cli rules -->
+
+---
+
+# 🧭 QUY TẮC PHÁT TRIỂN & CỘNG TÁC KỸ THUẬT (MÔ HÌNH 5 LỚP LAUREN)
+> Xem chi tiết đầy đủ tại file [PRINCIPLES.md](file:///d:/TQLCNTT2311074/Nam4HK1/UrbunTreeDoAn4/PRINCIPLES.md).
+
+Mọi AI Agent làm việc trên dự án **UrbanTree** bắt buộc phải tuân thủ nghiêm ngặt 5 nguyên tắc sau:
+
+1. **Lớp 1 — Codebase có tổ chức:**
+   - Không viết code "god object", không phụ thuộc chằng chịt.
+   - Giữ kiến trúc phân tầng rõ ràng: `src/types` (định kiểu), `src/db` (dữ liệu), `src/utils` (nghiệp vụ tính toán), `src/components` (giao diện).
+   - Đặt tên hàm, biến tường minh, không "chữa cháy" tạm bợ để rồi sinh thêm lỗi mới.
+
+2. **Lớp 2 — Static Analysis tự động:**
+   - Luôn sử dụng TypeScript Compiler và Linter để kiểm tra lỗi cú pháp, kiểu dữ liệu trước khi suy luận logic.
+   - Bắt buộc chạy `npm run build` sau mỗi lần can thiệp code và đảm bảo Exit Code = 0.
+
+3. **Lớp 3 — Verification (Kiểm chứng thực tế):**
+   - Code chạy được không đồng nghĩa với code đúng. Phải kiểm chứng tính đúng đắn của logic nghiệp vụ (sinh khối Allometric, chuẩn RPZ BS 5837, hạn SLA, v.v.).
+   - Kiểm tra các trường hợp biên (Edge Cases): Nạp dữ liệu 5.000 cây, dữ liệu rỗng, dữ liệu đặc biệt, giới hạn bộ nhớ.
+
+4. **Lớp 4 — Prose (Hướng dẫn rõ ràng):**
+   - Luôn đọc kỹ tài liệu hướng dẫn và ngữ cảnh dự án trước khi thực hiện.
+   - Bám sát yêu cầu của người dùng, không tự tiện suy đoán sai lệch định hướng.
+
+5. **Lớp 5 — Human Review (Con người kiểm duyệt):**
+   - AI làm xong phải tóm tắt trung thực, thẳng thắn những điểm đã làm, những điểm còn thiếu sót và rủi ro nếu có.
+   - Quyết định cuối cùng và trách nhiệm vận hành thuộc về con người.
+
