@@ -96,7 +96,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Navigation Links (Pill Tabs) - Phân quyền rõ rệt ADMIN vs STAFF vs CITIZEN (Tối ưu co giãn theo màn hình) */}
-          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 shrink bg-slate-100/70 dark:bg-slate-800/80 p-0.5 xl:p-1 rounded-full border border-slate-200/60 dark:border-slate-700/60 backdrop-blur-md min-w-0">
+          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 shrink-0 bg-slate-100/70 dark:bg-slate-800/80 p-0.5 xl:p-1 rounded-full border border-slate-200/60 dark:border-slate-700/60 backdrop-blur-md">
             {/* 1. Trang chủ (dành cho mọi người) */}
             <button
               onClick={() => setActiveTab('home')}
@@ -122,7 +122,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }`}
                 >
                   <Wrench className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span>Bàn làm việc<span className="hidden xl:inline"> thực địa</span></span>
+                  <span>Bàn làm việc</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('map')}
@@ -144,7 +144,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }`}
                 >
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                  <span>Sự cố<span className="hidden xl:inline"> được giao</span></span>
+                  <span>Sự cố</span>
                 </button>
               </>
             )}
@@ -161,11 +161,11 @@ export const Header: React.FC<HeaderProps> = ({
                   }`}
                 >
                   <Sliders className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span>Dashboard<span className="hidden xl:inline"> Vĩ Mô</span></span>
+                  <span>Dashboard<span className="hidden 2xl:inline"> Vĩ Mô</span></span>
                 </button>
                 <button
                   onClick={() => setActiveTab('trees')}
-                  className={`flex items-center gap-1 xl:gap-1.5 px-2 xl:px-3 py-1.5 rounded-full text-[11px] xl:text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 ${
+                  className={`flex items-center gap-1 xl:gap-1.5 px-2 xl:px-2.5 py-1.5 rounded-full text-[11px] xl:text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 ${
                     activeTab === 'trees'
                       ? 'bg-emerald-600 text-white shadow-xs'
                       : 'text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white/80 dark:hover:bg-slate-700/80'
@@ -176,18 +176,18 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('map')}
-                  className={`flex items-center gap-1 xl:gap-1.5 px-2 xl:px-3 py-1.5 rounded-full text-[11px] xl:text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 ${
+                  className={`flex items-center gap-1 xl:gap-1.5 px-2 xl:px-2.5 py-1.5 rounded-full text-[11px] xl:text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 ${
                     activeTab === 'map'
                       ? 'bg-emerald-600 text-white shadow-xs'
                       : 'text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white/80 dark:hover:bg-slate-700/80'
                   }`}
                 >
                   <MapPin className="w-3.5 h-3.5 shrink-0" />
-                  <span>Bản đồ<span className="hidden xl:inline"> số</span> GIS</span>
+                  <span>Bản đồ GIS</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('care')}
-                  className={`flex items-center gap-1 xl:gap-1.5 px-2 xl:px-3 py-1.5 rounded-full text-[11px] xl:text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 ${
+                  className={`flex items-center gap-1 xl:gap-1.5 px-2 xl:px-2.5 py-1.5 rounded-full text-[11px] xl:text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 ${
                     activeTab === 'care'
                       ? 'bg-emerald-600 text-white shadow-xs'
                       : 'text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white/80 dark:hover:bg-slate-700/80'
@@ -198,25 +198,25 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('incidents')}
-                  className={`flex items-center gap-1 xl:gap-1.5 px-2 xl:px-3 py-1.5 rounded-full text-[11px] xl:text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 ${
+                  className={`flex items-center gap-1 xl:gap-1.5 px-2 xl:px-2.5 py-1.5 rounded-full text-[11px] xl:text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 ${
                     activeTab === 'incidents'
                       ? 'bg-emerald-600 text-white shadow-xs'
                       : 'text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white/80 dark:hover:bg-slate-700/80'
                   }`}
                 >
                   <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                  <span>Sự cố<span className="hidden xl:inline"> &amp; Điều phối</span></span>
+                  <span>Sự cố</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('blockchain')}
-                  className={`flex items-center gap-1 xl:gap-1.5 px-2 xl:px-3 py-1.5 rounded-full text-[11px] xl:text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 ${
+                  className={`flex items-center gap-1 xl:gap-1.5 px-2 xl:px-2.5 py-1.5 rounded-full text-[11px] xl:text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 ${
                     activeTab === 'blockchain'
                       ? 'bg-emerald-600 text-white shadow-xs'
                       : 'text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white/80 dark:hover:bg-slate-700/80'
                   }`}
                 >
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 animate-pulse shrink-0" />
-                  <span>Blockchain<span className="hidden xl:inline"> A19</span></span>
+                  <span>Blockchain</span>
                 </button>
               </>
             )}
@@ -272,7 +272,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 bg-emerald-50 dark:bg-slate-800/90 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-slate-700/90 text-xs font-semibold rounded-full border border-emerald-200/70 dark:border-slate-700 transition-all shadow-2xs whitespace-nowrap cursor-pointer shrink-0"
             >
               <QrCode className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <span className="hidden md:inline">Quét QR</span>
+              <span className="hidden 2xl:inline">Quét QR</span>
             </button>
 
             {/* Nút Đăng nhập hệ thống (Chỉ hiển thị khi là Khách vãng lai chưa đăng nhập) */}
@@ -298,7 +298,7 @@ export const Header: React.FC<HeaderProps> = ({
                   ) : (
                     <UserCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   )}
-                  <span className="hidden xl:inline max-w-[95px] truncate font-bold">{currentUser.fullName}</span>
+                  <span className="hidden 2xl:inline max-w-[95px] truncate font-bold">{currentUser.fullName}</span>
                   <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded-full text-white shrink-0 ${
                     currentUser.role === 'ADMIN'
                       ? 'bg-emerald-800 dark:bg-emerald-700'
