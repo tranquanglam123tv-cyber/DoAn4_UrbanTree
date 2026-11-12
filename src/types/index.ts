@@ -4,6 +4,7 @@
  */
 
 export type Role = 'ADMIN' | 'STAFF' | 'CITIZEN';
+export type StaffWorkStatus = 'ACTIVE' | 'ON_MISSION' | 'ON_LEAVE';
 
 export interface User {
   id: string;
@@ -14,8 +15,16 @@ export interface User {
   avatarUrl?: string;
   email?: string;
   phone?: string;
-  assignedDistrict?: string; // e.g. "Q. Ninh Kiều", "Q. Cái Răng", "Toàn thành phố"
-  teamName?: string; // e.g. "Tổ Kỹ Thuật Số 1 - Phụ Trách Tuyến Hòa Bình"
+  assignedDistrict?: string; // e.g. "Quận Ninh Kiều", "Quận Cái Răng", "Toàn TP. Cần Thơ"
+  teamName?: string; // e.g. "Tổ Kỹ Thuật Số 1 - Tuyến Hòa Bình"
+  department?: string; // e.g. "Phòng Quản Lý Đô Thị", "Đội Cây Xanh Môi Trường", "Tổ Kỹ Thuật Lâm Sinh"
+  position?: string; // e.g. "Kỹ thuật viên trưởng", "Thợ cưa cắt cành bậc 4", "Chuyên viên giám định rễ"
+  staffCode?: string; // e.g. "KTV-CT-028"
+  workStatus?: StaffWorkStatus; // ACTIVE, ON_MISSION, ON_LEAVE
+  missionNote?: string; // e.g. "Đang công tác rà soát cây nghiêng sau bão tại Ninh Kiều"
+  joinedDate?: string; // YYYY-MM-DD
+  skills?: string[]; // e.g. ["Vận hành xe thang", "Cưa hạ cành cao", "Siêu âm rễ Arbotom", "Xử lý nấm bệnh"]
+  permissions?: string[]; // e.g. ["CARE_WRITE", "INCIDENT_RESOLVE", "TREE_FELL_APPROVE", "EXPORT_REPORT"]
   authProvider?: 'LOCAL' | 'GOOGLE';
 }
 
