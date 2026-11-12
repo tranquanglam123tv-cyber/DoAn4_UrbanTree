@@ -159,11 +159,21 @@ export const MapView: React.FC<MapViewProps> = ({
   const [selectedHealth, setSelectedHealth] = useState<string>('ALL');
   const [selectedCorridorFilter, setSelectedCorridorFilter] = useState<string>('ALL');
   const [selectedLocation, setSelectedLocation] = useState<string>('ALL'); // 📍 Bộ lọc Vị trí / Địa điểm
-  const [searchLocationQuery, setSearchLocationQuery] = useState<string>(''); // 🔍 Ô tìm kiếm số nhà, vị trí
+  const [searchLocationInput, setSearchLocationInput] = useState<string>(''); // 🔍 Ô tìm kiếm số nhà, vị trí
+  const [debouncedLocationQuery, setDebouncedLocationQuery] = useState<string>('');
+
+  // ⚡ Debounce 300ms cho ô tìm kiếm bản đồ
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedLocationQuery(searchLocationInput.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchLocationInput]);
 
   // 🏛️ Multi-Zone / District Jurisdiction State
   const [selectedZoneId, setSelectedZoneId] = useState<string>('all');
   const [mapViewportVersion, setMapViewportVersion] = useState<number>(0);
+  const [currentZoom, setCurrentZoom] = useState<number>(14);
 
   // Selection Drawers
   const [activeSelectedTree, setActiveSelectedTree] = useState<Tree | null>(null);
@@ -235,9 +245,14 @@ export const MapView: React.FC<MapViewProps> = ({
         });
       });
 
-      // Viewport culling on move / zoom
+      // Viewport culling on move / zoom (Debounce 100ms)
+      let moveTimer: any = null;
       map.on('moveend zoomend', () => {
-        setMapViewportVersion((v) => v + 1);
+        if (moveTimer) clearTimeout(moveTimer);
+        moveTimer = setTimeout(() => {
+          setMapViewportVersion((v) => v + 1);
+          setCurrentZoom(map.getZoom());
+        }, 100);
       });
 
       // Click on Map for Pin Add Mode or General clicks
@@ -350,9 +365,9 @@ export const MapView: React.FC<MapViewProps> = ({
           }
         }
 
-        // 🔍 Ô tìm kiếm số nhà, vị trí (Search Query Filter)
-        if (searchLocationQuery.trim()) {
-          const q = searchLocationQuery.toLowerCase().trim();
+        // 🔍 Ô tìm kiếm số nhà, vị trí (Search Query Filter - Debounced 300ms)
+        if (debouncedLocationQuery.trim()) {
+          const q = debouncedLocationQuery.toLowerCase().trim();
           const treeSearchable = `${tree.address} ${tree.displayName} ${tree.houseNumberMilestone} ${tree.streetCorridor} ${tree.streetCode} ${tree.publicCode}`.toLowerCase();
           if (!treeSearchable.includes(q)) return;
         }
@@ -537,7 +552,7 @@ export const MapView: React.FC<MapViewProps> = ({
     selectedHealth,
     selectedCorridorFilter,
     selectedLocation,
-    searchLocationQuery,
+    debouncedLocationQuery,
     selectedZoneId,
     mapViewportVersion,
   ]);
@@ -895,14 +910,14 @@ export const MapView: React.FC<MapViewProps> = ({
               <input
                 type="text"
                 placeholder="Tìm số nhà, vị trí..."
-                value={searchLocationQuery}
-                onChange={(e) => setSearchLocationQuery(e.target.value)}
+                value={searchLocationInput}
+                onChange={(e) => setSearchLocationInput(e.target.value)}
                 className="pl-7 pr-6 py-1 text-xs border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 w-36 sm:w-44 focus:ring-1 focus:ring-emerald-500 transition-all"
               />
-              {searchLocationQuery && (
+              {searchLocationInput && (
                 <button
                   type="button"
-                  onClick={() => setSearchLocationQuery('')}
+                  onClick={() => setSearchLocationInput('')}
                   className="absolute right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs cursor-pointer"
                   title="Xóa tìm kiếm"
                 >
@@ -966,6 +981,17 @@ export const MapView: React.FC<MapViewProps> = ({
 
       {/* 🗺️ MAP CONTAINER */}
       <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 dark:border-emerald-500/20 shadow-lg shadow-slate-900/5 h-[620px] bg-slate-100 dark:bg-slate-950">
+        {/* ⚡ GIS High-Performance LOD Badge (Tầm nhìn toàn cảnh) */}
+        {currentZoom < 14 && trees.length > 300 && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-slate-900/90 backdrop-blur-md text-white px-4 py-2 rounded-2xl border border-emerald-500/40 shadow-xl flex items-center gap-2.5 text-xs pointer-events-auto">
+            <span className="relative flex h-2.5 w-2.5 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+            </span>
+            <span>⚡ <strong>Tầm nhìn toàn cảnh:</strong> Đang tối ưu 300 cây tiêu biểu. Phóng to vào từng tuyến phố để xem toàn bộ chi tiết.</span>
+          </div>
+        )}
+
         {/* Banner while Pin-Adding mode is active */}
         {isPinAddMode && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 bg-emerald-600 text-white px-4 py-2 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-bold animate-bounce pointer-events-auto">

@@ -56,16 +56,26 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
   const trees = storage.getTrees();
   const treeTypes = storage.getTreeTypes();
 
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [jumpPageInput, setJumpPageInput] = useState('');
   const [selectedArea, setSelectedArea] = useState<string>('ALL');
   const [selectedType, setSelectedType] = useState<string>('ALL');
   const [selectedHealth, setSelectedHealth] = useState<string>('ALL');
   const [selectedCorridorFilter, setSelectedCorridorFilter] = useState<string>('ALL');
   const [viewMode, setViewMode] = useState<'grid' | 'table' | 'corridor'>('corridor');
 
-  // Pagination State (Tối ưu chống đơ lag khi dữ liệu > 1,000 - 5,000 cây)
+  // ⚡ Debounce 300ms: Tối ưu chống đơ lag khi tìm kiếm trên tập 5,000+ cây
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  // Pagination State (Tối ưu DOM không quá tải: 30 / 60 / 100 cây/trang)
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(36);
+  const [pageSize, setPageSize] = useState<number>(30);
 
   // GPS Radar State
   const [isScanningGps, setIsScanningGps] = useState(false);
@@ -97,7 +107,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
   // Reset trang về 1 khi bất kỳ bộ lọc nào thay đổi
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, selectedArea, selectedCorridorFilter, selectedType, selectedHealth, viewMode]);
+  }, [debouncedSearch, selectedArea, selectedCorridorFilter, selectedType, selectedHealth, viewMode]);
 
   // Filtered Trees
   const filteredTrees = useMemo(() => {
@@ -106,9 +116,10 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
       const corridor = getTreeCorridor(tree).toLowerCase();
       const milestone = getTreeMilestone(tree).toLowerCase();
       const area = getTreeGeneralArea(tree);
-      const searchLower = search.toLowerCase();
+      const searchLower = debouncedSearch.toLowerCase();
 
       const matchesSearch =
+        !searchLower ||
         tree.publicCode.toLowerCase().includes(searchLower) ||
         tree.displayName.toLowerCase().includes(searchLower) ||
         tree.address.toLowerCase().includes(searchLower) ||
@@ -125,7 +136,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
 
       return matchesSearch && matchesArea && matchesType && matchesHealth && matchesCorridor;
     });
-  }, [trees, search, selectedArea, selectedType, selectedHealth, selectedCorridorFilter]);
+  }, [trees, debouncedSearch, selectedArea, selectedType, selectedHealth, selectedCorridorFilter]);
 
   // Paginated Trees for Grid & Table
   const totalPages = Math.max(1, Math.ceil(filteredTrees.length / pageSize));
@@ -304,11 +315,20 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
           <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3" />
           <input
             type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Tìm theo mã tuyến [HB-01], số nhà mốc, tên cây, đường phố..."
-            className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 dark:border-slate-700/80 rounded-full focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-slate-50/50 dark:bg-slate-900/90 dark:text-slate-100 dark:placeholder-slate-500"
+            className="w-full pl-9 pr-8 py-2 text-xs border border-slate-200 dark:border-slate-700/80 rounded-full focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-slate-50/50 dark:bg-slate-900/90 dark:text-slate-100 dark:placeholder-slate-500"
           />
+          {searchInput && (
+            <button
+              type="button"
+              onClick={() => setSearchInput('')}
+              className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold"
+            >
+              ✕
+            </button>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -831,43 +851,93 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
         </div>
       )}
 
-      {/* 📄 BỘ ĐIỀU KHIỂN PHÂN TRANG HIỆU NĂNG CAO (PAGINATION CONTROLS) */}
+      {/* 📄 BỘ ĐIỀU KHIỂN PHÂN TRANG HIỆU NĂNG CAO (SMART PAGINATION CONTROLS) */}
       {viewMode !== 'corridor' && totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bento-card dark:bg-[#0c1812] dark:border-slate-800 text-xs shadow-xs">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-4 bento-card dark:bg-[#0c1812] dark:border-slate-800 text-xs shadow-xs">
           <div className="text-slate-500 dark:text-slate-400">
-            Đang xem cây thứ <span className="font-bold text-slate-800 dark:text-slate-200">{(currentPage - 1) * pageSize + 1}</span> – <span className="font-bold text-slate-800 dark:text-slate-200">{Math.min(currentPage * pageSize, filteredTrees.length)}</span> trong tổng số <span className="font-bold text-emerald-600 dark:text-[#00FF9D]">{filteredTrees.length.toLocaleString('vi-VN')}</span> cây
+            Đang xem cây thứ <span className="font-bold text-slate-800 dark:text-slate-200">{(currentPage - 1) * pageSize + 1}</span> – <span className="font-bold text-slate-800 dark:text-slate-200">{Math.min(currentPage * pageSize, filteredTrees.length)}</span> trên tổng số <span className="font-bold text-emerald-600 dark:text-[#00FF9D]">{filteredTrees.length.toLocaleString('vi-VN')}</span> cây
           </div>
 
-          <div className="flex items-center gap-1.5 self-center sm:self-auto flex-wrap">
+          <div className="flex items-center gap-2 self-center lg:self-auto flex-wrap">
+            {/* Nút Đầu trang */}
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors cursor-pointer"
+              title="Về trang đầu tiên"
+            >
+              ⇤ Đầu
+            </button>
+
+            {/* Nút Trang trước */}
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
               className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors cursor-pointer"
             >
-              ← Trang trước
+              ← Trước
             </button>
 
             <span className="px-3.5 py-1.5 font-mono font-bold text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 rounded-xl">
               Trang {currentPage} / {totalPages}
             </span>
 
+            {/* Nút Trang sau */}
             <button
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
               className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors cursor-pointer"
             >
-              Trang sau →
+              Sau →
             </button>
+
+            {/* Nút Cuối trang */}
+            <button
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors cursor-pointer"
+              title="Đến trang cuối cùng"
+            >
+              Cuối ⇥
+            </button>
+
+            {/* 🎯 Form Nhảy nhanh đến trang bất kỳ */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const p = parseInt(jumpPageInput, 10);
+                if (!isNaN(p) && p >= 1 && p <= totalPages) {
+                  setCurrentPage(p);
+                  setJumpPageInput('');
+                }
+              }}
+              className="flex items-center gap-1 ml-1"
+            >
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={jumpPageInput}
+                onChange={(e) => setJumpPageInput(e.target.value)}
+                placeholder="Số trang..."
+                className="w-16 px-2 py-1.5 text-xs text-center border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-mono"
+              />
+              <button
+                type="submit"
+                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs cursor-pointer transition-colors shadow-2xs"
+              >
+                Đến
+              </button>
+            </form>
 
             <select
               value={pageSize}
               onChange={(e) => setPageSize(Number(e.target.value))}
               className="ml-2 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-semibold"
             >
-              <option value={24}>24 cây / trang</option>
-              <option value={36}>36 cây / trang</option>
+              <option value={30}>30 cây / trang</option>
               <option value={60}>60 cây / trang</option>
-              <option value={120}>120 cây / trang</option>
+              <option value={100}>100 cây / trang</option>
             </select>
           </div>
         </div>
