@@ -23,6 +23,7 @@ import { QRScannerModal } from './components/QRScannerModal';
 import { PublicTreeModal } from './components/PublicTreeModal';
 import { LoginModal } from './components/LoginModal';
 import { CitizenPortalView } from './components/CitizenPortalView';
+import { StaffWorkstationView } from './components/StaffWorkstationView';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { SporeBackground } from './components/common/SporeBackground';
 import { storage } from './db/storage';
@@ -126,7 +127,16 @@ export default function App() {
   const handleUserChange = (newUser: User) => {
     storage.setActiveUser(newUser);
     setCurrentUser(newUser);
-    showToast(`Đã chuyển vai trò: ${newUser.fullName} (${newUser.role})`);
+    if (newUser.role === 'STAFF') {
+      setActiveTab('staff_workstation');
+      showToast(`Đã chuyển vai trò: Kỹ thuật viên ${newUser.fullName} (Bàn làm việc thực địa)`);
+    } else if (newUser.role === 'ADMIN') {
+      setActiveTab('dashboard');
+      showToast(`Đã chuyển vai trò: Quản trị viên ${newUser.fullName} (Dashboard Vĩ mô)`);
+    } else {
+      setActiveTab('home');
+      showToast(`Đã chuyển vai trò: ${newUser.fullName} (${newUser.role})`);
+    }
   };
 
   const handleLoginSuccess = (user: User) => {
@@ -135,9 +145,12 @@ export default function App() {
     if (user.role === 'CITIZEN') {
       setActiveTab('citizen_portal');
       showToast(`Chào mừng ${user.fullName} đến với Cổng Công Dân Xanh!`);
+    } else if (user.role === 'STAFF') {
+      setActiveTab('staff_workstation');
+      showToast(`Đăng nhập thành công! Chào mừng Kỹ thuật viên ${user.fullName} vào Bàn làm việc thực địa.`);
     } else {
       setActiveTab('dashboard');
-      showToast(`Đăng nhập thành công! Chào mừng ${user.fullName} (${user.role}).`);
+      showToast(`Đăng nhập thành công! Chào mừng Quản trị viên ${user.fullName}.`);
     }
   };
 
@@ -215,19 +228,47 @@ export default function App() {
               setActiveTab('incidents');
             }}
             onOpenQrScanner={() => setIsQrScannerOpen(true)}
-            onOpenAdminDashboard={() => setActiveTab('dashboard')}
+            onOpenAdminDashboard={() => {
+              if (currentUser.role === 'STAFF') {
+                setActiveTab('staff_workstation');
+              } else if (currentUser.role === 'ADMIN') {
+                setActiveTab('dashboard');
+              } else {
+                setIsLoginModalOpen(true);
+              }
+            }}
             onOpenLogin={() => setIsLoginModalOpen(true)}
             onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
           />
         )}
 
-        {/* Dashboard Quản trị dành cho Admin & Staff */}
-        {activeTab === 'dashboard' && currentUser.role !== 'CITIZEN' && (
+        {/* Bàn Làm Việc Thực Địa (Dành riêng cho Kỹ Thuật Viên Thực Địa - STAFF) */}
+        {activeTab === 'staff_workstation' && (
+          <StaffWorkstationView
+            currentUser={currentUser}
+            onOpenQrScanner={() => setIsQrScannerOpen(true)}
+            onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
+            onOpenMap={() => setActiveTab('map')}
+          />
+        )}
+
+        {/* Dashboard Vĩ Mô Quản Trị dành riêng cho Lãnh Đạo / Cơ Quan Quản Lý (ADMIN) */}
+        {activeTab === 'dashboard' && currentUser.role === 'ADMIN' && (
           <DashboardView
             onNavigate={(tab) => setActiveTab(tab)}
             onOpenAddTree={() => setIsAddTreeOpen(true)}
             onOpenCareModal={handleOpenCareModal}
             onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
+          />
+        )}
+
+        {/* Nếu Staff vào dashboard thì đưa về Bàn Làm Việc Thực Địa */}
+        {activeTab === 'dashboard' && currentUser.role === 'STAFF' && (
+          <StaffWorkstationView
+            currentUser={currentUser}
+            onOpenQrScanner={() => setIsQrScannerOpen(true)}
+            onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
+            onOpenMap={() => setActiveTab('map')}
           />
         )}
 

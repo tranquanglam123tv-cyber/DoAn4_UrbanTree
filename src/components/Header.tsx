@@ -19,6 +19,8 @@ import {
   LogOut,
   Users,
   Award,
+  Wrench,
+  Truck,
 } from 'lucide-react';
 import { Role, User } from '../types';
 import { storage } from '../db/storage';
@@ -93,9 +95,9 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          {/* Navigation Links (Pill Tabs) */}
+          {/* Navigation Links (Pill Tabs) - Phân quyền rõ rệt ADMIN vs STAFF vs CITIZEN */}
           <nav className="hidden lg:flex items-center gap-1 shrink-0 bg-slate-100/70 dark:bg-slate-800/80 p-1 rounded-full border border-slate-200/60 dark:border-slate-700/60 backdrop-blur-md">
-            {/* 1. Trang chủ (dành cho mọi người, công cộng) */}
+            {/* 1. Trang chủ (dành cho mọi người) */}
             <button
               onClick={() => setActiveTab('home')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
@@ -108,24 +110,59 @@ export const Header: React.FC<HeaderProps> = ({
               <span>Trang chủ</span>
             </button>
 
-            {/* 2. Nút riêng vào Dashboard Quản trị dành cho Admin & Staff */}
-            {currentUser.role !== 'CITIZEN' && (
-              <button
-                onClick={() => setActiveTab('dashboard')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 whitespace-nowrap cursor-pointer border ${
-                  activeTab === 'dashboard'
-                    ? 'bg-emerald-700 text-white border-emerald-800 shadow-xs'
-                    : 'text-emerald-800 dark:text-emerald-300 bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-200/80 dark:border-emerald-800/60 hover:bg-emerald-100/80 dark:hover:bg-emerald-900/50'
-                }`}
-              >
-                <Sliders className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span>Dashboard Quản trị</span>
-              </button>
+            {/* --- ROLE: STAFF (Kỹ thuật viên thực địa) --- */}
+            {currentUser.role === 'STAFF' && (
+              <>
+                <button
+                  onClick={() => setActiveTab('staff_workstation')}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 whitespace-nowrap cursor-pointer border ${
+                    activeTab === 'staff_workstation'
+                      ? 'bg-emerald-700 text-white border-emerald-800 shadow-xs ring-2 ring-emerald-500/30'
+                      : 'text-emerald-800 dark:text-emerald-300 bg-emerald-50/80 dark:bg-emerald-950/50 border-emerald-300/80 dark:border-emerald-700/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
+                  }`}
+                >
+                  <Wrench className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Bàn làm việc thực địa</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('map')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
+                    activeTab === 'map'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white/80 dark:hover:bg-slate-700/80'
+                  }`}
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Bản đồ GIS</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('incidents')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
+                    activeTab === 'incidents'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white/80 dark:hover:bg-slate-700/80'
+                  }`}
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Sự cố được giao</span>
+                </button>
+              </>
             )}
 
-            {/* 3. Phân hệ Quản lý Cây cho Nhân viên/Admin */}
-            {currentUser.role !== 'CITIZEN' && (
+            {/* --- ROLE: ADMIN (Lãnh đạo / Cơ quan Quản lý Vĩ mô) --- */}
+            {currentUser.role === 'ADMIN' && (
               <>
+                <button
+                  onClick={() => setActiveTab('dashboard')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 whitespace-nowrap cursor-pointer border ${
+                    activeTab === 'dashboard'
+                      ? 'bg-emerald-700 text-white border-emerald-800 shadow-xs'
+                      : 'text-emerald-800 dark:text-emerald-300 bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-200/80 dark:border-emerald-800/60 hover:bg-emerald-100/80 dark:hover:bg-emerald-900/50'
+                  }`}
+                >
+                  <Sliders className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Dashboard Vĩ Mô</span>
+                </button>
                 <button
                   onClick={() => setActiveTab('trees')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
@@ -137,78 +174,92 @@ export const Header: React.FC<HeaderProps> = ({
                   <Trees className="w-3.5 h-3.5" />
                   <span>Hồ sơ cây</span>
                 </button>
+                <button
+                  onClick={() => setActiveTab('map')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
+                    activeTab === 'map'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white/80 dark:hover:bg-slate-700/80'
+                  }`}
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Bản đồ số GIS</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('care')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
+                    activeTab === 'care'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white/80 dark:hover:bg-slate-700/80'
+                  }`}
+                >
+                  <ClipboardList className="w-3.5 h-3.5" />
+                  <span>Chăm sóc</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('incidents')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
+                    activeTab === 'incidents'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white/80 dark:hover:bg-slate-700/80'
+                  }`}
+                >
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <span>Sự cố &amp; Điều phối</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('blockchain')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
+                    activeTab === 'blockchain'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white/80 dark:hover:bg-slate-700/80'
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
+                  <span>Blockchain A19</span>
+                </button>
               </>
             )}
 
-            {/* 4. Bản đồ số GIS (Mọi người dân và nhân viên đều xem được) */}
-            <button
-              onClick={() => setActiveTab('map')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
-                activeTab === 'map'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white/80 dark:hover:bg-slate-700/80'
-              }`}
-            >
-              <MapPin className="w-3.5 h-3.5" />
-              <span>Bản đồ số GIS</span>
-            </button>
-
-            {/* 5. Chăm sóc (Nhân viên / Admin) */}
-            {currentUser.role !== 'CITIZEN' && (
-              <button
-                onClick={() => setActiveTab('care')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
-                  activeTab === 'care'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white/80 dark:hover:bg-slate-700/80'
-                }`}
-              >
-                <ClipboardList className="w-3.5 h-3.5" />
-                <span>Chăm sóc</span>
-              </button>
-            )}
-
-            {/* 6. Phản ánh Sự cố (Mọi người) */}
-            <button
-              onClick={() => setActiveTab('incidents')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
-                activeTab === 'incidents'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white/80 dark:hover:bg-slate-700/80'
-              }`}
-            >
-              <AlertTriangle className="w-3.5 h-3.5" />
-              <span>Sự cố</span>
-            </button>
-
-            {/* 7. Phản ánh & Hồ sơ sinh thái của tôi (Dành riêng cho Người dân đã đăng nhập) */}
-            {currentUser.role === 'CITIZEN' && currentUser.id !== 'citizen-guest' && (
-              <button
-                onClick={() => setActiveTab('citizen_portal')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 whitespace-nowrap cursor-pointer border ${
-                  activeTab === 'citizen_portal'
-                    ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
-                    : 'text-emerald-800 dark:text-emerald-300 bg-emerald-50/80 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border-emerald-200 dark:border-emerald-800/60'
-                }`}
-              >
-                <Award className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span>Phản ánh của tôi</span>
-              </button>
-            )}
-
-            {/* 8. Blockchain Proof (Admin) */}
-            {currentUser.role === 'ADMIN' && (
-              <button
-                onClick={() => setActiveTab('blockchain')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
-                  activeTab === 'blockchain'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white/80 dark:hover:bg-slate-700/80'
-                }`}
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
-                <span>Blockchain A19</span>
-              </button>
+            {/* --- ROLE: CITIZEN (Công dân sinh thái) --- */}
+            {currentUser.role === 'CITIZEN' && (
+              <>
+                <button
+                  onClick={() => setActiveTab('map')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
+                    activeTab === 'map'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white/80 dark:hover:bg-slate-700/80'
+                  }`}
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Bản đồ số GIS</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('incidents')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
+                    activeTab === 'incidents'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white/80 dark:hover:bg-slate-700/80'
+                  }`}
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Báo sự cố cây</span>
+                </button>
+                {currentUser.id !== 'citizen-guest' && (
+                  <button
+                    onClick={() => setActiveTab('citizen_portal')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 whitespace-nowrap cursor-pointer border ${
+                      activeTab === 'citizen_portal'
+                        ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
+                        : 'text-emerald-800 dark:text-emerald-300 bg-emerald-50/80 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border-emerald-200 dark:border-emerald-800/60'
+                    }`}
+                  >
+                    <Award className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Phản ánh của tôi</span>
+                  </button>
+                )}
+              </>
             )}
           </nav>
 
@@ -275,7 +326,7 @@ export const Header: React.FC<HeaderProps> = ({
                     </div>
                   </div>
 
-                  {currentUser.role === 'CITIZEN' ? (
+                  {currentUser.role === 'CITIZEN' && (
                     <button
                       onClick={() => setActiveTab('citizen_portal')}
                       className="w-full text-left px-2.5 py-2 text-xs rounded-xl flex items-center gap-2 hover:bg-emerald-50 dark:hover:bg-slate-800 text-emerald-900 dark:text-emerald-300 font-bold transition-colors cursor-pointer"
@@ -283,13 +334,25 @@ export const Header: React.FC<HeaderProps> = ({
                       <Award className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                       <span>Hồ sơ &amp; Phản ánh của tôi</span>
                     </button>
-                  ) : (
+                  )}
+
+                  {currentUser.role === 'STAFF' && (
+                    <button
+                      onClick={() => setActiveTab('staff_workstation')}
+                      className="w-full text-left px-2.5 py-2 text-xs rounded-xl flex items-center gap-2 hover:bg-emerald-50 dark:hover:bg-slate-800 text-emerald-900 dark:text-emerald-300 font-bold transition-colors cursor-pointer"
+                    >
+                      <Wrench className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <span>Bàn làm việc thực địa (Field)</span>
+                    </button>
+                  )}
+
+                  {currentUser.role === 'ADMIN' && (
                     <button
                       onClick={() => setActiveTab('dashboard')}
                       className="w-full text-left px-2.5 py-2 text-xs rounded-xl flex items-center gap-2 hover:bg-emerald-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold transition-colors cursor-pointer"
                     >
                       <Sliders className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                      <span>Mở Dashboard Quản Trị</span>
+                      <span>Mở Dashboard Quản Trị Vĩ Mô</span>
                     </button>
                   )}
 
@@ -356,7 +419,45 @@ export const Header: React.FC<HeaderProps> = ({
           >
             Trang chủ
           </button>
-          {currentUser.role !== 'CITIZEN' && (
+
+          {/* STAFF Mobile Items */}
+          {currentUser.role === 'STAFF' && (
+            <>
+              <button
+                onClick={() => setActiveTab('staff_workstation')}
+                className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${
+                  activeTab === 'staff_workstation'
+                    ? 'bg-emerald-700 text-white'
+                    : 'text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
+                }`}
+              >
+                ⚡ Thực địa
+              </button>
+              <button
+                onClick={() => setActiveTab('map')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                  activeTab === 'map'
+                    ? 'bg-emerald-600 text-white'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                Bản đồ GIS
+              </button>
+              <button
+                onClick={() => setActiveTab('incidents')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                  activeTab === 'incidents'
+                    ? 'bg-emerald-600 text-white'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                Sự cố giao
+              </button>
+            </>
+          )}
+
+          {/* ADMIN Mobile Items */}
+          {currentUser.role === 'ADMIN' && (
             <>
               <button
                 onClick={() => setActiveTab('dashboard')}
@@ -378,51 +479,85 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 Hồ sơ cây
               </button>
+              <button
+                onClick={() => setActiveTab('map')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                  activeTab === 'map'
+                    ? 'bg-emerald-600 text-white'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                Bản đồ số
+              </button>
+              <button
+                onClick={() => setActiveTab('care')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                  activeTab === 'care'
+                    ? 'bg-emerald-600 text-white'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                Chăm sóc
+              </button>
+              <button
+                onClick={() => setActiveTab('incidents')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                  activeTab === 'incidents'
+                    ? 'bg-emerald-600 text-white'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                Sự cố
+              </button>
+              <button
+                onClick={() => setActiveTab('blockchain')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                  activeTab === 'blockchain'
+                    ? 'bg-emerald-600 text-white'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                Blockchain
+              </button>
             </>
           )}
-          <button
-            onClick={() => setActiveTab('map')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-              activeTab === 'map'
-                ? 'bg-emerald-600 text-white'
-                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-          >
-            Bản đồ số
-          </button>
-          {currentUser.role !== 'CITIZEN' && (
-            <button
-              onClick={() => setActiveTab('care')}
-              className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-                activeTab === 'care'
-                  ? 'bg-emerald-600 text-white'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              Chăm sóc
-            </button>
-          )}
-          <button
-            onClick={() => setActiveTab('incidents')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-              activeTab === 'incidents'
-                ? 'bg-emerald-600 text-white'
-                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-          >
-            Sự cố
-          </button>
-          {currentUser.role === 'ADMIN' && (
-            <button
-              onClick={() => setActiveTab('blockchain')}
-              className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-                activeTab === 'blockchain'
-                  ? 'bg-emerald-600 text-white'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              Blockchain
-            </button>
+
+          {/* CITIZEN Mobile Items */}
+          {currentUser.role === 'CITIZEN' && (
+            <>
+              <button
+                onClick={() => setActiveTab('map')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                  activeTab === 'map'
+                    ? 'bg-emerald-600 text-white'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                Bản đồ số
+              </button>
+              <button
+                onClick={() => setActiveTab('incidents')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                  activeTab === 'incidents'
+                    ? 'bg-emerald-600 text-white'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                Báo sự cố
+              </button>
+              {currentUser.id !== 'citizen-guest' && (
+                <button
+                  onClick={() => setActiveTab('citizen_portal')}
+                  className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${
+                    activeTab === 'citizen_portal'
+                      ? 'bg-emerald-600 text-white'
+                      : 'text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100'
+                  }`}
+                >
+                  Phản ánh của tôi
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

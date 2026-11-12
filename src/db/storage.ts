@@ -607,6 +607,64 @@ class StorageService {
     return newCare;
   }
 
+  public async batchCareMaintenance(params: {
+    treeIds: string[];
+    staffUserId: string;
+    staffName: string;
+    actionType: CareActionType;
+    notes: string;
+    imageUrl?: string;
+  }): Promise<CareRecord[]> {
+    const { treeIds, staffUserId, staffName, actionType, notes, imageUrl } = params;
+    const now = new Date().toISOString();
+    const createdRecords: CareRecord[] = [];
+
+    for (let i = 0; i < treeIds.length; i++) {
+      const treeId = treeIds[i];
+      const tree = this.trees.find((t) => t.id === treeId);
+      if (!tree) continue;
+
+      const id = `care-batch-${Date.now()}-${i}`;
+      const newCare: CareRecord = {
+        id,
+        treeId,
+        staffUserId,
+        staffName,
+        actionType,
+        healthBefore: tree.healthStatus,
+        healthAfter: tree.healthStatus === 'CRITICAL' ? 'POOR' : tree.healthStatus === 'POOR' ? 'FAIR' : 'GOOD',
+        notes: `[Duy tu tuyến phố] ${notes}`,
+        imageUrl: imageUrl || tree.imageUrl,
+        performedAt: now,
+        createdAt: now,
+      };
+
+      // Update tree health and timestamp
+      tree.healthStatus = newCare.healthAfter;
+      tree.updatedAt = now;
+
+      // Anchor to blockchain
+      const { hash, canonicalJson } = computeRecordHash('CARE_RECORD', newCare);
+      const receipt = await blockchainService.anchorRecord({
+        recordType: 'CARE_RECORD',
+        recordId: id,
+        hash,
+        canonicalJson,
+      });
+
+      newCare.payloadVersion = 1;
+      newCare.payloadHash = hash;
+      newCare.anchorStatus = receipt.status;
+      newCare.txHash = receipt.txHash;
+
+      this.careRecords.unshift(newCare);
+      createdRecords.push(newCare);
+    }
+
+    this.saveAll();
+    return createdRecords;
+  }
+
   // Incidents
   public getIncidents(): Incident[] {
     return [...this.incidents];
