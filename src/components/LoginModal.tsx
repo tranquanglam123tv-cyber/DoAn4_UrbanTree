@@ -52,6 +52,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       '883374638147-huujfd6886q9lt2frgqusk5f3dediccu.apps.googleusercontent.com'
     );
   });
+  const [isGisReady, setIsGisReady] = useState<boolean>(false);
   const [showConfigGoogleId, setShowConfigGoogleId] = useState<boolean>(false);
   const [inputCustomGoogleId, setInputCustomGoogleId] = useState<string>('');
   const googleBtnContainerRef = useRef<HTMLDivElement>(null);
@@ -135,9 +136,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             shape: 'pill',
             width: 320,
           });
+          setIsGisReady(true);
         }
       } catch (err) {
         console.warn('Google Identity Services init:', err);
+        setIsGisReady(false);
       }
     }
   }, [isOpen, activeTab, viewMode, googleClientId]);
@@ -651,152 +654,47 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           {/* ═════════════════════════════════════════════════════════════ */}
           {viewMode === 'login' && activeTab === 'citizen' && (
             <div className="space-y-4">
-              {/* 🌐 REAL GOOGLE OAUTH 2.0 SIGN IN (GOOGLE IDENTITY SERVICES) */}
-              <div className="space-y-2">
-                {/* Real GIS Button Container (when Client ID is initialized) */}
-                <div ref={googleBtnContainerRef} className="flex justify-center w-full empty:hidden" />
+              {/* 🌐 1. GOOGLE SIGN IN (SINGLE CLEAN ACTION) */}
+              <div className="space-y-1.5">
+                {/* Official Google Button Container */}
+                <div ref={googleBtnContainerRef} className={`flex justify-center w-full min-h-[44px] ${!isGisReady ? 'hidden' : ''}`} />
 
-                {/* Standard / Fallback Google Button */}
-                <button
-                  type="button"
-                  onClick={handleGoogleSignIn}
-                  disabled={isLoading}
-                  className="w-full py-2.5 px-4 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold flex items-center justify-center gap-3 shadow-xs hover:shadow-sm transition-all cursor-pointer group"
-                >
-                  {/* Official Google 4-Color Logo SVG */}
-                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                    <path
-                      fill="#4285F4"
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                    />
-                  </svg>
-                  <span>
-                    {googleClientId ? 'Đăng nhập với Google (Live GIS)' : 'Đăng nhập bằng Google (1-Click)'}
-                  </span>
-                </button>
-
-                {/* Google Client ID Config Toggle */}
-                <div className="text-right">
+                {/* Fallback button shown only if Google GIS iframe is not ready */}
+                {!isGisReady && (
                   <button
                     type="button"
-                    onClick={() => {
-                      setShowConfigGoogleId(!showConfigGoogleId);
-                      setInputCustomGoogleId(googleClientId);
-                    }}
-                    className="text-[10px] text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 font-mono inline-flex items-center gap-1 cursor-pointer transition-colors"
+                    onClick={handleGoogleSignIn}
+                    disabled={isLoading}
+                    className="w-full py-2.5 px-4 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold flex items-center justify-center gap-3 shadow-xs hover:shadow-sm transition-all cursor-pointer"
                   >
-                    <Settings className="w-3 h-3" />
-                    <span>
-                      {googleClientId ? 'Đang dùng Client ID thật' : 'Cấu hình Google Client ID thật'}
-                    </span>
+                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                    </svg>
+                    <span>Đăng nhập với Google</span>
                   </button>
-                </div>
-
-                {/* Expandable Config Box */}
-                {showConfigGoogleId && (
-                  <form
-                    onSubmit={handleSaveGoogleClientId}
-                    className="p-3 bg-slate-50 dark:bg-slate-900/90 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 text-xs animate-in fade-in duration-150"
-                  >
-                    <div className="font-bold text-slate-800 dark:text-slate-200 text-[11px] flex items-center justify-between">
-                      <span>Google OAuth Client ID</span>
-                      <a
-                        href="https://console.cloud.google.com/apis/credentials"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-0.5 text-[10px]"
-                      >
-                        <span>Lấy Client ID</span>
-                        <ExternalLink className="w-2.5 h-2.5" />
-                      </a>
-                    </div>
-                    <input
-                      type="text"
-                      value={inputCustomGoogleId}
-                      onChange={(e) => setInputCustomGoogleId(e.target.value)}
-                      placeholder="VD: 123456-abc.apps.googleusercontent.com"
-                      className="w-full px-2.5 py-1.5 text-[11px] font-mono bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    />
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-[10px] text-slate-400">Thêm origin: http://localhost:3000</span>
-                      <button
-                        type="submit"
-                        className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-lg cursor-pointer"
-                      >
-                        Lưu Client ID
-                      </button>
-                    </div>
-                  </form>
                 )}
               </div>
 
-              {/* Quyền lợi tài khoản người dân */}
-              <div className="p-3 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-2xl space-y-1.5">
-                <span className="text-[11px] font-bold text-emerald-900 dark:text-emerald-300 uppercase tracking-wider block">
-                  Quyền lợi khi đăng nhập Người dân:
-                </span>
-                <div className="grid grid-cols-1 gap-1 text-[11px] text-emerald-800 dark:text-emerald-200">
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <span>Lưu &amp; tra cứu lịch sử mọi phản ánh cây xanh.</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Bell className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <span>Nhận thông báo khi Kỹ thuật viên xử lý xong cây kèm ảnh.</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Award className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <span>Tích lũy Điểm Sinh Thái &amp; Huy hiệu "Công Dân Xanh".</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Nút đăng nhập 1-click dùng thử cho người dân */}
-              <button
-                type="button"
-                onClick={handleQuickCitizenLogin}
-                className="w-full p-2.5 bg-emerald-100/60 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-950/80 text-emerald-900 dark:text-emerald-200 border border-emerald-300/80 dark:border-emerald-800/60 rounded-xl text-xs font-bold flex items-center justify-between transition-all group cursor-pointer"
-              >
-                <div className="flex items-center gap-2 text-left">
-                  <HeartHandshake className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-                  <div>
-                    <div>1-Click: Đăng nhập Công Dân Mẫu</div>
-                    <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-normal">
-                      Nguyễn Văn An · Đã có 3 phản ánh cây xanh
-                    </div>
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-emerald-700 dark:text-emerald-400 group-hover:translate-x-1 transition-transform" />
-              </button>
-
-              <div className="relative flex py-1 items-center">
+              {/* Divider */}
+              <div className="relative flex py-0.5 items-center">
                 <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
                 <span className="flex-shrink mx-3 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                  Hoặc đăng ký tài khoản qua Email / SMS OTP
+                  Hoặc đăng nhập bằng OTP
                 </span>
                 <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
               </div>
 
-              {/* Form Đăng ký / Đăng nhập Người dân */}
+              {/* 📱 2. OTP SIGN IN / REGISTRATION FORM */}
               <form onSubmit={handleCitizenSubmit} className="space-y-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Họ và tên của bạn *
+                    Họ và tên của bạn
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                       <User className="w-4 h-4" />
                     </div>
                     <input
@@ -811,36 +709,27 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Số điện thoại (Nhận mã OTP SMS xác thực)
+                    Email hoặc Số điện thoại (Nhận mã OTP) *
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
-                      <Phone className="w-4 h-4" />
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      {citizenEmail.includes('@') ? <Mail className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
                     </div>
                     <input
-                      type="tel"
-                      value={citizenPhone}
-                      onChange={(e) => setCitizenPhone(e.target.value)}
-                      placeholder="Ví dụ: 0918234910"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-900 transition-all"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Địa chỉ Email (Nhận mã OTP bảo mật qua hòm thư Gmail)
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
-                      <Mail className="w-4 h-4" />
-                    </div>
-                    <input
-                      type="email"
-                      value={citizenEmail}
-                      onChange={(e) => setCitizenEmail(e.target.value)}
-                      placeholder="Ví dụ: hoten@gmail.com"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-900 transition-all"
+                      type="text"
+                      value={citizenEmail || citizenPhone}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val.includes('@')) {
+                          setCitizenEmail(val);
+                          setCitizenPhone('');
+                        } else {
+                          setCitizenPhone(val);
+                          setCitizenEmail(val);
+                        }
+                      }}
+                      placeholder="Nhập email (vd: hoten@gmail.com) hoặc SĐT"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-900 transition-all font-mono"
                     />
                   </div>
                 </div>
@@ -848,18 +737,32 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-md shadow-emerald-700/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
+                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-md shadow-emerald-700/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
                 >
                   {isLoading ? (
                     <span>Đang gửi mã xác thực...</span>
                   ) : (
                     <>
                       <Smartphone className="w-4 h-4" />
-                      <span>Tiếp Tục &amp; Nhận Mã OTP Xác Thực</span>
+                      <span>Nhận Mã OTP Xác Thực</span>
                     </>
                   )}
                 </button>
               </form>
+
+              {/* ⚡ 3. DEMO ACCOUNT & BENEFITS STRIP */}
+              <div className="pt-1 flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={handleQuickCitizenLogin}
+                  className="text-emerald-700 dark:text-[#00FF9D] font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <HeartHandshake className="w-3.5 h-3.5" />
+                  <span>Vào nhanh tài khoản mẫu (Nguyễn Văn An)</span>
+                </button>
+
+                <span className="text-[10px] text-slate-400">Bảo mật OTP 2 lớp</span>
+              </div>
             </div>
           )}
 
