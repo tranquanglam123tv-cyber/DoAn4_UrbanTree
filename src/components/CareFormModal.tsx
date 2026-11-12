@@ -86,8 +86,16 @@ export const CareFormModal: React.FC<CareFormModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-      <div className="bg-white dark:bg-[#0c1812] rounded-2xl max-w-lg w-full max-h-[90vh] shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex flex-col border border-[#E0EBDD] dark:border-emerald-500/30 dark:text-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto"
+      data-lenis-prevent
+      onWheel={(e) => e.stopPropagation()}
+    >
+      <div
+        className="bg-white dark:bg-[#0c1812] rounded-2xl max-w-lg w-full max-h-[92vh] shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex flex-col border border-[#E0EBDD] dark:border-emerald-500/30 dark:text-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto"
+        data-lenis-prevent
+        onWheel={(e) => e.stopPropagation()}
+      >
         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <div className="p-2 bg-[#E0EBDD] dark:bg-emerald-950/80 text-[#174B36] dark:text-emerald-400 dark:border dark:border-emerald-800/50 rounded-lg">
@@ -103,7 +111,11 @@ export const CareFormModal: React.FC<CareFormModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 flex-1 text-xs">
+        <form
+          onSubmit={handleSubmit}
+          className="p-6 overflow-y-auto overscroll-contain space-y-4 flex-1 text-xs"
+          data-lenis-prevent
+        >
           {error && (
             <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs">
               {error}

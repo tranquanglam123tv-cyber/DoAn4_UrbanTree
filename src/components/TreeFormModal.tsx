@@ -370,8 +370,16 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, onClose, onS
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
-      <div className="bg-white dark:bg-[#0c1812] rounded-2xl max-w-2xl w-full max-h-[92vh] shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex flex-col border border-[#E0EBDD] dark:border-emerald-500/30 dark:text-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto"
+      data-lenis-prevent
+      onWheel={(e) => e.stopPropagation()}
+    >
+      <div
+        className="bg-white dark:bg-[#0c1812] rounded-2xl max-w-2xl w-full max-h-[92vh] shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex flex-col border border-[#E0EBDD] dark:border-emerald-500/30 dark:text-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto"
+        data-lenis-prevent
+        onWheel={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-slate-50/50 dark:bg-slate-900/40">
           <div className="flex items-center gap-2.5">
@@ -433,7 +441,11 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, onClose, onS
 
         {/* BODY TAB 1: THÊM ĐƠN LẺ / KHỚP THỰC ĐỊA */}
         {activeTab === 'single' ? (
-          <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-4 flex-1 text-xs">
+          <form
+            onSubmit={handleSubmit}
+            className="p-5 overflow-y-auto overscroll-contain space-y-4 flex-1 text-xs"
+            data-lenis-prevent
+          >
             {error && (
               <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
@@ -888,7 +900,10 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, onClose, onS
           </form>
         ) : (
           /* BODY TAB 2: NHẬP HÀNG LOẠT TỪ TUYẾN PHỐ / EXCEL */
-          <div className="p-5 overflow-y-auto space-y-4 flex-1 text-xs">
+          <div
+            className="p-5 overflow-y-auto overscroll-contain space-y-4 flex-1 text-xs"
+            data-lenis-prevent
+          >
             {error && (
               <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />

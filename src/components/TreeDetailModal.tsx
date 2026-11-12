@@ -79,8 +79,16 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-      <div className="bg-white dark:bg-[#0c1812] rounded-2xl max-w-2xl w-full max-h-[90vh] shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex flex-col border border-[#E0EBDD] dark:border-emerald-500/30 dark:text-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto"
+      data-lenis-prevent
+      onWheel={(e) => e.stopPropagation()}
+    >
+      <div
+        className="bg-white dark:bg-[#0c1812] rounded-2xl max-w-2xl w-full max-h-[92vh] shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex flex-col border border-[#E0EBDD] dark:border-emerald-500/30 dark:text-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto"
+        data-lenis-prevent
+        onWheel={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="px-6 py-4 bg-[#174B36] dark:bg-[#091b12] dark:border-b dark:border-emerald-500/30 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
@@ -196,7 +204,7 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
         </div>
 
         {/* Tab Content */}
-        <div className="p-6 overflow-y-auto space-y-5 flex-1">
+        <div className="p-6 overflow-y-auto overscroll-contain space-y-5 flex-1" data-lenis-prevent>
           {activeTab === 'info' && (
             <div className="space-y-4">
               {/* Image & Quick specs */}

@@ -38,8 +38,16 @@ export const PublicTreeModal: React.FC<PublicTreeModalProps> = ({
   const treeType = storage.getTreeTypeById(tree.treeTypeId);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-      <div className="bg-white dark:bg-[#0c1812] rounded-2xl max-w-lg w-full max-h-[92vh] shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex flex-col border border-[#E0EBDD] dark:border-emerald-500/30 dark:text-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-xs">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto"
+      data-lenis-prevent
+      onWheel={(e) => e.stopPropagation()}
+    >
+      <div
+        className="bg-white dark:bg-[#0c1812] rounded-2xl max-w-lg w-full max-h-[92vh] shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex flex-col border border-[#E0EBDD] dark:border-emerald-500/30 dark:text-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-xs my-auto"
+        data-lenis-prevent
+        onWheel={(e) => e.stopPropagation()}
+      >
         {/* Top Header */}
         <div className="px-5 py-3.5 bg-[#174B36] dark:bg-[#091b12] dark:border-b dark:border-emerald-500/30 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
@@ -67,7 +75,7 @@ export const PublicTreeModal: React.FC<PublicTreeModalProps> = ({
         </div>
 
         {/* Scrollable Body */}
-        <div className="p-5 overflow-y-auto space-y-4 flex-1">
+        <div className="p-5 overflow-y-auto overscroll-contain space-y-4 flex-1" data-lenis-prevent>
           {/* Toggle between Tag & Details */}
           <div className="flex items-center gap-2">
             <button

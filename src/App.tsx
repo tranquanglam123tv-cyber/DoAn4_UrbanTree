@@ -75,6 +75,21 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  // Lenis instance ref
+  const lenisRef = useRef<Lenis | null>(null);
+
+  // Check if any modal is currently open
+  const isAnyModalOpen = Boolean(
+    selectedTreeForDetail ||
+    selectedTreeForQr ||
+    isAddTreeOpen ||
+    selectedTreeForEdit ||
+    isCareModalOpen ||
+    isQrScannerOpen ||
+    isLoginModalOpen ||
+    publicTreeModalTree
+  );
+
   // Automark Lenis Smooth Scroll Engine
   useEffect(() => {
     const lenis = new Lenis({
@@ -82,7 +97,16 @@ export default function App() {
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       orientation: 'vertical',
       smoothWheel: true,
+      prevent: (node: HTMLElement) => {
+        return (
+          Boolean(node.hasAttribute?.('data-lenis-prevent')) ||
+          node.closest?.('[data-lenis-prevent]') !== null ||
+          node.closest?.('.overflow-y-auto') !== null ||
+          node.closest?.('.overflow-auto') !== null
+        );
+      },
     });
+    lenisRef.current = lenis;
 
     lenis.on('scroll', ScrollTrigger.update);
 
@@ -95,8 +119,23 @@ export default function App() {
     return () => {
       gsap.ticker.remove(ticker);
       lenis.destroy();
+      lenisRef.current = null;
     };
   }, []);
+
+  // Lock background scroll and stop Lenis while any modal is open
+  useEffect(() => {
+    if (isAnyModalOpen) {
+      lenisRef.current?.stop();
+      document.body.style.overflow = 'hidden';
+    } else {
+      lenisRef.current?.start();
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isAnyModalOpen]);
 
   // Check URL hash for direct QR code scanning link (e.g. #tree-TREE-001 or #report-TREE-001)
   useEffect(() => {

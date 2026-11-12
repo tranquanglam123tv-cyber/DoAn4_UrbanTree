@@ -135,8 +135,16 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-md bg-white dark:bg-[#0c1812] rounded-3xl shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] border border-emerald-100 dark:border-emerald-500/30 overflow-hidden animate-scale-up">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-fade-in"
+      data-lenis-prevent
+      onWheel={(e) => e.stopPropagation()}
+    >
+      <div
+        className="relative w-full max-w-md max-h-[92vh] flex flex-col bg-white dark:bg-[#0c1812] rounded-3xl shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] border border-emerald-100 dark:border-emerald-500/30 overflow-hidden animate-scale-up my-auto"
+        data-lenis-prevent
+        onWheel={(e) => e.stopPropagation()}
+      >
         {/* Top Accent Gradient Bar */}
         <div className="h-2 bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-700" />
 
