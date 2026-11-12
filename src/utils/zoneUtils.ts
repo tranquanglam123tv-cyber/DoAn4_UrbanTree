@@ -433,34 +433,60 @@ export function getTreeProvinceId(tree: Tree): string {
   const corr = (tree.streetCorridor || '').toLowerCase();
   const text = `${addr} ${name} ${corr}`;
 
-  // 1. Đà Nẵng
-  if (text.includes('đà nẵng') || text.includes('da nang') || text.includes('sơn trà') || text.includes('hải châu') || text.includes('ngũ hành sơn') || text.includes('thanh khê') || text.includes('cẩm lệ')) {
+  // 1. ƯU TIÊN VĂN BẢN ĐỊA CHỈ: Kiểm tra rõ tên Tỉnh / Thành phố
+  // Cần Thơ (Ưu tiên số 1 nếu có chữ cần thơ hoặc các quận đặc trưng của Cần Thơ)
+  if (
+    text.includes('cần thơ') || text.includes('can tho') ||
+    text.includes('ninh kiều') || text.includes('bình thủy') ||
+    text.includes('cái răng') || text.includes('ô môn') ||
+    text.includes('thốt nốt') || text.includes('phong điền')
+  ) {
+    return 'can-tho';
+  }
+
+  // Đà Nẵng
+  if (
+    text.includes('đà nẵng') || text.includes('da nang') ||
+    text.includes('sơn trà') || text.includes('hải châu') ||
+    text.includes('ngũ hành sơn') || text.includes('thanh khê') || text.includes('cẩm lệ')
+  ) {
     return 'da-nang';
   }
-  // Coords check Đà Nẵng (lat 15.8 - 16.2, lng 108.0 - 108.4)
+
+  // Hà Nội
+  if (
+    text.includes('hà nội') || text.includes('ha noi') ||
+    text.includes('hoàn kiếm') || text.includes('ba đình') ||
+    text.includes('tây hồ') || text.includes('cầu giấy') || text.includes('đống đa')
+  ) {
+    return 'ha-noi';
+  }
+
+  // TP. Hồ Chí Minh
+  if (
+    text.includes('hồ chí minh') || text.includes('tp.hcm') ||
+    text.includes('sài gòn') || text.includes('saigon') ||
+    text.includes('thủ đức') || text.includes('quận 1') ||
+    text.includes('quận 3') || text.includes('quận 7')
+  ) {
+    return 'hcm';
+  }
+
+  // 2. FALLBACK TỌA ĐỘ GPS (Chỉ áp dụng khi địa chỉ không ghi rõ tỉnh thành)
+  // Đà Nẵng
   if (tree.latitude >= 15.8 && tree.latitude <= 16.3 && tree.longitude >= 108.0 && tree.longitude <= 108.4) {
     return 'da-nang';
   }
-
-  // 2. Hà Nội
-  if (text.includes('hà nội') || text.includes('ha noi') || text.includes('hoàn kiếm') || text.includes('ba đình') || text.includes('tây hồ') || text.includes('cầu giấy') || text.includes('đống đa')) {
-    return 'ha-noi';
-  }
-  // Coords check Hà Nội (lat 20.8 - 21.3, lng 105.6 - 106.0)
+  // Hà Nội
   if (tree.latitude >= 20.8 && tree.latitude <= 21.3 && tree.longitude >= 105.6 && tree.longitude <= 106.0) {
     return 'ha-noi';
   }
-
-  // 3. TP. Hồ Chí Minh
-  if (text.includes('hồ chí minh') || text.includes('tp.hcm') || text.includes('sài gòn') || text.includes('saigon') || text.includes('thủ đức') || text.includes('quận 1') || text.includes('quận 3') || text.includes('quận 7')) {
-    return 'hcm';
-  }
-  // Coords check TP.HCM (lat 10.6 - 11.0, lng 106.5 - 107.0)
+  // TP.HCM
   if (tree.latitude >= 10.6 && tree.latitude <= 11.0 && tree.longitude >= 106.5 && tree.longitude <= 107.0) {
     return 'hcm';
   }
 
-  // 4. Default / Can Tho
+  // 3. Mặc định là Cần Thơ
   return 'can-tho';
 }
 

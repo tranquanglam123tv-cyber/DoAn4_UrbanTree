@@ -126,22 +126,9 @@ export function getTreeGeneralArea(tree: Tree): string {
   const corr = (tree.streetCorridor || '').toLowerCase();
   const full = `${addr} ${corr}`;
 
-  // 1. Các tỉnh/thành phố lớn ngoài Cần Thơ
-  if (full.includes('đà nẵng') || full.includes('da nang')) {
-    if (full.includes('hải châu')) return 'Quận Hải Châu (Đà Nẵng)';
-    if (full.includes('sơn trà')) return 'Quận Sơn Trà (Đà Nẵng)';
-    if (full.includes('ngũ hành sơn')) return 'Quận Ngũ Hành Sơn (Đà Nẵng)';
-    if (full.includes('thanh khê')) return 'Quận Thanh Khê (Đà Nẵng)';
-    return 'TP. Đà Nẵng';
-  }
-  if (full.includes('hà nội') || full.includes('ha noi')) return 'TP. Hà Nội';
-  if (full.includes('hồ chí minh') || full.includes('tp.hcm') || full.includes('sài gòn') || full.includes('saigon')) {
-    return 'TP. Hồ Chí Minh';
-  }
-  if (full.includes('hải phòng') || full.includes('hai phong')) return 'TP. Hải Phòng';
-  if (full.includes('huế') || full.includes('thừa thiên')) return 'TP. Huế';
-
-  // 2. Các Quận/Huyện của TP. Cần Thơ
+  // 1. Kiểm tra Cần Thơ trước nếu địa chỉ ghi rõ Cần Thơ hoặc các quận Cần Thơ
+  const isExplicitCanTho = full.includes('cần thơ') || full.includes('can tho');
+  
   if (full.includes('cái răng') || full.includes('cai rang')) return 'Quận Cái Răng (Cần Thơ)';
   if (full.includes('bình thủy') || full.includes('binh thuy')) return 'Quận Bình Thủy (Cần Thơ)';
   if (full.includes('ô môn') || full.includes('o mon')) return 'Quận Ô Môn (Cần Thơ)';
@@ -151,6 +138,34 @@ export function getTreeGeneralArea(tree: Tree): string {
   if (full.includes('cờ đỏ') || full.includes('co do')) return 'Huyện Cờ Đỏ (Cần Thơ)';
   if (full.includes('vĩnh thạnh') || full.includes('vinh thanh')) return 'Huyện Vĩnh Thạnh (Cần Thơ)';
   if (full.includes('ninh kiều') || full.includes('ninh kieu')) return 'Quận Ninh Kiều (Cần Thơ)';
+
+  if (isExplicitCanTho) return 'TP. Cần Thơ';
+
+  // 2. Các tỉnh/thành phố lớn ngoài Cần Thơ
+  if (full.includes('đà nẵng') || full.includes('da nang')) {
+    if (full.includes('hải châu')) return 'Quận Hải Châu (Đà Nẵng)';
+    if (full.includes('sơn trà')) return 'Quận Sơn Trà (Đà Nẵng)';
+    if (full.includes('ngũ hành sơn')) return 'Quận Ngũ Hành Sơn (Đà Nẵng)';
+    if (full.includes('thanh khê')) return 'Quận Thanh Khê (Đà Nẵng)';
+    if (full.includes('cẩm lệ')) return 'Quận Cẩm Lệ (Đà Nẵng)';
+    return 'TP. Đà Nẵng';
+  }
+  if (full.includes('hà nội') || full.includes('ha noi')) {
+    if (full.includes('hoàn kiếm')) return 'Quận Hoàn Kiếm (Hà Nội)';
+    if (full.includes('ba đình')) return 'Quận Ba Đình (Hà Nội)';
+    if (full.includes('tây hồ')) return 'Quận Tây Hồ (Hà Nội)';
+    if (full.includes('cầu giấy')) return 'Quận Cầu Giấy (Hà Nội)';
+    return 'TP. Hà Nội';
+  }
+  if (full.includes('hồ chí minh') || full.includes('tp.hcm') || full.includes('sài gòn') || full.includes('saigon')) {
+    if (full.includes('thủ đức')) return 'TP. Thủ Đức (TP.HCM)';
+    if (full.includes('quận 1') || full.includes('q.1')) return 'Quận 1 (TP.HCM)';
+    if (full.includes('quận 3') || full.includes('q.3')) return 'Quận 3 (TP.HCM)';
+    if (full.includes('quận 7') || full.includes('q.7')) return 'Quận 7 (TP.HCM)';
+    return 'TP. Hồ Chí Minh';
+  }
+  if (full.includes('hải phòng') || full.includes('hai phong')) return 'TP. Hải Phòng';
+  if (full.includes('huế') || full.includes('thừa thiên')) return 'TP. Huế';
 
   // 3. Fallback: Tách theo dấu phẩy từ cuối địa chỉ
   const parts = (tree.address || '').split(',').map((p) => p.trim()).filter(Boolean);
