@@ -10,69 +10,181 @@ import {
   ClipboardList,
   ShieldCheck,
   Eye,
+  Plus,
+  Edit,
+  Trash2,
+  Navigation,
+  Crosshair,
+  Building2,
+  CheckCircle,
+  X,
+  Compass,
+  Save,
+  RotateCcw,
 } from 'lucide-react';
 import { storage } from '../db/storage';
-import { Incident, Tree } from '../types';
+import { Incident, Tree, User } from '../types';
 import {
   getTreeCorridor,
   getTreeMilestone,
   getTreeStreetCode,
   STREET_CORRIDORS_LIST,
 } from '../utils/treeUtils';
+import { CAN_THO_ZONES, getTreeZoneId, UrbanZone } from '../utils/zoneUtils';
 
 interface MapViewProps {
+  currentUser: User;
   onSelectTree: (tree: Tree) => void;
   onOpenCareModal: (treeId: string) => void;
   onOpenIncidentReport: (treeId?: string) => void;
+  onOpenAddTree: (coords?: { latitude: number; longitude: number; address?: string }) => void;
+  onOpenEditTree: (tree: Tree) => void;
+  onTreeUpdated?: () => void;
 }
 
 export const MapView: React.FC<MapViewProps> = ({
+  currentUser,
   onSelectTree,
   onOpenCareModal,
   onOpenIncidentReport,
+  onOpenAddTree,
+  onOpenEditTree,
+  onTreeUpdated,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
+  const tempPinLayerRef = useRef<L.LayerGroup | null>(null);
+  const userLocationLayerRef = useRef<L.LayerGroup | null>(null);
+  const treeMarkersMapRef = useRef<Map<string, L.Marker>>(new Map());
 
+  // Filter States
   const [showTrees, setShowTrees] = useState(true);
   const [showIncidents, setShowIncidents] = useState(true);
   const [selectedHealth, setSelectedHealth] = useState<string>('ALL');
   const [selectedCorridorFilter, setSelectedCorridorFilter] = useState<string>('ALL');
+
+  // 🏛️ Multi-Zone / District Jurisdiction State
+  const [selectedZoneId, setSelectedZoneId] = useState<string>('all');
+
+  // Selection Drawers
   const [activeSelectedTree, setActiveSelectedTree] = useState<Tree | null>(null);
   const [activeSelectedIncident, setActiveSelectedIncident] = useState<Incident | null>(null);
 
+  // 🎯 Admin Pin-Adding Mode
+  const [isPinAddMode, setIsPinAddMode] = useState<boolean>(false);
+  const isPinAddModeRef = useRef<boolean>(false);
+  isPinAddModeRef.current = isPinAddMode;
+
+  // 📍 Reposition / Relocate Mode for a selected Tree
+  const [isRepositioning, setIsRepositioning] = useState<boolean>(false);
+  const [repositionedCoords, setRepositionedCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  // 🗑️ Delete Tree Confirmation Modal
+  const [treeToDelete, setTreeToDelete] = useState<Tree | null>(null);
+  const [deleteReason, setDeleteReason] = useState<string>('Chặt hạ giải tỏa quy hoạch');
+
+  // 🔍 Cursor Live Coordinates
+  const [cursorCoords, setCursorCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Notification Toast state
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
   const trees = storage.getTrees();
   const incidents = storage.getIncidents();
+  const isAdmin = currentUser.role === 'ADMIN';
 
+  const activeZone = CAN_THO_ZONES.find((z) => z.id === selectedZoneId) || CAN_THO_ZONES[0];
+
+  // 1. Initialize Map
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
     if (!mapInstanceRef.current) {
-      // Initialize map centered at Can Tho City (Ninh Kieu Wharf)
+      // Centered at Can Tho City
       const map = L.map(mapContainerRef.current, {
-        center: [10.0345, 105.7882],
-        zoom: 15,
+        center: activeZone.center,
+        zoom: activeZone.zoom,
         zoomControl: true,
       });
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
+        attribution: '&copy; OpenStreetMap contributors | UrbanTree Eco-GIS 4.0',
         maxZoom: 19,
       }).addTo(map);
 
-      const layerGroup = L.layerGroup().addTo(map);
-      markersLayerRef.current = layerGroup;
+      const markersGroup = L.layerGroup().addTo(map);
+      const tempGroup = L.layerGroup().addTo(map);
+      const userLocGroup = L.layerGroup().addTo(map);
+
+      markersLayerRef.current = markersGroup;
+      tempPinLayerRef.current = tempGroup;
+      userLocationLayerRef.current = userLocGroup;
       mapInstanceRef.current = map;
 
-      // Force recalculation of map container dimensions (fixes grey map bug)
+      // Mousemove coordinates
+      map.on('mousemove', (e: L.LeafletMouseEvent) => {
+        setCursorCoords({
+          lat: Number(e.latlng.lat.toFixed(6)),
+          lng: Number(e.latlng.lng.toFixed(6)),
+        });
+      });
+
+      // Click on Map for Pin Add Mode or General clicks
+      map.on('click', (e: L.LeafletMouseEvent) => {
+        const lat = Number(e.latlng.lat.toFixed(6));
+        const lng = Number(e.latlng.lng.toFixed(6));
+
+        if (isPinAddModeRef.current) {
+          // Drop a pulsing pin at clicked coordinates
+          tempPinLayerRef.current?.clearLayers();
+
+          const tempIcon = L.divIcon({
+            html: `
+              <div style="
+                background: #10b981;
+                width: 38px;
+                height: 38px;
+                border-radius: 50%;
+                border: 3px solid white;
+                box-shadow: 0 0 20px #10b981;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 18px;
+                animation: bounce 1s infinite alternate;
+              ">
+                📍
+              </div>
+            `,
+            className: 'temp-pin',
+            iconSize: [38, 38],
+            iconAnchor: [19, 38],
+          });
+
+          L.marker([lat, lng], { icon: tempIcon }).addTo(tempPinLayerRef.current!);
+
+          // Turn off pin mode
+          setIsPinAddMode(false);
+
+          // Infer estimated address based on zone
+          const estimatedAddr = `Vị trí định vị vỉa hè tại ${activeZone.name}, Cần Thơ`;
+          onOpenAddTree({ latitude: lat, longitude: lng, address: estimatedAddr });
+        }
+      });
+
+      // Force recalculation of map container dimensions
       setTimeout(() => {
         map.invalidateSize();
       }, 250);
     }
 
     return () => {
-      // cleanup on unmount
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -80,17 +192,36 @@ export const MapView: React.FC<MapViewProps> = ({
     };
   }, []);
 
-  // Update markers whenever filters or data change
+  // 2. Zone FlyTo Transition when selectedZoneId changes
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    mapInstanceRef.current.flyTo(activeZone.center, activeZone.zoom, {
+      duration: 1.2,
+      easeLinearity: 0.25,
+    });
+  }, [selectedZoneId]);
+
+  // 3. Render Markers (Filtered by Zone, Health, Corridor)
   useEffect(() => {
     if (!mapInstanceRef.current || !markersLayerRef.current) return;
 
     const layer = markersLayerRef.current;
     layer.clearLayers();
+    treeMarkersMapRef.current.clear();
 
     // 1. Add Tree Markers
     if (showTrees) {
       trees.forEach((tree) => {
+        // Zone Filter
+        if (selectedZoneId !== 'all') {
+          const treeZone = getTreeZoneId(tree);
+          if (treeZone !== selectedZoneId) return;
+        }
+
+        // Health Filter
         if (selectedHealth !== 'ALL' && tree.healthStatus !== selectedHealth) return;
+
+        // Corridor Filter
         if (
           selectedCorridorFilter !== 'ALL' &&
           getTreeCorridor(tree) !== selectedCorridorFilter
@@ -117,7 +248,7 @@ export const MapView: React.FC<MapViewProps> = ({
             height: 32px;
             border-radius: 50%;
             border: 3px solid white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.35);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -142,15 +273,20 @@ export const MapView: React.FC<MapViewProps> = ({
           iconAnchor: [16, 16],
         });
 
-        const marker = L.marker([tree.latitude, tree.longitude], { icon });
+        const marker = L.marker([tree.latitude, tree.longitude], {
+          icon,
+          draggable: false,
+        });
 
         marker.on('click', () => {
           setActiveSelectedTree(tree);
           setActiveSelectedIncident(null);
+          setIsRepositioning(false);
+          setRepositionedCoords(null);
         });
 
         marker.bindPopup(`
-          <div style="min-width: 200px; font-family: inherit;">
+          <div style="min-width: 210px; font-family: inherit;">
             <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
               <span style="background: #0f172a; color: #fde047; padding: 2px 6px; border-radius: 6px; font-weight: 900; font-family: monospace; font-size: 11px;">[${streetCode}]</span>
               <span style="font-weight: bold; font-size: 12px; color: #174B36;">${tree.displayName}</span>
@@ -167,13 +303,14 @@ export const MapView: React.FC<MapViewProps> = ({
         `);
 
         layer.addLayer(marker);
+        treeMarkersMapRef.current.set(tree.id, marker);
       });
     }
 
     // 2. Add Incident Markers
     if (showIncidents) {
       incidents.forEach((inc) => {
-        if (inc.status === 'RESOLVED') return; // only show active incidents on map
+        if (inc.status === 'RESOLVED') return;
 
         const isCritical = inc.severity === 'CRITICAL';
         const color = isCritical ? '#DC2626' : '#EA580C';
@@ -225,93 +362,393 @@ export const MapView: React.FC<MapViewProps> = ({
         layer.addLayer(marker);
       });
     }
+  }, [trees, incidents, showTrees, showIncidents, selectedHealth, selectedCorridorFilter, selectedZoneId]);
 
-    // Force map tile redraw
-    if (mapInstanceRef.current) {
-      setTimeout(() => {
-        mapInstanceRef.current?.invalidateSize();
-      }, 200);
+  // 4. Handle Repositioning Toggle
+  const startRepositioning = (tree: Tree) => {
+    setIsRepositioning(true);
+    setRepositionedCoords({ lat: tree.latitude, lng: tree.longitude });
+
+    const marker = treeMarkersMapRef.current.get(tree.id);
+    if (marker) {
+      marker.dragging?.enable();
+      marker.openPopup();
+
+      marker.on('dragend', (e: any) => {
+        const { lat, lng } = e.target.getLatLng();
+        setRepositionedCoords({
+          lat: Number(lat.toFixed(6)),
+          lng: Number(lng.toFixed(6)),
+        });
+      });
+
+      showToast('Đã bật chế độ kéo thả ghim cây! Hãy kéo marker đến vị trí mới trên bản đồ.');
     }
-  }, [trees, incidents, showTrees, showIncidents, selectedHealth]);
+  };
+
+  const cancelRepositioning = () => {
+    if (activeSelectedTree) {
+      const marker = treeMarkersMapRef.current.get(activeSelectedTree.id);
+      if (marker) {
+        marker.setLatLng([activeSelectedTree.latitude, activeSelectedTree.longitude]);
+        marker.dragging?.disable();
+      }
+    }
+    setIsRepositioning(false);
+    setRepositionedCoords(null);
+  };
+
+  const saveRepositioning = async () => {
+    if (!activeSelectedTree || !repositionedCoords) return;
+
+    try {
+      await storage.updateTree(activeSelectedTree.id, {
+        latitude: repositionedCoords.lat,
+        longitude: repositionedCoords.lng,
+      });
+
+      const updatedTree = storage.getTreeById(activeSelectedTree.id);
+      if (updatedTree) {
+        setActiveSelectedTree(updatedTree);
+      }
+
+      const marker = treeMarkersMapRef.current.get(activeSelectedTree.id);
+      if (marker) {
+        marker.dragging?.disable();
+      }
+
+      setIsRepositioning(false);
+      setRepositionedCoords(null);
+      showToast('Đã lưu tọa độ mới và cập nhật Blockchain Smart Contract thành công!');
+      onTreeUpdated?.();
+    } catch (err: any) {
+      alert('Lỗi cập nhật tọa độ: ' + err.message);
+    }
+  };
+
+  // 5. Handle Tree Deletion / Giải tỏa
+  const confirmDeleteTree = () => {
+    if (!treeToDelete) return;
+
+    const success = storage.deleteTree(treeToDelete.id);
+    if (success) {
+      // Remove marker from map
+      const marker = treeMarkersMapRef.current.get(treeToDelete.id);
+      if (marker) {
+        markersLayerRef.current?.removeLayer(marker);
+        treeMarkersMapRef.current.delete(treeToDelete.id);
+      }
+
+      setActiveSelectedTree(null);
+      setTreeToDelete(null);
+      showToast(`Đã giải tỏa cây [${treeToDelete.streetCode || treeToDelete.publicCode}] khỏi cơ sở dữ liệu GIS!`);
+      onTreeUpdated?.();
+    } else {
+      alert('Không thể xóa cây.');
+    }
+  };
+
+  // 6. My Live Location (GPS Navigator)
+  const handleLocateMe = () => {
+    if (!navigator.geolocation) {
+      alert('Trình duyệt của bạn không hỗ trợ định vị GPS.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+
+        userLocationLayerRef.current?.clearLayers();
+
+        const locIcon = L.divIcon({
+          html: `
+            <div style="position: relative; width: 24px; height: 24px;">
+              <div style="
+                position: absolute;
+                inset: -8px;
+                border-radius: 50%;
+                background: rgba(59, 130, 246, 0.35);
+                animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+              "></div>
+              <div style="
+                position: absolute;
+                inset: 0;
+                border-radius: 50%;
+                background: #2563eb;
+                border: 3px solid white;
+                box-shadow: 0 0 14px rgba(37,99,235,0.7);
+              "></div>
+            </div>
+          `,
+          className: 'user-loc-pin',
+          iconSize: [24, 24],
+          iconAnchor: [12, 12],
+        });
+
+        L.marker([lat, lng], { icon: locIcon })
+          .bindPopup('<strong>📍 Vị trí hiện tại của bạn</strong>')
+          .addTo(userLocationLayerRef.current!);
+
+        mapInstanceRef.current?.flyTo([lat, lng], 17, { duration: 1.5 });
+        showToast('Đã bắt tọa độ GPS thực tế của bạn!');
+      },
+      (err) => {
+        showToast('Không thể lấy GPS: ' + err.message + '. Bay về trung tâm Cần Thơ.');
+        mapInstanceRef.current?.flyTo([10.0345, 105.7882], 15);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
+
+  // Filtered stats for current view
+  const currentZoneTrees =
+    selectedZoneId === 'all'
+      ? trees
+      : trees.filter((t) => getTreeZoneId(t) === selectedZoneId);
+
+  const goodTreesCount = currentZoneTrees.filter((t) => t.healthStatus === 'GOOD').length;
+  const goodRate = currentZoneTrees.length > 0 ? Math.round((goodTreesCount / currentZoneTrees.length) * 100) : 100;
 
   return (
-    <div className="space-y-4">
-      {/* Top Map Control Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 bento-card p-4 dark:bg-[#0c1812] dark:border-emerald-500/20">
-        <div>
-          <h1 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-800 flex items-center justify-center text-emerald-700 dark:text-emerald-400">
-              <MapPin className="w-4 h-4" />
+    <div className="space-y-3.5 animate-fade-in">
+      {/* 👑 ADMIN MULTI-DISTRICT / ZONE CONTROLLER BAR */}
+      <div className="bento-card p-3.5 sm:p-4 dark:bg-[#0c1812] dark:border-emerald-500/20 flex flex-col gap-3">
+        {/* Row 1: Header + Admin Badge + Location Action Buttons */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-800 flex items-center justify-center text-emerald-700 dark:text-emerald-400">
+                <MapPin className="w-4 h-4" />
+              </div>
+              <h1 className="text-base font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <span>Bản đồ Số Cây Xanh &amp; Không Gian GIS Đô Thị</span>
+                {isAdmin && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 font-bold flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                    <span>ADMIN JURISDICTION</span>
+                  </span>
+                )}
+              </h1>
             </div>
-            <span>Bản đồ Số Cây xanh &amp; Điểm nóng Sự cố GIS</span>
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Tọa độ GPS chuẩn xác từ cơ sở dữ liệu và vị trí phản ánh thời gian thực của người dân.
-          </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              {activeZone.agency} · {activeZone.description}
+            </p>
+          </div>
+
+          {/* Quick Actions (GPS Me + Add Tree on Map) */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* GPS Locate Me Button */}
+            <button
+              type="button"
+              onClick={handleLocateMe}
+              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              title="Định vị tọa độ thiết bị của tôi"
+            >
+              <Navigation className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <span>Vị trí của tôi</span>
+            </button>
+
+            {/* Admin Add Tree via Map Pin */}
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  const nextState = !isPinAddMode;
+                  setIsPinAddMode(nextState);
+                  if (nextState) {
+                    showToast('🎯 Chế độ ghim đang bật: Hãy click bất kỳ điểm nào trên bản đồ để cắm mốc cây mới!');
+                  }
+                }}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
+                  isPinAddMode
+                    ? 'bg-rose-600 text-white animate-pulse shadow-rose-500/30 ring-2 ring-rose-400'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20'
+                }`}
+              >
+                <Crosshair className="w-3.5 h-3.5" />
+                <span>{isPinAddMode ? 'Hủy ghim vị trí' : '➕ Ghim thêm cây trên map'}</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Filter Controls */}
-        <div className="flex flex-wrap items-center gap-2.5 text-xs">
-          <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-emerald-950/30 px-3 py-1.5 rounded-full border border-slate-200 dark:border-emerald-800/60">
-            <input
-              type="checkbox"
-              checked={showTrees}
-              onChange={(e) => setShowTrees(e.target.checked)}
-              className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-            />
-            <span className="font-semibold text-emerald-800 dark:text-emerald-300">Cây xanh ({trees.length})</span>
-          </label>
+        {/* Row 2: 🏛️ NÚT ĐỔI / CHỌN KHU VỰC QUẢN LÝ (MULTI-ZONE SELECTOR) */}
+        <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
+            <span className="text-xs font-extrabold text-slate-600 dark:text-slate-300 uppercase tracking-wider shrink-0 flex items-center gap-1">
+              <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Khu vực:</span>
+            </span>
 
-          {/* Lọc Tuyến Phố */}
-          <select
-            value={selectedCorridorFilter}
-            onChange={(e) => setSelectedCorridorFilter(e.target.value)}
-            className="px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 cursor-pointer"
-          >
-            <option value="ALL">📍 Tất cả tuyến đường</option>
-            {STREET_CORRIDORS_LIST.map((c) => (
-              <option key={c.id} value={c.name}>
-                {c.name} ({c.prefix})
-              </option>
-            ))}
-          </select>
+            {/* 6 District / Zone Buttons */}
+            {CAN_THO_ZONES.map((zone) => {
+              const isSelected = selectedZoneId === zone.id;
+              const countInZone =
+                zone.id === 'all'
+                  ? trees.length
+                  : trees.filter((t) => getTreeZoneId(t) === zone.id).length;
 
-          <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-200 bg-rose-50 dark:bg-rose-950/30 px-3 py-1.5 rounded-full border border-rose-200 dark:border-rose-800/60">
-            <input
-              type="checkbox"
-              checked={showIncidents}
-              onChange={(e) => setShowIncidents(e.target.checked)}
-              className="rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
-            />
-            <span className="font-semibold text-rose-800 dark:text-rose-300">Sự cố ({incidents.filter((i) => i.status !== 'RESOLVED').length})</span>
-          </label>
-
-          <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 dark:border-slate-800">
-            <span className="text-slate-500 dark:text-slate-400">Sức khỏe:</span>
-            <select
-              value={selectedHealth}
-              onChange={(e) => setSelectedHealth(e.target.value)}
-              className="px-2.5 py-1 text-xs border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500"
-            >
-              <option value="ALL">Tất cả</option>
-              <option value="GOOD">Tốt</option>
-              <option value="FAIR">Bình thường</option>
-              <option value="POOR">Kém</option>
-              <option value="CRITICAL">Nguy cấp</option>
-            </select>
+              return (
+                <button
+                  key={zone.id}
+                  type="button"
+                  onClick={() => setSelectedZoneId(zone.id)}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer border ${
+                    isSelected
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                      : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900/90 dark:hover:bg-slate-800 dark:text-slate-300 dark:border-slate-800'
+                  }`}
+                >
+                  <span>{zone.shortName}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-extrabold ${
+                      isSelected
+                        ? 'bg-white/25 text-white'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    {countInZone}
+                  </span>
+                </button>
+              );
+            })}
           </div>
+
+          {/* District Quick Stats Pill */}
+          <div className="flex items-center gap-3 text-[11px] font-bold text-slate-600 dark:text-slate-300 self-end lg:self-auto shrink-0">
+            <span>Cây trong vùng: <strong className="text-emerald-700 dark:text-emerald-400">{currentZoneTrees.length} cây</strong></span>
+            <span>·</span>
+            <span>Khỏe mạnh: <strong className="text-teal-700 dark:text-teal-400">{goodRate}%</strong></span>
+          </div>
+        </div>
+
+        {/* Row 3: Sub-filters (Trees checkbox, Corridor dropdown, Health status) */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-emerald-950/30 px-3 py-1 rounded-full border border-slate-200 dark:border-emerald-800/60">
+              <input
+                type="checkbox"
+                checked={showTrees}
+                onChange={(e) => setShowTrees(e.target.checked)}
+                className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+              />
+              <span className="font-semibold text-emerald-800 dark:text-emerald-300">Cây xanh ({currentZoneTrees.length})</span>
+            </label>
+
+            {/* Lọc Tuyến Phố */}
+            <select
+              value={selectedCorridorFilter}
+              onChange={(e) => setSelectedCorridorFilter(e.target.value)}
+              className="px-3 py-1 text-xs font-semibold border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 cursor-pointer"
+            >
+              <option value="ALL">📍 Tất cả tuyến đường</option>
+              {STREET_CORRIDORS_LIST.map((c) => (
+                <option key={c.id} value={c.name}>
+                  {c.name} ({c.prefix})
+                </option>
+              ))}
+            </select>
+
+            <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-200 bg-rose-50 dark:bg-rose-950/30 px-3 py-1 rounded-full border border-rose-200 dark:border-rose-800/60">
+              <input
+                type="checkbox"
+                checked={showIncidents}
+                onChange={(e) => setShowIncidents(e.target.checked)}
+                className="rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
+              />
+              <span className="font-semibold text-rose-800 dark:text-rose-300">
+                Sự cố ({incidents.filter((i) => i.status !== 'RESOLVED').length})
+              </span>
+            </label>
+
+            <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 dark:border-slate-800">
+              <span className="text-slate-500 dark:text-slate-400">Sức khỏe:</span>
+              <select
+                value={selectedHealth}
+                onChange={(e) => setSelectedHealth(e.target.value)}
+                className="px-2.5 py-1 text-xs border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500"
+              >
+                <option value="ALL">Tất cả</option>
+                <option value="GOOD">Tốt</option>
+                <option value="FAIR">Bình thường</option>
+                <option value="POOR">Kém</option>
+                <option value="CRITICAL">Nguy cấp</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Current Live Cursor GPS Coordinates */}
+          {cursorCoords && (
+            <div className="font-mono text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800">
+              📍 {cursorCoords.lat.toFixed(5)}, {cursorCoords.lng.toFixed(5)}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Map Container Layout */}
+      {/* 🗺️ MAP CONTAINER */}
       <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 dark:border-emerald-500/20 shadow-lg shadow-slate-900/5 h-[620px] bg-slate-100 dark:bg-slate-950">
-        <div ref={mapContainerRef} className="w-full h-full z-10" />
+        {/* Banner while Pin-Adding mode is active */}
+        {isPinAddMode && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 bg-emerald-600 text-white px-4 py-2 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-bold animate-bounce pointer-events-auto">
+            <Crosshair className="w-4 h-4 animate-spin" />
+            <span>🎯 CHẾ ĐỘ GHIM: Hãy click vào vỉa hè / vị trí trên bản đồ để cắm mốc cây xanh mới</span>
+            <button
+              onClick={() => setIsPinAddMode(false)}
+              className="ml-2 bg-emerald-700 hover:bg-emerald-800 p-1 rounded-lg cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* Live Repositioning Banner for Selected Tree */}
+        {isRepositioning && activeSelectedTree && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 bg-amber-500 text-slate-950 px-4 py-2 rounded-2xl shadow-xl flex items-center gap-3 text-xs font-black animate-fade-in pointer-events-auto">
+            <Compass className="w-4 h-4 animate-spin" />
+            <span>
+              📍 Đang định vị lại [{getTreeStreetCode(activeSelectedTree)}]: Kéo thả marker trên map
+              {repositionedCoords && ` (${repositionedCoords.lat}, ${repositionedCoords.lng})`}
+            </span>
+            <div className="flex items-center gap-1.5 ml-2">
+              <button
+                onClick={saveRepositioning}
+                className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg cursor-pointer flex items-center gap-1"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>Lưu vị trí mới</span>
+              </button>
+              <button
+                onClick={cancelRepositioning}
+                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-900 text-white rounded-lg cursor-pointer flex items-center gap-1"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Hủy</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Toast Alert */}
+        {toastMessage && (
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 bg-slate-900/95 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-2xl border border-slate-700 animate-in fade-in slide-in-from-top-2">
+            {toastMessage}
+          </div>
+        )}
+
+        {/* Map Element */}
+        <div
+          ref={mapContainerRef}
+          className={`w-full h-full z-10 ${isPinAddMode ? 'cursor-crosshair' : ''}`}
+        />
 
         {/* Legend Overlay */}
         <div className="absolute bottom-4 left-4 z-20 bg-white/95 dark:bg-[#0c1812]/95 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200/90 dark:border-emerald-500/30 shadow-xl text-xs space-y-2 pointer-events-auto">
           <div className="font-bold text-slate-900 dark:text-slate-100 text-[11px] uppercase tracking-wider mb-1 flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span>Chú giải bản đồ GIS</span>
+            <span>Chú giải GIS · {activeZone.shortName}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block shadow-xs" />
@@ -335,9 +772,10 @@ export const MapView: React.FC<MapViewProps> = ({
           </div>
         </div>
 
-        {/* Selected Tree Floating Drawer (if a tree is clicked) */}
+        {/* 🌿 SELECTED TREE FLOATING DRAWER (WITH ADMIN CRUD & REPOSITION) */}
         {activeSelectedTree && (
-          <div className="absolute top-4 right-4 z-20 w-84 bg-white dark:bg-[#0c1812] rounded-2xl border border-[#E0EBDD] dark:border-emerald-500/30 shadow-2xl p-4 text-xs space-y-3 animate-in fade-in slide-in-from-right-4 duration-150">
+          <div className="absolute top-4 right-4 z-20 w-88 bg-white dark:bg-[#0c1812] rounded-2xl border border-[#E0EBDD] dark:border-emerald-500/30 shadow-2xl p-4 text-xs space-y-3 animate-in fade-in slide-in-from-right-4 duration-150">
+            {/* Header */}
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-1.5">
@@ -348,33 +786,83 @@ export const MapView: React.FC<MapViewProps> = ({
                     {activeSelectedTree.publicCode}
                   </span>
                 </div>
-                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm mt-1">{activeSelectedTree.displayName}</h3>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm mt-1">
+                  {activeSelectedTree.displayName}
+                </h3>
                 <p className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mt-0.5">
                   📍 {getTreeMilestone(activeSelectedTree)}
                 </p>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                  {getTreeCorridor(activeSelectedTree)}
+                  {getTreeCorridor(activeSelectedTree)} · Tọa độ: {activeSelectedTree.latitude.toFixed(5)}, {activeSelectedTree.longitude.toFixed(5)}
                 </p>
               </div>
               <button
-                onClick={() => setActiveSelectedTree(null)}
+                onClick={() => {
+                  setActiveSelectedTree(null);
+                  setIsRepositioning(false);
+                }}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
+            {/* Metrics */}
             <div className="grid grid-cols-2 gap-2 p-2.5 bg-slate-50 dark:bg-slate-900/80 rounded-lg text-slate-600 dark:text-slate-300 font-mono text-[11px] border border-transparent dark:border-slate-800">
               <div>
                 <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Sức khỏe</span>
                 <span className="font-bold text-slate-800 dark:text-slate-100">{activeSelectedTree.healthStatus}</span>
               </div>
               <div>
-                <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Đường kính</span>
-                <span className="font-bold text-slate-800 dark:text-slate-100">{activeSelectedTree.diameterCm || 30} cm</span>
+                <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Đường kính / Cao</span>
+                <span className="font-bold text-slate-800 dark:text-slate-100">{activeSelectedTree.diameterCm || 30}cm / {activeSelectedTree.heightM || 8}m</span>
               </div>
             </div>
 
+            {/* 🛠️ ADMIN CRUD & REPOSITION ACTIONS */}
+            {isAdmin && (
+              <div className="p-2.5 bg-amber-50/70 dark:bg-amber-950/30 rounded-xl border border-amber-200/80 dark:border-amber-800/40 space-y-2">
+                <div className="text-[10px] font-extrabold uppercase tracking-wider text-amber-800 dark:text-amber-300 flex items-center justify-between">
+                  <span>Quyền Quản Trị Viên (Admin)</span>
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-1.5">
+                  {/* Sửa thông tin cây */}
+                  <button
+                    type="button"
+                    onClick={() => onOpenEditTree(activeSelectedTree)}
+                    className="py-1.5 px-2 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-lg font-bold border border-slate-200 dark:border-slate-700 transition-colors flex items-center justify-center gap-1 cursor-pointer shadow-2xs"
+                  >
+                    <Edit className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                    <span>Sửa thông tin</span>
+                  </button>
+
+                  {/* Định vị lại tọa độ (Kéo thả marker) */}
+                  <button
+                    type="button"
+                    onClick={() => startRepositioning(activeSelectedTree)}
+                    className="py-1.5 px-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg font-black transition-colors flex items-center justify-center gap-1 cursor-pointer shadow-2xs"
+                    title="Kéo thả marker trên map để cập nhật tọa độ GPS chuẩn xác"
+                  >
+                    <Compass className="w-3 h-3" />
+                    <span>Định vị lại</span>
+                  </button>
+                </div>
+
+                {/* Xóa / Giải tỏa cây */}
+                <button
+                  type="button"
+                  onClick={() => setTreeToDelete(activeSelectedTree)}
+                  className="w-full py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 rounded-lg font-bold border border-rose-200 dark:border-rose-800/40 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <Trash2 className="w-3 h-3 text-rose-600" />
+                  <span>Giải tỏa / Xóa hồ sơ cây này</span>
+                </button>
+              </div>
+            )}
+
+            {/* Standard View Actions */}
             <div className="flex items-center gap-2 pt-1">
               <button
                 onClick={() => onSelectTree(activeSelectedTree)}
@@ -393,7 +881,7 @@ export const MapView: React.FC<MapViewProps> = ({
           </div>
         )}
 
-        {/* Selected Incident Floating Drawer (if an incident is clicked) */}
+        {/* Selected Incident Drawer */}
         {activeSelectedIncident && (
           <div className="absolute top-4 right-4 z-20 w-80 bg-white dark:bg-[#0c1812] rounded-xl border border-red-200 dark:border-rose-500/30 shadow-xl p-4 text-xs space-y-3 animate-in fade-in slide-in-from-right-4 duration-150">
             <div className="flex items-start justify-between">
@@ -422,6 +910,67 @@ export const MapView: React.FC<MapViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* ⚠️ DIALOG XÁC NHẬN GIẢI TỎA / XÓA CÂY (ADMIN CONFIRMATION MODAL) */}
+      {treeToDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in"
+          data-lenis-prevent
+          onWheel={(e) => e.stopPropagation()}
+        >
+          <div className="bg-white dark:bg-[#0c1812] rounded-2xl max-w-md w-full border border-rose-300 dark:border-rose-800/80 p-5 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400">
+              <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-950/80 flex items-center justify-center">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-slate-100">Xác nhận Giải tỏa / Xóa Cây</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Thao tác này sẽ gỡ bỏ cây khỏi bản đồ GIS.</p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-rose-50/60 dark:bg-rose-950/30 rounded-xl border border-rose-200 dark:border-rose-800/40 text-xs space-y-1">
+              <div>Mã tuyến: <strong className="font-mono text-slate-900 dark:text-slate-100">[{getTreeStreetCode(treeToDelete)}]</strong> ({treeToDelete.publicCode})</div>
+              <div>Tên cây: <strong className="text-slate-900 dark:text-slate-100">{treeToDelete.displayName}</strong></div>
+              <div>Vị trí: {getTreeMilestone(treeToDelete)}</div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Lý do giải tỏa / xóa:
+              </label>
+              <select
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-rose-500"
+              >
+                <option value="Chặt hạ giải tỏa quy hoạch">Chặt hạ giải tỏa quy hoạch mở rộng đường</option>
+                <option value="Cây chết khô bão đổ">Cây chết khô / ngã đổ sau mưa bão</option>
+                <option value="Di dời sang vườn ươm">Bứng dời sang vườn ươm thành phố</option>
+                <option value="Sai lệch dữ liệu thực địa">Sai lệch dữ liệu Excel so với thực địa</option>
+              </select>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setTreeToDelete(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 rounded-xl cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteTree}
+                className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl cursor-pointer flex items-center gap-1.5 shadow-sm"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Xác nhận giải tỏa</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

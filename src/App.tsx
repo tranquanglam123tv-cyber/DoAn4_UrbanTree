@@ -59,6 +59,8 @@ export default function App() {
   const [selectedTreeForDetail, setSelectedTreeForDetail] = useState<Tree | null>(null);
   const [selectedTreeForQr, setSelectedTreeForQr] = useState<Tree | null>(null);
   const [selectedTreeForEdit, setSelectedTreeForEdit] = useState<Tree | null>(null);
+  const [addTreeCoords, setAddTreeCoords] = useState<{ latitude: number; longitude: number; address?: string } | null>(null);
+  const [treeVersion, setTreeVersion] = useState<number>(0);
   const [isAddTreeOpen, setIsAddTreeOpen] = useState(false);
   const [isCareModalOpen, setIsCareModalOpen] = useState(false);
   const [careModalTreeId, setCareModalTreeId] = useState<string | undefined>(undefined);
@@ -345,9 +347,21 @@ export default function App() {
 
         {activeTab === 'map' && (
           <MapView
+            key={`map-view-${treeVersion}`}
+            currentUser={currentUser}
             onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
             onOpenCareModal={handleOpenCareModal}
             onOpenIncidentReport={() => setActiveTab('incidents')}
+            onOpenAddTree={(coords) => {
+              setAddTreeCoords(coords || null);
+              setSelectedTreeForEdit(null);
+              setIsAddTreeOpen(true);
+            }}
+            onOpenEditTree={(tree) => {
+              setSelectedTreeForEdit(tree);
+              setAddTreeCoords(null);
+            }}
+            onTreeUpdated={() => setTreeVersion((v) => v + 1)}
           />
         )}
 
@@ -440,11 +454,14 @@ export default function App() {
       {(isAddTreeOpen || selectedTreeForEdit) && (
         <TreeFormModal
           tree={selectedTreeForEdit}
+          initialCoords={addTreeCoords}
           onClose={() => {
             setIsAddTreeOpen(false);
             setSelectedTreeForEdit(null);
+            setAddTreeCoords(null);
           }}
           onSaved={() => {
+            setTreeVersion((v) => v + 1);
             showToast(selectedTreeForEdit ? 'Cập nhật cây thành công!' : 'Thêm cây và neo Blockchain thành công!');
           }}
         />

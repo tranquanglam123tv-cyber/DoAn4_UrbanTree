@@ -439,6 +439,94 @@ export const INITIAL_TREES: Tree[] = [
     createdAt: '2026-01-10T08:00:00.000Z',
     updatedAt: '2026-11-01T04:30:00.000Z',
   },
+  // --- TUYẾN QUẬN CÁI RĂNG (VÕ NGUYÊN GIÁP & CẦU CẦN THƠ) ---
+  {
+    id: 'tree-cr-01',
+    publicCode: 'TREE-CR-01',
+    streetCode: 'CR-01',
+    streetCorridor: 'Đại lộ Võ Nguyên Giáp',
+    houseNumberMilestone: 'Gần cầu Quang Trung, Phường Hưng Phú',
+    sequenceNumber: 1,
+    treeTypeId: 'type-bang',
+    displayName: 'Cây Bàng Đài Loan Tuyến Cái Răng #01',
+    address: 'Đại lộ Võ Nguyên Giáp, Phường Hưng Phú, Quận Cái Răng, Cần Thơ',
+    latitude: 10.0125,
+    longitude: 105.7982,
+    plantedAt: '2022-04-12',
+    healthStatus: 'GOOD',
+    diameterCm: 30,
+    heightM: 8.0,
+    imageUrl: 'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=800&q=80',
+    isActive: true,
+    createdAt: '2026-02-15T08:00:00.000Z',
+    updatedAt: '2026-11-01T04:30:00.000Z',
+  },
+  // --- TUYẾN QUẬN BÌNH THỦY (ĐẠI LỘ VÕ VĂN KIỆT & SÂN BAY) ---
+  {
+    id: 'tree-bt-01',
+    publicCode: 'TREE-BT-01',
+    streetCode: 'BT-01',
+    streetCorridor: 'Đại lộ Võ Văn Kiệt',
+    houseNumberMilestone: 'Vòng xoay hướng vào Sân bay Cần Thơ',
+    sequenceNumber: 1,
+    treeTypeId: 'type-gianghuong',
+    displayName: 'Cây Giáng Hương Cảnh Quan Sân Bay #01',
+    address: 'Đại lộ Võ Văn Kiệt, Phường An Thới, Quận Bình Thủy, Cần Thơ',
+    latitude: 10.0682,
+    longitude: 105.7425,
+    plantedAt: '2020-11-20',
+    healthStatus: 'GOOD',
+    diameterCm: 35,
+    heightM: 9.2,
+    imageUrl: 'https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=800&q=80',
+    isActive: true,
+    createdAt: '2026-02-15T08:00:00.000Z',
+    updatedAt: '2026-11-01T04:30:00.000Z',
+  },
+  // --- TUYẾN QUẬN Ô MÔN (QUỐC LỘ 91 & KCN TRÀ NÓC) ---
+  {
+    id: 'tree-om-01',
+    publicCode: 'TREE-OM-01',
+    streetCode: 'OM-01',
+    streetCorridor: 'Quốc Lộ 91',
+    houseNumberMilestone: 'Cổng KCN Trà Nóc, Phường Trà Nóc',
+    sequenceNumber: 1,
+    treeTypeId: 'type-sao',
+    displayName: 'Cây Sao Đen Vành Đai Xanh Ô Môn #01',
+    address: 'Quốc Lộ 91, Phường Trà Nóc, Quận Ô Môn, Cần Thơ',
+    latitude: 10.1150,
+    longitude: 105.6540,
+    plantedAt: '2019-08-15',
+    healthStatus: 'FAIR',
+    diameterCm: 45,
+    heightM: 14.5,
+    imageUrl: 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80',
+    isActive: true,
+    createdAt: '2026-02-15T08:00:00.000Z',
+    updatedAt: '2026-11-01T04:30:00.000Z',
+  },
+  // --- TUYẾN HUYỆN PHONG ĐIỀN (VÀNH ĐAI XANH DU LỊCH SINH THÁI) ---
+  {
+    id: 'tree-pd-01',
+    publicCode: 'TREE-PD-01',
+    streetCode: 'PD-01',
+    streetCorridor: 'Nguyễn Văn Cừ Nối Dài',
+    houseNumberMilestone: 'Khu du lịch sinh thái Mỹ Khánh',
+    sequenceNumber: 1,
+    treeTypeId: 'type-me',
+    displayName: 'Cây Me Tây Sinh Thái Phong Điền #01',
+    address: 'Tuyến Nguyễn Văn Cừ Nối Dài, Xã Mỹ Khánh, Huyện Phong Điền, Cần Thơ',
+    latitude: 9.9920,
+    longitude: 105.7050,
+    plantedAt: '2018-05-10',
+    healthStatus: 'GOOD',
+    diameterCm: 55,
+    heightM: 16.0,
+    imageUrl: 'https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?auto=format&fit=crop&w=800&q=80',
+    isActive: true,
+    createdAt: '2026-02-15T08:00:00.000Z',
+    updatedAt: '2026-11-01T04:30:00.000Z',
+  },
 ];
 
 export const INITIAL_CARE_RECORDS: CareRecord[] = [
@@ -811,6 +899,16 @@ class StorageService {
     this.trees[index] = updatedTree;
     this.saveAll();
     return updatedTree;
+  }
+
+  public deleteTree(id: string): boolean {
+    const prevLen = this.trees.length;
+    this.trees = this.trees.filter((t) => t.id !== id);
+    if (this.trees.length !== prevLen) {
+      this.saveAll();
+      return true;
+    }
+    return false;
   }
 
   /**

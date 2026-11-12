@@ -34,11 +34,12 @@ import { DigitalAlloyTag } from './DigitalAlloyTag';
 
 interface TreeFormModalProps {
   tree: Tree | null; // null if adding new
+  initialCoords?: { latitude: number; longitude: number; address?: string } | null;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, onClose, onSaved }) => {
+export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, initialCoords, onClose, onSaved }) => {
   const treeTypes = storage.getTreeTypes();
   const allExistingTrees = storage.getTrees();
 
@@ -55,10 +56,10 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, onClose, onS
   const [streetCode, setStreetCode] = useState(tree?.streetCode || '');
   const [displayName, setDisplayName] = useState(tree?.displayName || '');
   const [treeTypeId, setTreeTypeId] = useState(tree?.treeTypeId || treeTypes[0]?.id || '');
-  const [address, setAddress] = useState(tree?.address || '');
+  const [address, setAddress] = useState(tree?.address || initialCoords?.address || '');
   const [houseMilestone, setHouseMilestone] = useState(tree?.houseNumberMilestone || '');
-  const [latitude, setLatitude] = useState(tree?.latitude || 10.036829);
-  const [longitude, setLongitude] = useState(tree?.longitude || 105.782541);
+  const [latitude, setLatitude] = useState(tree?.latitude ?? initialCoords?.latitude ?? 10.036829);
+  const [longitude, setLongitude] = useState(tree?.longitude ?? initialCoords?.longitude ?? 105.782541);
   const [plantedAt, setPlantedAt] = useState(tree?.plantedAt || '2023-01-01');
   const [healthStatus, setHealthStatus] = useState<TreeHealthStatus>(tree?.healthStatus || 'GOOD');
   const [diameterCm, setDiameterCm] = useState(tree?.diameterCm || 30);
