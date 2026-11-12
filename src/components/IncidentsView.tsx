@@ -16,6 +16,7 @@ import {
   Upload,
   Image as ImageIcon,
   RotateCcw,
+  Wrench,
 } from 'lucide-react';
 import { storage } from '../db/storage';
 import { Incident, IncidentSeverity, IncidentStatus, IncidentUpdate, User } from '../types';
@@ -41,13 +42,16 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
     initialTreeId ? 'public_report' : currentUser.role === 'CITIZEN' ? 'public_report' : 'admin'
   );
 
-  // Admin filter & search
+  // Admin / Staff filter & search
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [staffScope, setStaffScope] = useState<'MY_ASSIGNED' | 'ALL'>('MY_ASSIGNED');
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
 
   // Status transition form state
-  const [newStatus, setNewStatus] = useState<IncidentStatus>('ASSIGNED');
+  const [newStatus, setNewStatus] = useState<IncidentStatus>(
+    currentUser.role === 'ADMIN' ? 'ASSIGNED' : 'IN_PROGRESS'
+  );
   const [assignStaffId, setAssignStaffId] = useState<string>('');
   const [transitionNote, setTransitionNote] = useState('');
   const [transitionImageUrl, setTransitionImageUrl] = useState('');
@@ -122,6 +126,10 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
     }
   }, [initialTreeId, trees]);
 
+  const myAssignedCount = incidents.filter(
+    (i) => i.assignedToUserId === currentUser.id && i.status !== 'RESOLVED' && i.status !== 'REJECTED'
+  ).length;
+
   const filteredIncidents = incidents.filter((inc) => {
     const matchesSearch =
       inc.publicCode.toLowerCase().includes(search.toLowerCase()) ||
@@ -129,7 +137,13 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
       (inc.address && inc.address.toLowerCase().includes(search.toLowerCase()));
 
     const matchesStatus = statusFilter === 'ALL' || inc.status === statusFilter;
-    return matchesSearch && matchesStatus;
+
+    const matchesScope =
+      currentUser.role === 'STAFF' && staffScope === 'MY_ASSIGNED'
+        ? inc.assignedToUserId === currentUser.id
+        : true;
+
+    return matchesSearch && matchesStatus && matchesScope;
   });
 
   const handleUpdateStatus = async (e: React.FormEvent) => {
@@ -229,10 +243,20 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
             <div className="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-700/50 flex items-center justify-center text-amber-600 dark:text-amber-400">
               <AlertTriangle className="w-4 h-4" />
             </div>
-            <span className="leading-snug">Quản lý Tiếp nhận &amp; Xử lý Sự cố Cây xanh</span>
+            <span className="leading-snug">
+              {currentUser.role === 'ADMIN'
+                ? 'Quản lý Tiếp nhận & Điều phối Sự cố Cây xanh'
+                : currentUser.role === 'STAFF'
+                ? 'Tiếp nhận & Xử lý Hiện trường Sự cố Cây xanh'
+                : 'Cổng Tiếp nhận & Tra cứu Sự cố Cây xanh'}
+            </span>
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Quy trình tiếp nhận phản ánh, phân công đội ngũ kỹ thuật, lưu vết lịch sử bất biến và bảo chứng kết quả giải quyết.
+            {currentUser.role === 'ADMIN'
+              ? 'Quy trình tiếp nhận phản ánh người dân, phân công đội ngũ kỹ thuật viên, giám sát SLA và lưu vết bất biến.'
+              : currentUser.role === 'STAFF'
+              ? 'Xem các sự cố được phân công trên địa bàn, di chuyển đến hiện trường xử lý và chụp ảnh nghiệm thu On-Chain.'
+              : 'Gửi phản ánh cây xanh nguy hiểm, gãy đổ, sâu bệnh và tra cứu tiến độ xử lý của cơ quan chức năng.'}
           </p>
         </div>
 
@@ -241,34 +265,46 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
           {currentUser.role !== 'CITIZEN' && (
             <button
               onClick={() => setActiveSubTab('admin')}
-              className={`px-3.5 py-1.5 rounded-full font-semibold transition-all whitespace-nowrap cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-full font-semibold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
                 activeSubTab === 'admin'
                   ? 'bg-emerald-600 dark:bg-emerald-500 text-white shadow-xs font-bold'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
               }`}
             >
-              Điều phối Sự cố (Admin)
+              {currentUser.role === 'ADMIN' ? (
+                <>
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Điều Phối Sự Cố (Admin)</span>
+                </>
+              ) : (
+                <>
+                  <Wrench className="w-3.5 h-3.5" />
+                  <span>Xử Lý Hiện Trường (Kỹ thuật)</span>
+                </>
+              )}
             </button>
           )}
           <button
             onClick={() => setActiveSubTab('public_report')}
-            className={`px-3.5 py-1.5 rounded-full font-semibold transition-all whitespace-nowrap cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full font-semibold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
               activeSubTab === 'public_report'
                 ? 'bg-emerald-600 dark:bg-emerald-500 text-white shadow-xs font-bold'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
             }`}
           >
-            Cổng Phản ánh Người dân
+            <AlertTriangle className="w-3.5 h-3.5" />
+            <span>Cổng Phản ánh Người dân</span>
           </button>
           <button
             onClick={() => setActiveSubTab('public_lookup')}
-            className={`px-3.5 py-1.5 rounded-full font-semibold transition-all whitespace-nowrap cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full font-semibold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
               activeSubTab === 'public_lookup'
                 ? 'bg-emerald-600 dark:bg-emerald-500 text-white shadow-xs font-bold'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
             }`}
           >
-            Tra cứu theo Mã
+            <Search className="w-3.5 h-3.5" />
+            <span>Tra cứu theo Mã</span>
           </button>
         </div>
       </div>
@@ -278,6 +314,36 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
         <div className="space-y-4">
           {/* Filter and Search Bar */}
           <div className="p-3 bg-white dark:bg-[#0c1812] rounded-xl border border-[#E0EBDD] dark:border-emerald-500/20 shadow-2xs flex flex-wrap items-center gap-3">
+            {currentUser.role === 'STAFF' && (
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setStaffScope('MY_ASSIGNED')}
+                  className={`px-2.5 py-1 text-xs rounded-md font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    staffScope === 'MY_ASSIGNED'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
+                >
+                  <span>🎯 Việc giao cho tôi</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">
+                    {myAssignedCount}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStaffScope('ALL')}
+                  className={`px-2.5 py-1 text-xs rounded-md font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    staffScope === 'ALL'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
+                >
+                  <span>🌐 Tất cả sự cố ({incidents.length})</span>
+                </button>
+              </div>
+            )}
+
             <div className="relative flex-1 min-w-[220px]">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
               <input
@@ -322,7 +388,14 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                   return (
                     <div
                       key={inc.id}
-                      onClick={() => setSelectedIncident(inc)}
+                      onClick={() => {
+                        setSelectedIncident(inc);
+                        if (currentUser.role === 'STAFF') {
+                          setNewStatus(inc.status === 'IN_PROGRESS' ? 'RESOLVED' : 'IN_PROGRESS');
+                        } else {
+                          setNewStatus('ASSIGNED');
+                        }
+                      }}
                       className={`p-4 rounded-xl border transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-[#F8FAF8] dark:bg-[#12241b] border-[#174B36] dark:border-emerald-500 ring-1 ring-[#174B36] dark:ring-emerald-500 shadow-sm'
@@ -705,7 +778,9 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                 </div>
               ) : (
                 <div className="p-8 text-center bg-white dark:bg-[#0c1812] rounded-2xl border border-[#E0EBDD] dark:border-emerald-500/20 text-slate-400 dark:text-slate-500 text-xs">
-                  Chọn một sự cố từ danh sách bên trái để điều phối và xem tiến trình xử lý.
+                  {currentUser.role === 'ADMIN'
+                    ? 'Chọn một sự cố từ danh sách bên trái để điều phối và phân công Kỹ thuật viên.'
+                    : 'Chọn một sự cố từ danh sách bên trái để cập nhật tiến độ xử lý và nghiệm thu hiện trường.'}
                 </div>
               )}
             </div>
