@@ -147,6 +147,7 @@ export const MapView: React.FC<MapViewProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
+  const rpzLayerRef = useRef<L.LayerGroup | null>(null);
   const tempPinLayerRef = useRef<L.LayerGroup | null>(null);
   const userLocationLayerRef = useRef<L.LayerGroup | null>(null);
   const treeMarkersMapRef = useRef<Map<string, L.Marker>>(new Map());
@@ -154,6 +155,7 @@ export const MapView: React.FC<MapViewProps> = ({
   // Filter States
   const [showTrees, setShowTrees] = useState(true);
   const [showIncidents, setShowIncidents] = useState(true);
+  const [showRootProtectionZone, setShowRootProtectionZone] = useState(false); // 🛡️ Bật/Tắt Vùng bảo vệ rễ (RPZ)
   const [selectedHealth, setSelectedHealth] = useState<string>('ALL');
   const [selectedCorridorFilter, setSelectedCorridorFilter] = useState<string>('ALL');
   const [selectedLocation, setSelectedLocation] = useState<string>('ALL'); // 📍 Bộ lọc Vị trí / Địa điểm
@@ -214,10 +216,12 @@ export const MapView: React.FC<MapViewProps> = ({
       }).addTo(map);
 
       const markersGroup = L.layerGroup().addTo(map);
+      const rpzGroup = L.layerGroup().addTo(map);
       const tempGroup = L.layerGroup().addTo(map);
       const userLocGroup = L.layerGroup().addTo(map);
 
       markersLayerRef.current = markersGroup;
+      rpzLayerRef.current = rpzGroup;
       tempPinLayerRef.current = tempGroup;
       userLocationLayerRef.current = userLocGroup;
       mapInstanceRef.current = map;
@@ -302,6 +306,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
     const layer = markersLayerRef.current;
     layer.clearLayers();
+    rpzLayerRef.current?.clearLayers();
     treeMarkersMapRef.current.clear();
 
     // 1. Add Tree Markers
@@ -416,6 +421,32 @@ export const MapView: React.FC<MapViewProps> = ({
 
         layer.addLayer(marker);
         treeMarkersMapRef.current.set(tree.id, marker);
+
+        // 🛡️ VÙNG BẢO VỆ RỄ CÂY (ROOT PROTECTION ZONE - RPZ) THEO TIÊU CHUẨN BS 5837
+        if (showRootProtectionZone || activeSelectedTree?.id === tree.id) {
+          const rpzRadius = Math.max(
+            3,
+            tree.canopyDiameterM ? Math.round((tree.canopyDiameterM / 2) * 10) / 10 : 3,
+            Math.round((tree.diameterCm || 25) * 0.12 * 10) / 10
+          );
+          const isCurrentSelected = activeSelectedTree?.id === tree.id;
+          const circleColor = tree.healthStatus === 'CRITICAL' ? '#EF4444' : '#F59E0B';
+          const rpzCircle = L.circle([tree.latitude, tree.longitude], {
+            radius: rpzRadius,
+            color: circleColor,
+            weight: isCurrentSelected ? 2.5 : 1.5,
+            dashArray: '5, 5',
+            fillColor: circleColor,
+            fillOpacity: isCurrentSelected ? 0.28 : 0.14,
+          });
+          rpzCircle.bindTooltip(
+            `🛡️ <strong>Vùng bảo vệ rễ (RPZ): ${rpzRadius}m</strong><br/>
+             <span>[${streetCode}] ${tree.displayName}</span><br/>
+             <span style="font-size:10px; color:#b45309;">⚠️ Chuẩn BS 5837: Cấm đào cáp / đặt máy xúc cơ giới vi phạm rễ cọc.</span>`,
+            { sticky: true }
+          );
+          rpzLayerRef.current?.addLayer(rpzCircle);
+        }
       });
     }
 
@@ -479,6 +510,8 @@ export const MapView: React.FC<MapViewProps> = ({
     incidents,
     showTrees,
     showIncidents,
+    showRootProtectionZone,
+    activeSelectedTree,
     selectedHealth,
     selectedCorridorFilter,
     selectedLocation,
@@ -867,6 +900,22 @@ export const MapView: React.FC<MapViewProps> = ({
               </span>
             </label>
 
+            {/* 🛡️ CÔNG TẮC BẬT VÙNG BẢO VỆ RỄ CÂY (ROOT PROTECTION ZONE - RPZ) */}
+            <label
+              className="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-200 bg-amber-50 dark:bg-amber-950/30 px-3 py-1 rounded-full border border-amber-300 dark:border-amber-700/60 shadow-2xs hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+              title="Quy chuẩn BS 5837: Hiển thị bán kính bảo vệ rễ cây an toàn khi thi công đào vỉa hè / đặt cáp viễn thông"
+            >
+              <input
+                type="checkbox"
+                checked={showRootProtectionZone}
+                onChange={(e) => setShowRootProtectionZone(e.target.checked)}
+                className="rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+              />
+              <span className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1">
+                <span>🛡️ Vùng rễ (RPZ)</span>
+              </span>
+            </label>
+
             <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 dark:border-slate-800">
               <span className="text-slate-500 dark:text-slate-400">Sức khỏe:</span>
               <select
@@ -1012,14 +1061,26 @@ export const MapView: React.FC<MapViewProps> = ({
             </div>
 
             {/* Metrics */}
-            <div className="grid grid-cols-2 gap-2 p-2.5 bg-slate-50 dark:bg-slate-900/80 rounded-lg text-slate-600 dark:text-slate-300 font-mono text-[11px] border border-transparent dark:border-slate-800">
+            <div className="grid grid-cols-3 gap-2 p-2.5 bg-slate-50 dark:bg-slate-900/80 rounded-lg text-slate-600 dark:text-slate-300 font-mono text-[11px] border border-transparent dark:border-slate-800">
               <div>
                 <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Sức khỏe</span>
                 <span className="font-bold text-slate-800 dark:text-slate-100">{activeSelectedTree.healthStatus}</span>
               </div>
               <div>
-                <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Đường kính / Cao</span>
-                <span className="font-bold text-slate-800 dark:text-slate-100">{activeSelectedTree.diameterCm || 30}cm / {activeSelectedTree.heightM || 8}m</span>
+                <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Đường kính/Cao</span>
+                <span className="font-bold text-slate-800 dark:text-slate-100">
+                  {activeSelectedTree.diameterCm || 30}cm / {activeSelectedTree.heightM || 8}m
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 dark:text-slate-500 block text-[10px]">🛡️ Vùng rễ (RPZ)</span>
+                <span className="font-bold text-amber-600 dark:text-amber-400">
+                  {Math.max(
+                    3,
+                    activeSelectedTree.canopyDiameterM ? Math.round((activeSelectedTree.canopyDiameterM / 2) * 10) / 10 : 3,
+                    Math.round((activeSelectedTree.diameterCm || 25) * 0.12 * 10) / 10
+                  )}m
+                </span>
               </div>
             </div>
 

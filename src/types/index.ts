@@ -33,6 +33,16 @@ export interface TreeType {
   woodDensity?: number; // Tỷ trọng gỗ khô (g/cm3), dùng tính toán hấp thụ CO2 Allometric i-Tree
 }
 
+export interface FellingPermit {
+  permitNumber: string; // Số quyết định / giấy phép (VD: GP-45/SXD-QLĐT)
+  issuedBy: string; // Cơ quan phê duyệt (Sở Xây Dựng TP. Cần Thơ hoặc UBND Quận/TP)
+  issuedDate: string; // Ngày ký phê duyệt (YYYY-MM-DD)
+  reason: string; // Lý do đốn hạ (Mục gốc >70%, sâu mọt nguy hiểm mùa bão, giải phóng mặt bằng)
+  approvedByOfficer: string; // Cán bộ thẩm định / ký tên
+  inspectionTeam: string; // Tổ kiểm định hiện trường (Thanh tra Đô thị & Cty Cây xanh)
+  replacementPlantingRequired?: boolean; // Bắt buộc trồng cây bù đắp
+}
+
 export interface Tree {
   id: string;
   publicCode: string; // e.g. TREE-001
@@ -52,6 +62,7 @@ export interface Tree {
   imageUrl?: string;
   diameterCm?: number;
   heightM?: number;
+  fellingPermit?: FellingPermit; // Biên bản / Giấy phép đốn hạ theo luật khi cây DEAD hoặc giải tỏa
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

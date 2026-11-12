@@ -184,6 +184,31 @@ Trong nghiệp vụ hạ tầng đô thị thông minh cấp quốc gia (Multi-T
     *(Trong đó: $\text{DBH}$ là đường kính ngang ngực cm, $H$ là chiều cao m, $\rho$ là tỷ trọng gỗ khô).*
   - Từ sinh khối tích lũy hàng năm, hệ thống nhân với tỷ lệ Carbon ($50\%$) và tỷ số phân tử $\frac{44}{12}$ để kết xuất chính xác lượng $CO_2$ cô lập (tấn/năm) và lượng Oxy hoàn lưu cho không gian sống đô thị.
 
+### Câu 8: Vùng bảo vệ rễ cây (Root Protection Zone - RPZ) trên bản đồ GIS giải quyết bài toán gì khi thi công hạ tầng đô thị?
+- **Trả lời chuyên gia hạ tầng:**
+  - $70\%$ các sự cố cây xanh ngã đổ bất ngờ vào mùa mưa bão là do các đơn vị điện lực, viễn thông hoặc thoát nước đào rãnh vỉa hè quá sát gốc làm đứt cụm rễ cọc chịu lực.
+  - Hệ thống tích hợp **Quy chuẩn Quốc tế BS 5837 (Trees in relation to design, demolition and construction)**:
+    $$RPZ = \max\left(3.0m, \frac{\text{CanopyDiameter}}{2}, \text{DBH (cm)} \times 0.12\right)$$
+  - Trên bản đồ Leaflet, khi bật công tắc `[🛡️ Vùng rễ (RPZ)]`, hệ thống vẽ vòng tròn mờ bán kính 3 - 6m xung quanh từng gốc cây, giúp các đơn vị thi công đào vỉa hè tra cứu tọa độ cấm đào bới máy xúc cơ giới, ngăn chặn tận gốc rủi ro ngã đổ.
+
+### Câu 9: Cơ chế giám sát SLA phản ứng nhanh sự cố đô thị hoạt động như thế nào?
+- **Trả lời về mặt quản trị điều hành:**
+  - Hệ thống thiết lập đồng hồ đếm ngược SLA tự động theo mức độ nghiêm trọng:
+    - **CRITICAL (Khẩn cấp):** SLA **30 phút** (cây đổ đè đường huyết mạch, dây điện đứt).
+    - **HIGH (Cao):** SLA **120 phút** (nhánh lớn rạn nứt có nguy cơ rơi).
+    - **MEDIUM / LOW:** SLA **24 - 48 giờ**.
+  - Nếu quá hạn cam kết, hệ thống tự động đổi màu vé sang đỏ nhấp nháy: `🚨 VI PHẠM SLA: Quá hạn N phút!`, đồng thời cập nhật tỷ lệ tuân thủ cam kết phục vụ trên Báo cáo Sở Xây dựng.
+
+### Câu 10: Chiến dịch rà soát cắt tỉa đón mùa mưa bão (Pre-Storm Pruning) hoạt động ra sao?
+- **Trả lời về mặt vận hành mùa mưa Nam Bộ:**
+  - Vào giai đoạn tháng 5 - tháng 11 hàng năm, hệ thống tự động lọc toàn bộ các cây Loại 2 và Loại 3 có chiều cao $H \ge 7m$ hoặc đường kính $D \ge 25cm$ mà **chưa được cắt tỉa trong vòng 180 ngày qua**.
+  - Dashboard phát cảnh báo màu hổ phách: `⛈️ Chiến Dịch Rà Soát Cắt Tỉa Hạ Độ Cao Đón Mùa Mưa Bão: Phát hiện N cây cần xử lý` để lãnh đạo Công ty Cây xanh lập tức phân bổ xe thang xử lý trước khi giông lốc đổ bộ.
+
+### Câu 11: Làm sao hệ thống xuất được Báo cáo chính quy cho UBND Thành phố và Sở Xây dựng?
+- **Trả lời về tính ứng dụng hành chính:**
+  - Ngay trên Admin Dashboard có nút `[📄 Xuất Báo Cáo Sở Xây Dựng]`.
+  - Hệ thống tự động tổng hợp thành văn bản hành chính khổ A4 chuẩn thể thức Nhà nước (có Quốc hiệu, Tiêu ngữ, Số hiệu công văn, Bảng số liệu phân cấp Thông tư 20, Chỉ số Carbon Allometric, Tỷ lệ SLA và Khung chữ ký duyệt 3 cấp) cho phép in trực tiếp hoặc xuất file PDF nộp báo cáo chỉ với 1 click.
+
 ---
 *Tài liệu lưu hành nội bộ đồ án tốt nghiệp UrbanTree - Cần Thơ Smart Eco-GIS 4.0.*
 

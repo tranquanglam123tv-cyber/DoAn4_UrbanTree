@@ -248,4 +248,155 @@ export function calculateAllometricCarbon(tree: {
   };
 }
 
+/**
+ * ⏱️ TÍNH TOÁN SLA (SERVICE LEVEL AGREEMENT) PHẢN ỨNG NHANH SỰ CỐ ĐÔ THỊ
+ * Tiêu chuẩn cam kết thời gian ứng cứu:
+ * - CRITICAL: 30 phút (Cây ngã đổ, đè đường, đứt dây điện, nguy hiểm tính mạng)
+ * - HIGH: 120 phút (2 giờ - Nhánh lớn rạn nứt, cản trở giao thông)
+ * - MEDIUM: 24 giờ (Sâu bệnh, nhánh khô gãy rải rác)
+ * - LOW: 48 giờ (Bong tróc rễ nhẹ, cần khảo sát)
+ */
+export interface IncidentSLAResult {
+  limitMinutes: number;
+  limitLabel: string;
+  elapsedMinutes: number;
+  remainingMinutes: number;
+  isOverdue: boolean;
+  isResolved: boolean;
+  statusText: string;
+  badgeClass: string;
+  percentUsed: number;
+}
+
+export function calculateIncidentSLA(incident: {
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  status: string;
+  createdAt: string;
+  resolvedAt?: string | null;
+}): IncidentSLAResult {
+  // 1. Định mức SLA theo mức độ khẩn cấp (phút)
+  const SLA_LIMITS: Record<string, { minutes: number; label: string }> = {
+    CRITICAL: { minutes: 30, label: '30 phút' },
+    HIGH: { minutes: 120, label: '2 giờ' },
+    MEDIUM: { minutes: 1440, label: '24 giờ' },
+    LOW: { minutes: 2880, label: '48 giờ' },
+  };
+
+  const config = SLA_LIMITS[incident.severity] || SLA_LIMITS.MEDIUM;
+  const createdTime = new Date(incident.createdAt).getTime();
+  const isResolved = incident.status === 'RESOLVED';
+  const endTime = isResolved && incident.resolvedAt ? new Date(incident.resolvedAt).getTime() : Date.now();
+
+  const elapsedMs = Math.max(0, endTime - createdTime);
+  const elapsedMinutes = Math.floor(elapsedMs / (60 * 1000));
+  const remainingMinutes = config.minutes - elapsedMinutes;
+  const isOverdue = remainingMinutes < 0;
+
+  // Tính % thời gian đã tiêu tốn
+  const percentUsed = Math.min(Math.round((elapsedMinutes / config.minutes) * 100), 100);
+
+  let statusText = '';
+  let badgeClass = '';
+
+  if (isResolved) {
+    if (isOverdue) {
+      statusText = `Đã xong (Trễ hạn SLA ${Math.abs(remainingMinutes)}p)`;
+      badgeClass = 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-300 dark:border-amber-800';
+    } else {
+      statusText = `Đạt chuẩn SLA (${elapsedMinutes}p / ${config.label})`;
+      badgeClass = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800';
+    }
+  } else {
+    if (isOverdue) {
+      const overdueMins = Math.abs(remainingMinutes);
+      const overdueText = overdueMins >= 60 ? `${Math.floor(overdueMins / 60)}h ${overdueMins % 60}p` : `${overdueMins} phút`;
+      statusText = `🚨 VI PHẠM SLA: Quá hạn ${overdueText}!`;
+      badgeClass = 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-200 border-rose-300 dark:border-rose-700 animate-pulse font-bold';
+    } else {
+      const remText = remainingMinutes >= 60 ? `${Math.floor(remainingMinutes / 60)}h ${remainingMinutes % 60}p` : `${remainingMinutes} phút`;
+      if (percentUsed >= 70) {
+        statusText = `⚠️ Khẩn cấp: Còn ${remText} (SLA ${config.label})`;
+        badgeClass = 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-300 dark:border-amber-700 font-semibold';
+      } else {
+        statusText = `🟢 Trong hạn SLA: Còn ${remText}`;
+        badgeClass = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700';
+      }
+    }
+  }
+
+  return {
+    limitMinutes: config.minutes,
+    limitLabel: config.label,
+    elapsedMinutes,
+    remainingMinutes,
+    isOverdue,
+    isResolved,
+    statusText,
+    badgeClass,
+    percentUsed,
+  };
+}
+
+/**
+ * ⛈️ KIỂM TRA CÂY CẦN CẮT TỈA TRƯỚC MÙA MƯA BÃO (PRE-STORM PRUNING AUDIT)
+ * Tiêu chí:
+ * - Cây Loại 2 hoặc Di sản Loại 3 (hoặc H >= 7m, D >= 25cm)
+ * - Chưa có nhật ký chăm sóc PRUNING trong vòng 180 ngày qua (hoặc chưa bao giờ cắt tỉa)
+ */
+export function isStormSeasonPruningNeeded(
+  tree: Tree,
+  careRecords: Array<{ treeId: string; actionType: string; performedAt: string }> = []
+): {
+  isNeeded: boolean;
+  reason: string;
+  daysSinceLastPruning: number | null;
+  urgencyLevel: 'HIGH' | 'MEDIUM' | 'NORMAL';
+} {
+  const h = tree.heightM || 8;
+  const d = tree.diameterCm || 25;
+  const isLargeTree = h >= 7 || d >= 25 || tree.classification === 'HERITAGE' || tree.classification === 'TYPE_2';
+
+  if (!isLargeTree) {
+    return {
+      isNeeded: false,
+      reason: 'Cây nhỏ/mới trồng, tán gọn gàng, ít nguy cơ gãy đổ',
+      daysSinceLastPruning: null,
+      urgencyLevel: 'NORMAL',
+    };
+  }
+
+  // Tìm lần cắt tỉa gần nhất
+  const pruningRecords = careRecords
+    .filter((r) => r.treeId === tree.id && r.actionType === 'PRUNING')
+    .sort((a, b) => new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime());
+
+  if (pruningRecords.length === 0) {
+    return {
+      isNeeded: true,
+      reason: 'Chưa có lịch sử cắt tỉa cành hạ độ cao. Cần rà soát ngay trước mùa bão!',
+      daysSinceLastPruning: null,
+      urgencyLevel: 'HIGH',
+    };
+  }
+
+  const lastPruningDate = new Date(pruningRecords[0].performedAt).getTime();
+  const daysSince = Math.floor((Date.now() - lastPruningDate) / (24 * 60 * 60 * 1000));
+
+  if (daysSince >= 180) {
+    return {
+      isNeeded: true,
+      reason: `Đã ${daysSince} ngày chưa tỉa cành đón gió bão (>6 tháng). Cần hạ độ cao tán lá.`,
+      daysSinceLastPruning: daysSince,
+      urgencyLevel: daysSince >= 270 ? 'HIGH' : 'MEDIUM',
+    };
+  }
+
+  return {
+    isNeeded: false,
+    reason: `Đã cắt tỉa cách đây ${daysSince} ngày (Đạt chuẩn an toàn mùa mưa bão).`,
+    daysSinceLastPruning: daysSince,
+    urgencyLevel: 'NORMAL',
+  };
+}
+
 

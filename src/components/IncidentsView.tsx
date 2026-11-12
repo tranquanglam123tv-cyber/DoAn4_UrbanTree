@@ -20,6 +20,7 @@ import {
 import { storage } from '../db/storage';
 import { Incident, IncidentSeverity, IncidentStatus, IncidentUpdate, User } from '../types';
 import { TreeSearchSelect } from './common/TreeSearchSelect';
+import { calculateIncidentSLA } from '../utils/treeUtils';
 
 interface IncidentsViewProps {
   onSelectTree: (tree: any) => void;
@@ -317,6 +318,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                 filteredIncidents.map((inc) => {
                   const tree = inc.treeId ? trees.find((t) => t.id === inc.treeId) : null;
                   const isSelected = selectedIncident?.id === inc.id;
+                  const sla = calculateIncidentSLA(inc);
                   return (
                     <div
                       key={inc.id}
@@ -351,6 +353,12 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                             }`}
                           >
                             {inc.status === 'REOPENED' ? `⚠️ TÁI XỬ LÝ (Lần ${inc.reopenedCount || 1})` : inc.status}
+                          </span>
+
+                          {/* ⏱️ ĐỒNG HỒ SLA PHẢN ỨNG NHANH */}
+                          <span className={`text-[10px] px-2 py-0.5 rounded font-mono border flex items-center gap-1 ${sla.badgeClass}`}>
+                            <Clock className="w-3 h-3 shrink-0" />
+                            <span>{sla.statusText}</span>
                           </span>
                         </div>
 
@@ -425,6 +433,56 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                       <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Địa chỉ:</span>
                       <span className="text-slate-800 dark:text-slate-200">{selectedIncident.address}</span>
                     </div>
+
+                    {/* ⏱️ SLA MONITOR BOX */}
+                    {(() => {
+                      const selSla = calculateIncidentSLA(selectedIncident);
+                      return (
+                        <div
+                          className={`p-3 rounded-xl border space-y-1.5 ${
+                            selSla.isOverdue
+                              ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/60'
+                              : 'bg-slate-50 dark:bg-slate-900/50 border-slate-200/80 dark:border-slate-800'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-[11px] font-bold">
+                            <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                              <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                              <span>Cam kết SLA: {selSla.limitLabel}</span>
+                            </span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${selSla.badgeClass}`}>
+                              {selSla.statusText}
+                            </span>
+                          </div>
+
+                          <div className="w-full bg-slate-200 dark:bg-slate-700/80 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className={`h-full transition-all duration-500 ${
+                                selSla.isOverdue
+                                  ? 'bg-rose-600'
+                                  : selSla.percentUsed >= 70
+                                  ? 'bg-amber-500'
+                                  : 'bg-emerald-500'
+                              }`}
+                              style={{ width: `${Math.min(selSla.percentUsed, 100)}%` }}
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                            <span>
+                              Đã trôi qua: <strong>{selSla.elapsedMinutes} phút</strong>
+                            </span>
+                            <span>
+                              {selSla.isResolved
+                                ? 'Hoàn tất nghiệm thu On-Chain'
+                                : selSla.isOverdue
+                                ? '🚨 Vi phạm tiến độ đáp ứng'
+                                : `Còn lại: ${selSla.remainingMinutes} phút`}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Status Transition Form */}

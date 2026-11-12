@@ -1191,6 +1191,33 @@ class StorageService {
     if (newStatus === 'RESOLVED') {
       incident.resolvedAt = now;
 
+      // 🌿 TỰ ĐỘNG PHỤC HỒI SỨC KHỎE CÂY LIÊN KẾT & GHI NHẬN NHẬT KÝ CHĂM SÓC
+      if (incident.treeId) {
+        const tree = this.trees.find((t) => t.id === incident.treeId);
+        if (tree && (tree.healthStatus === 'CRITICAL' || tree.healthStatus === 'POOR')) {
+          const oldHealth = tree.healthStatus;
+          tree.healthStatus = 'FAIR';
+          tree.updatedAt = now;
+
+          // Tạo bản ghi nhật ký chăm sóc thực địa tương ứng
+          const careId = `care-inc-${Date.now()}`;
+          const newCare: CareRecord = {
+            id: careId,
+            treeId: tree.id,
+            staffUserId: actorUserId,
+            staffName: actorName,
+            actionType: 'PRUNING',
+            healthBefore: oldHealth,
+            healthAfter: 'FAIR',
+            notes: `[Tự động từ Sự cố ${incident.publicCode}] ${note || 'Đã hoàn tất khắc phục sự cố hiện trường, cắt tỉa cành gãy và bảo đảm an toàn đô thị.'}`,
+            imageUrl: imageUrl || incident.imageUrl,
+            performedAt: now,
+            createdAt: now,
+          };
+          this.careRecords.unshift(newCare);
+        }
+      }
+
       // Anchor RESOLUTION to blockchain
       const { hash, canonicalJson } = computeRecordHash('INCIDENT_RESOLUTION', incident, {
         resolvedBy: actorUserId,

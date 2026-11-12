@@ -24,11 +24,24 @@ import {
   ShieldAlert,
   Users,
   UserPlus,
+  FileText,
+  Printer,
+  CloudRain,
+  Download,
+  X,
+  Clock,
 } from 'lucide-react';
 import { storage } from '../db/storage';
 import { blockchainService } from '../services/blockchainService';
 import { Tree, CareRecord } from '../types';
-import { calculateAllometricCarbon, getTreeClassification } from '../utils/treeUtils';
+import {
+  calculateAllometricCarbon,
+  getTreeClassification,
+  calculateIncidentSLA,
+  isStormSeasonPruningNeeded,
+  getTreeStreetCode,
+  getTreeMilestone,
+} from '../utils/treeUtils';
 
 interface DashboardViewProps {
   onNavigate: (tab: string) => void;
@@ -53,8 +66,48 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const [activeChartTab, setActiveChartTab] = useState<'timeline' | 'category'>('timeline');
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
+  const [showOfficialReportModal, setShowOfficialReportModal] = useState<boolean>(false);
 
   const healthyPercent = stats.totalTrees > 0 ? Math.round((stats.healthyTrees / stats.totalTrees) * 100) : 0;
+
+  // ⛈️ RÀ SOÁT CÂY CẦN CẮT TỈA TRƯỚC MÙA MƯA BÃO (PRE-STORM AUDIT)
+  const stormPruningAudit = useMemo(() => {
+    const list = trees
+      .map((t) => ({ tree: t, audit: isStormSeasonPruningNeeded(t, careRecords) }))
+      .filter((item) => item.audit.isNeeded);
+    return {
+      neededCount: list.length,
+      highUrgencyCount: list.filter((i) => i.audit.urgencyLevel === 'HIGH').length,
+      items: list,
+    };
+  }, [trees, careRecords]);
+
+  // ⏱️ THỐNG KÊ SLA SỰ CỐ TOÀN DIỆN
+  const incidentSlaStats = useMemo(() => {
+    let onTimeCount = 0;
+    let overdueCount = 0;
+    let criticalCount = 0;
+
+    incidents.forEach((inc) => {
+      if (inc.severity === 'CRITICAL') criticalCount++;
+      const sla = calculateIncidentSLA(inc);
+      if (inc.status === 'RESOLVED') {
+        if (sla.isOverdue) overdueCount++;
+        else onTimeCount++;
+      } else {
+        if (sla.isOverdue) overdueCount++;
+      }
+    });
+
+    const total = onTimeCount + overdueCount;
+    const rate = total > 0 ? Math.round((onTimeCount / total) * 100) : 100;
+    return {
+      onTimeCount,
+      overdueCount,
+      criticalCount,
+      complianceRate: rate,
+    };
+  }, [incidents]);
 
   // 🌿 TÍNH TOÁN KHOA HỌC: SINH KHỐI ALLOMETRIC & HẤP THỤ CO2 TOÀN THÀNH PHỐ
   const ecoAllometricStats = useMemo(() => {
@@ -167,6 +220,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* Quick Action Bar Buttons */}
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          {/* Nút Xuất Báo Cáo UBND & Sở Xây Dựng */}
+          <button
+            onClick={() => setShowOfficialReportModal(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-300 font-bold text-xs transition-colors border border-blue-200 dark:border-blue-800/60 cursor-pointer shadow-2xs"
+          >
+            <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            <span>Xuất Báo Cáo Sở Xây Dựng</span>
+          </button>
+
           {onOpenStaffManagement && (
             <button
               onClick={onOpenStaffManagement}
@@ -202,6 +264,40 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* ⛈️ CẢNH BÁO CHIẾN DỊCH RÀ SOÁT CẮT TỈA TRƯỚC MÙA MƯA BÃO (PRE-STORM PRUNING CAMPAIGN) */}
+      {stormPruningAudit.neededCount > 0 && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <CloudRain className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-amber-900 dark:text-amber-300 text-xs sm:text-sm">
+                  Chiến Dịch Rà Soát Cắt Tỉa Hạ Độ Cao Đón Mùa Mưa Bão (Tháng 5 - Tháng 11)
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white">
+                  {stormPruningAudit.neededCount} Cây Cần Xử Lý
+                </span>
+              </div>
+              <p className="text-xs text-amber-800/90 dark:text-amber-400/90 mt-0.5">
+                Phát hiện {stormPruningAudit.neededCount} cây loại 2 &amp; loại 3 cao trên 7m chưa được cắt tỉa quá 180 ngày (có {stormPruningAudit.highUrgencyCount} cây nguy cơ cao khi giông lốc). Cần điều động xe thang kiểm tra.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => onNavigate('trees')}
+              className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors flex items-center gap-1 shadow-2xs cursor-pointer"
+            >
+              <span>Xem danh sách cây</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 🍱 BENTO GRID KPI STATS (CYBER BOTANICAL ECO-TECH DARK MODE) */}
       <div className="space-y-4">
@@ -771,6 +867,189 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* 📄 MODAL XUẤT BÁO CÁO ĐỊNH KỲ CHÍNH QUY (UBND & SỞ XÂY DỰNG TP. CẦN THƠ) */}
+      {showOfficialReportModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto"
+          data-lenis-prevent
+        >
+          <div className="bg-white dark:bg-[#0c1812] rounded-3xl max-w-4xl w-full max-h-[92vh] shadow-2xl flex flex-col border border-slate-200 dark:border-emerald-500/30 overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto">
+            {/* Header Toolbar */}
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/60 shrink-0">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-slate-100">
+                  Bản In Báo Cáo Nghiệp Vụ Quản Trị Cây Xanh (Mẫu Sở Xây Dựng)
+                </h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>In Báo Cáo / Lưu PDF</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowOfficialReportModal(false)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Document Content (A4 Official Printable Format) */}
+            <div className="p-6 sm:p-10 overflow-y-auto space-y-6 text-slate-800 dark:text-slate-200 font-sans leading-relaxed" data-lenis-prevent>
+              {/* Official Header */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-slate-800 dark:border-slate-300 pb-4 gap-4">
+                <div className="text-center sm:text-left">
+                  <div className="font-semibold text-xs tracking-wider uppercase text-slate-600 dark:text-slate-400">
+                    ỦY BAN NHÂN DÂN THÀNH PHỐ CẦN THƠ
+                  </div>
+                  <div className="font-extrabold text-sm uppercase text-slate-900 dark:text-white">
+                    SỞ XÂY DỰNG TP. CẦN THƠ
+                  </div>
+                  <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                    Số: 248/BC-SXD-QLĐT
+                  </div>
+                </div>
+
+                <div className="text-center sm:text-right">
+                  <div className="font-extrabold text-xs uppercase text-slate-900 dark:text-white">
+                    CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+                  </div>
+                  <div className="font-bold text-xs underline decoration-1 text-slate-800 dark:text-slate-200">
+                    Độc lập - Tự do - Hạnh phúc
+                  </div>
+                  <div className="text-[11px] italic text-slate-500 dark:text-slate-400 mt-1">
+                    Cần Thơ, ngày {new Date().getDate()} tháng {new Date().getMonth() + 1} năm {new Date().getFullYear()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Document Title */}
+              <div className="text-center space-y-1.5 pt-2">
+                <h1 className="text-base sm:text-lg font-black uppercase text-slate-900 dark:text-white tracking-tight">
+                  BÁO CÁO TỔNG HỢP CÔNG TÁC QUẢN TRỊ CÂY XANH ĐÔ THỊ, TIẾP NHẬN SỰ CỐ &amp; CHỈ SỐ CARBON SINH THÁI
+                </h1>
+                <p className="text-xs italic text-slate-500 dark:text-slate-400">
+                  (Căn cứ Thông tư 20/2020/TT-BXD, Nghị định 64/2010/NĐ-CP và Đề án Chuyển đổi số GIS 4.0)
+                </p>
+              </div>
+
+              {/* Section 1: Phân loại cây Thông tư 20 */}
+              <div className="space-y-2">
+                <h2 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
+                  <span>I. Hiện trạng phân cấp cây xanh đô thị (Thông tư 20/2020/TT-BXD)</span>
+                </h2>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border border-slate-200 dark:border-slate-800">
+                    <thead className="bg-slate-100 dark:bg-slate-800 font-bold text-slate-700 dark:text-slate-300">
+                      <tr>
+                        <th className="p-2.5 border-b border-slate-200 dark:border-slate-700">Phân loại cây</th>
+                        <th className="p-2.5 border-b border-slate-200 dark:border-slate-700">Tiêu chuẩn kích thước</th>
+                        <th className="p-2.5 border-b border-slate-200 dark:border-slate-700 text-center">Số lượng số hóa</th>
+                        <th className="p-2.5 border-b border-slate-200 dark:border-slate-700">Quy định quản lý</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-[11px]">
+                      <tr>
+                        <td className="p-2.5 font-bold text-blue-700 dark:text-blue-400">Cây Loại 1 (Mới trồng / Cây con)</td>
+                        <td className="p-2.5">Đường kính D &lt; 20cm, Chiều cao H &lt; 6m</td>
+                        <td className="p-2.5 text-center font-bold font-mono">{ecoAllometricStats.type1Count} cây</td>
+                        <td className="p-2.5">Duy trì cọc chống, tưới nước ẩm và kiểm tra định kỳ</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2.5 font-bold text-emerald-700 dark:text-emerald-400">Cây Loại 2 (Trưởng thành)</td>
+                        <td className="p-2.5">Đường kính D: 20–50cm, Chiều cao H: 6–12m</td>
+                        <td className="p-2.5 text-center font-bold font-mono">{ecoAllometricStats.type2Count} cây</td>
+                        <td className="p-2.5">Cắt tỉa cành định kỳ trước mùa mưa bão</td>
+                      </tr>
+                      <tr className="bg-purple-50/50 dark:bg-purple-950/30">
+                        <td className="p-2.5 font-bold text-purple-800 dark:text-purple-300">Cây Cổ Thụ Di Sản (Loại 3)</td>
+                        <td className="p-2.5">Đường kính D &ge; 50cm hoặc Chiều cao H &ge; 12m</td>
+                        <td className="p-2.5 text-center font-bold font-mono text-purple-700 dark:text-purple-300">{ecoAllometricStats.heritageCount} cây</td>
+                        <td className="p-2.5 font-semibold text-purple-900 dark:text-purple-300">
+                          Bảo tồn nghiêm ngặt. Cấm đốn hạ nếu không có phê duyệt từ UBND TP hoặc Sở Xây dựng
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Section 2: Sự cố & SLA */}
+              <div className="space-y-2">
+                <h2 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
+                  <span>II. Tiếp nhận xử lý sự cố &amp; Cam kết thời gian đáp ứng (SLA)</span>
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <div className="text-[10px] text-slate-500 uppercase font-bold">Tổng số sự cố tiếp nhận</div>
+                    <div className="text-xl font-black text-slate-900 dark:text-white font-mono mt-0.5">{incidents.length} vụ</div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60">
+                    <div className="text-[10px] text-rose-700 dark:text-rose-400 uppercase font-bold">Mức độ Nguy cấp (CRITICAL)</div>
+                    <div className="text-xl font-black text-rose-700 dark:text-rose-400 font-mono mt-0.5">{incidentSlaStats.criticalCount} vụ (SLA 30p)</div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60">
+                    <div className="text-[10px] text-emerald-700 dark:text-emerald-400 uppercase font-bold">Tỷ lệ tuân thủ cam kết SLA</div>
+                    <div className="text-xl font-black text-emerald-700 dark:text-emerald-400 font-mono mt-0.5">{incidentSlaStats.complianceRate}%</div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <div className="text-[10px] text-slate-500 uppercase font-bold">Nghiệm thu On-Chain</div>
+                    <div className="text-xl font-black text-slate-900 dark:text-white font-mono mt-0.5">{incidents.filter(i => i.status === 'RESOLVED').length} vụ</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Sinh khối & Allometric Carbon */}
+              <div className="space-y-2">
+                <h2 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
+                  <span>III. Chỉ số sinh khối &amp; Hấp thụ Carbon (Mô hình USDA i-Tree Eco)</span>
+                </h2>
+                <div className="p-3.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 flex flex-wrap items-center justify-between gap-4 text-xs">
+                  <div>
+                    <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Tổng sinh khối (Biomass)</span>
+                    <strong className="text-base text-emerald-800 dark:text-emerald-300 font-mono">{ecoAllometricStats.totalBiomassTon} tấn</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 dark:text-slate-400 block text-[10px]">CO2 cô lập tích lũy</span>
+                    <strong className="text-base text-teal-800 dark:text-teal-300 font-mono">{ecoAllometricStats.totalCo2TonYear} tấn CO2/năm</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Oxy hoàn lưu không gian</span>
+                    <strong className="text-base text-cyan-800 dark:text-cyan-300 font-mono">{ecoAllometricStats.totalO2TonYear} tấn O2/năm</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Signatures */}
+              <div className="pt-8 border-t border-slate-200 dark:border-slate-800 grid grid-cols-3 text-center text-xs">
+                <div>
+                  <div className="font-bold uppercase text-slate-800 dark:text-slate-200">NGƯỜI LẬP BIỂU</div>
+                  <div className="text-[10px] text-slate-400 italic">(Ký và ghi rõ họ tên)</div>
+                  <div className="mt-14 font-semibold text-slate-700 dark:text-slate-300">Đặng Thế Thuận</div>
+                </div>
+                <div>
+                  <div className="font-bold uppercase text-slate-800 dark:text-slate-200">TRƯỞNG PHÒNG QLĐT</div>
+                  <div className="text-[10px] text-slate-400 italic">(Ký và ghi rõ họ tên)</div>
+                  <div className="mt-14 font-semibold text-slate-700 dark:text-slate-300">Lê Tuấn Anh</div>
+                </div>
+                <div>
+                  <div className="font-bold uppercase text-slate-800 dark:text-slate-200">GIÁM ĐỐC SỞ XÂY DỰNG</div>
+                  <div className="text-[10px] text-slate-400 italic">(Ký tên và đóng dấu)</div>
+                  <div className="mt-14 font-bold text-emerald-700 dark:text-emerald-400">ĐÃ PHÊ DUYỆT ON-CHAIN</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
