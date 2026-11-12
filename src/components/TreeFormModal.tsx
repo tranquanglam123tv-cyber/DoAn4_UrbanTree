@@ -1369,19 +1369,19 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, initialCoord
                     <div className="font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between text-xs">
                       <span className="flex items-center gap-1.5">
                         <FileText className="w-4 h-4 text-emerald-600" />
-                        <span>Danh sách trích xuất ({parsedTreesFromFile.length} cây hợp lệ):</span>
+                        <span>Danh sách trích xuất ({parsedTreesFromFile.length.toLocaleString('vi-VN')} cây hợp lệ):</span>
                       </span>
                       <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                        ✓ Tự động cắm {parsedTreesFromFile.length} mốc lên Bản đồ GIS
+                        ✓ Sẵn sàng cắm mốc lên Bản đồ GIS
                       </span>
                     </div>
 
-                    <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                    <div className="max-h-56 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
                       <table className="w-full text-[11px] text-left">
                         <thead className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold sticky top-0">
                           <tr>
                             <th className="p-2">Mã cây</th>
-                            <th className="p-2">Chủng loại</th>
+                            <th className="p-2">Tên hiển thị / Chủng loại</th>
                             <th className="p-2">Vị trí / Địa chỉ</th>
                             <th className="p-2">Tọa độ GPS</th>
                             <th className="p-2">D/H</th>
@@ -1389,41 +1389,59 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, initialCoord
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {parsedTreesFromFile.map((t, idx) => (
-                            <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                              <td className="p-2 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                                {t.code}
-                              </td>
-                              <td className="p-2 font-medium text-slate-800 dark:text-slate-200">
-                                {t.typeName}
-                              </td>
-                              <td className="p-2 text-slate-600 dark:text-slate-400 max-w-[140px] truncate" title={t.address}>
-                                {t.address}
-                              </td>
-                              <td className="p-2 font-mono text-slate-500 text-[10px]">
-                                {t.lat.toFixed(5)}, {t.lng.toFixed(5)}
-                              </td>
-                              <td className="p-2 text-slate-600 dark:text-slate-400 font-mono">
-                                {t.diameter}cm / {t.height}m
-                              </td>
-                              <td className="p-2">
-                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                  t.healthStatus === 'GOOD'
-                                    ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400'
-                                    : t.healthStatus === 'FAIR'
-                                    ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400'
-                                    : t.healthStatus === 'POOR'
-                                    ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400'
-                                    : 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400'
-                                }`}>
-                                  {t.healthStatus}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
+                          {parsedTreesFromFile.slice(0, 50).map((t: any, idx) => {
+                            const code = t.publicCode || t.streetCode || t.code || `TREE-${idx + 1}`;
+                            const name = t.displayName || t.typeName || 'Cây Đô Thị';
+                            const lat = typeof t.latitude === 'number' ? t.latitude : typeof t.lat === 'number' ? t.lat : null;
+                            const lng = typeof t.longitude === 'number' ? t.longitude : typeof t.lng === 'number' ? t.lng : null;
+                            const diam = t.diameterCm ?? t.diameter ?? 30;
+                            const height = t.heightM ?? t.height ?? 8;
+                            const health = t.healthStatus || 'GOOD';
+
+                            return (
+                              <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                <td className="p-2 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                  {code}
+                                </td>
+                                <td className="p-2 font-medium text-slate-800 dark:text-slate-200 truncate max-w-[150px]" title={name}>
+                                  {name}
+                                </td>
+                                <td className="p-2 text-slate-600 dark:text-slate-400 max-w-[180px] truncate" title={t.address}>
+                                  {t.address || 'TP. Cần Thơ'}
+                                </td>
+                                <td className="p-2 font-mono text-slate-500 text-[10px]">
+                                  {lat !== null ? lat.toFixed(5) : '—'}, {lng !== null ? lng.toFixed(5) : '—'}
+                                </td>
+                                <td className="p-2 text-slate-600 dark:text-slate-400 font-mono">
+                                  {diam}cm / {height}m
+                                </td>
+                                <td className="p-2">
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                      health === 'GOOD'
+                                        ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400'
+                                        : health === 'FAIR'
+                                        ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400'
+                                        : health === 'POOR'
+                                        ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400'
+                                        : 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400'
+                                    }`}
+                                  >
+                                    {health}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
+
+                    {parsedTreesFromFile.length > 50 && (
+                      <p className="text-[11px] text-slate-400 dark:text-slate-500 italic text-center pt-1">
+                        * Đang hiển thị xem trước 50 / {parsedTreesFromFile.length.toLocaleString('vi-VN')} cây từ file. Toàn bộ {parsedTreesFromFile.length.toLocaleString('vi-VN')} cây sẽ được cắm mốc lên bản đồ khi bấm nút bên dưới.
+                      </p>
+                    )}
                   </div>
                 )}
 

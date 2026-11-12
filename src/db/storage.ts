@@ -849,7 +849,13 @@ class StorageService {
       localStorage.setItem(INCIDENT_UPDATES_STORAGE_KEY, JSON.stringify(this.incidentUpdates));
       localStorage.setItem(ACTIVE_USER_KEY, JSON.stringify(this.activeUser));
     } catch (err) {
-      console.error('Storage save error:', err);
+      console.warn('Storage save quota notice:', err);
+      // Fallback: nếu cây quá nhiều (5,000+ cây), lưu danh mục 1,000 cây gần nhất vào localStorage để tránh tràn bộ nhớ trình duyệt
+      try {
+        localStorage.setItem(TREES_STORAGE_KEY, JSON.stringify(this.trees.slice(0, 1000)));
+      } catch (e) {
+        // Safe ignore
+      }
     }
   }
 
@@ -981,7 +987,7 @@ class StorageService {
       created.push(newTree);
     }
 
-    this.trees.unshift(...created);
+    this.trees = [...created, ...this.trees];
     this.saveAll();
     return created;
   }
