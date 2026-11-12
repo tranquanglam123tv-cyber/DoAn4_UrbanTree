@@ -30,24 +30,13 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
   currentUser,
   initialTreeId,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'admin' | 'public_report' | 'public_lookup'>(
-    initialTreeId ? 'public_report' : currentUser.role === 'CITIZEN' ? 'public_report' : 'admin'
-  );
-
-  React.useEffect(() => {
-    if (initialTreeId) {
-      setActiveSubTab('public_report');
-      setReportTreeId(initialTreeId);
-      const tree = trees.find((t) => t.id === initialTreeId);
-      if (tree) {
-        setReportAddress(tree.address);
-      }
-    }
-  }, [initialTreeId, trees]);
-
   const incidents = storage.getIncidents();
   const trees = storage.getTrees();
   const users = storage.getUsers();
+
+  const [activeSubTab, setActiveSubTab] = useState<'admin' | 'public_report' | 'public_lookup'>(
+    initialTreeId ? 'public_report' : currentUser.role === 'CITIZEN' ? 'public_report' : 'admin'
+  );
 
   // Admin filter & search
   const [search, setSearch] = useState('');
@@ -64,11 +53,19 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
   const statusPhotoInputRef = useRef<HTMLInputElement | null>(null);
 
   // Citizen submission form state
-  const [reportTreeId, setReportTreeId] = useState<string>('');
+  const [reportTreeId, setReportTreeId] = useState<string>(initialTreeId || '');
   const [reportDesc, setReportDesc] = useState('');
-  const [reportAddress, setReportAddress] = useState('');
+  const [reportAddress, setReportAddress] = useState(() => {
+    if (initialTreeId) {
+      const match = storage.getTrees().find((t) => t.id === initialTreeId);
+      return match ? match.address : '';
+    }
+    return '';
+  });
   const [reportSeverity, setReportSeverity] = useState<IncidentSeverity>('MEDIUM');
-  const [reporterName, setReporterName] = useState('');
+  const [reporterName, setReporterName] = useState(() => {
+    return currentUser.role === 'CITIZEN' && currentUser.id !== 'citizen-guest' ? currentUser.fullName : '';
+  });
   const [reporterPhone, setReporterPhone] = useState('');
   const [reportImageUrl, setReportImageUrl] = useState('');
   const [reportImagePreview, setReportImagePreview] = useState<string | null>(null);
@@ -79,6 +76,17 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
   const [lookupCode, setLookupCode] = useState('');
   const [lookupResult, setLookupResult] = useState<Incident | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (initialTreeId) {
+      setActiveSubTab('public_report');
+      setReportTreeId(initialTreeId);
+      const match = trees.find((t) => t.id === initialTreeId);
+      if (match) {
+        setReportAddress(match.address);
+      }
+    }
+  }, [initialTreeId, trees]);
 
   const filteredIncidents = incidents.filter((inc) => {
     const matchesSearch =
