@@ -164,6 +164,11 @@ Trong nghiệp vụ hạ tầng đô thị thông minh cấp quốc gia (Multi-T
      - Đỏ thẫm Red (`#ef4444`) = Nguy cấp / Nghiêng đổ (CRITICAL)
      - Đồng thời, nhãn số thứ tự trên tuyến (như `01`, `02`, `14`) được in nổi trực tiếp giữa lòng Icon Marker, giúp người quản lý nhìn tổng quan từ xa là nhận diện được ngay hiện trạng từng cây mà không cần click vào từng điểm!
 
+### Câu 5: Phân cấp nghiệp vụ xử lý sự cố giữa Admin (Điều phối viên) và Staff (Kỹ thuật viên hiện trường) được tổ chức ra sao?
+- **Trả lời nghiệp vụ chuẩn:**
+  1. **Vai trò Admin (Phòng điều hành / Trung tâm IOC):** Admin ngồi tại văn phòng chỉ làm nhiệm vụ **Điều phối (Dispatching)**: tiếp nhận phản ánh của người dân ➔ sàng lọc tin rác / tin sai ➔ chuyển giao vé công tác và chỉ định Kỹ thuật viên phụ trách địa bàn (`ASSIGNED`). Admin **tuyệt đối không cầm cưa ra đường** nên không thực hiện chụp ảnh hay bấm hoàn tất hiện trường.
+  2. **Vai trò Staff (Tổ kỹ thuật thực địa):** Đội ngũ KTV đi xe thang đến hiện trường kiểm tra, cưa tỉa cành gãy, thu dọn rác xanh. Sau khi hoàn thành, KTV sử dụng điện thoại chụp ảnh đối chứng hiện trường sau xử lý và bấm **Nghiệm thu & Ký số On-Chain (RESOLVED)** trực tiếp trên giao diện dành riêng cho Staff (`StaffWorkstationView`).
+
 ---
 *Tài liệu lưu hành nội bộ đồ án tốt nghiệp UrbanTree - Cần Thơ Smart Eco-GIS 4.0.*
 
