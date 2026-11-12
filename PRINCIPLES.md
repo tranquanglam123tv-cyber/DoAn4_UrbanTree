@@ -98,3 +98,4 @@ Mỗi khi hoàn thành một chức năng hoặc sửa một lỗi, cả Develop
 - [ ] **Lớp 3 (Verification):** Đã kiểm tra thực tế trên trình duyệt, thử nghiệm trường hợp biên, tính toán đúng logic nghiệp vụ.
 - [ ] **Lớp 4 (Prose):** Đã cập nhật tài liệu hoặc ghi chú rõ ràng các thay đổi, tuân thủ đúng hướng dẫn trong `AGENTS.md`.
 - [ ] **Lớp 5 (Human Review):** Đã tóm tắt rõ ràng các thay đổi quan trọng để con người kiểm tra và đưa ra quyết định cuối cùng.
+
