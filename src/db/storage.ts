@@ -760,6 +760,65 @@ class StorageService {
     return incident;
   }
 
+  public async reopenIncident(params: {
+    incidentId: string;
+    actorUserId: string;
+    actorName: string;
+    reason: string;
+    imageUrl?: string;
+  }): Promise<Incident> {
+    const { incidentId, actorUserId, actorName, reason, imageUrl } = params;
+    const index = this.incidents.findIndex((i) => i.id === incidentId);
+    if (index === -1) throw new Error('Incident not found');
+
+    const incident = this.incidents[index];
+    const oldStatus = incident.status;
+    const now = new Date().toISOString();
+
+    incident.status = 'REOPENED';
+    incident.reopenedReason = reason;
+    incident.reopenedAt = now;
+    incident.reopenedCount = (incident.reopenedCount || 0) + 1;
+    incident.updatedAt = now;
+    if (imageUrl) {
+      incident.reopenedImageUrl = imageUrl;
+    }
+
+    // Anchor REOPEN request to blockchain for transparency
+    const { hash, canonicalJson } = computeRecordHash('INCIDENT_REPORT', incident, {
+      reopenedBy: actorUserId,
+      reason,
+      reopenedCount: incident.reopenedCount,
+    });
+
+    const receipt = await blockchainService.anchorRecord({
+      recordType: 'INCIDENT_REPORT',
+      recordId: incident.id,
+      hash,
+      canonicalJson,
+    });
+
+    incident.payloadHash = hash;
+    incident.anchorStatus = receipt.status;
+    incident.txHash = receipt.txHash;
+
+    // Append to immutable timeline
+    this.incidentUpdates.unshift({
+      id: `upd-${Date.now()}`,
+      incidentId,
+      actorUserId,
+      actorName,
+      oldStatus,
+      newStatus: 'REOPENED',
+      note: `Người dân gửi yêu cầu tái xử lý (chưa đạt): "${reason}"`,
+      imageUrl: imageUrl || incident.reopenedImageUrl,
+      createdAt: now,
+    });
+
+    this.saveAll();
+    return incident;
+  }
+
   public getIncidentUpdates(incidentId: string): IncidentUpdate[] {
     return this.incidentUpdates
       .filter((u) => u.incidentId === incidentId)

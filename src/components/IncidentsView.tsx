@@ -15,6 +15,7 @@ import {
   Camera,
   Upload,
   Image as ImageIcon,
+  RotateCcw,
 } from 'lucide-react';
 import { storage } from '../db/storage';
 import { Incident, IncidentSeverity, IncidentStatus, IncidentUpdate, User } from '../types';
@@ -76,6 +77,38 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
   const [lookupCode, setLookupCode] = useState('');
   const [lookupResult, setLookupResult] = useState<Incident | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
+  const [showLookupReopenForm, setShowLookupReopenForm] = useState(false);
+  const [lookupReopenReason, setLookupReopenReason] = useState('');
+  const [lookupReopenImageUrl, setLookupReopenImageUrl] = useState('');
+  const [isSubmittingLookupReopen, setIsSubmittingLookupReopen] = useState(false);
+  const [lookupReopenSuccess, setLookupReopenSuccess] = useState<string | null>(null);
+
+  const handleLookupReopenSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!lookupResult || !lookupReopenReason.trim()) return;
+
+    setIsSubmittingLookupReopen(true);
+    try {
+      const updated = await storage.reopenIncident({
+        incidentId: lookupResult.id,
+        actorUserId: currentUser?.id || 'citizen-guest',
+        actorName: currentUser?.fullName || 'Người dân (Công cộng)',
+        reason: lookupReopenReason.trim(),
+        imageUrl: lookupReopenImageUrl.trim() || undefined,
+      });
+      setLookupResult({ ...updated });
+      setShowLookupReopenForm(false);
+      setLookupReopenReason('');
+      setLookupReopenImageUrl('');
+      setLookupReopenSuccess(`Đã gửi yêu cầu tái xử lý cho sự cố [${lookupResult.publicCode}]!`);
+      setIncidents(storage.getIncidents());
+      setTimeout(() => setLookupReopenSuccess(null), 5000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmittingLookupReopen(false);
+    }
+  };
 
   React.useEffect(() => {
     if (initialTreeId) {
@@ -250,6 +283,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                 <option value="RECEIVED">Mới tiếp nhận (RECEIVED)</option>
                 <option value="ASSIGNED">Đã phân công (ASSIGNED)</option>
                 <option value="IN_PROGRESS">Đang xử lý (IN_PROGRESS)</option>
+                <option value="REOPENED">Yêu cầu tái xử lý (REOPENED)</option>
                 <option value="RESOLVED">Đã giải quyết (RESOLVED)</option>
                 <option value="REJECTED">Từ chối (REJECTED)</option>
               </select>
@@ -293,8 +327,14 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                           >
                             {inc.severity}
                           </span>
-                          <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/90 px-2 py-0.5 rounded border border-transparent dark:border-slate-700/60">
-                            {inc.status}
+                          <span
+                            className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${
+                              inc.status === 'REOPENED'
+                                ? 'bg-rose-100 dark:bg-rose-950/70 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-700 animate-pulse font-bold flex items-center gap-1'
+                                : 'text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/90 border-transparent dark:border-slate-700/60'
+                            }`}
+                          >
+                            {inc.status === 'REOPENED' ? `⚠️ TÁI XỬ LÝ (Lần ${inc.reopenedCount || 1})` : inc.status}
                           </span>
                         </div>
 
@@ -388,6 +428,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                       >
                         <option value="ASSIGNED">Phân công nhân viên (ASSIGNED)</option>
                         <option value="IN_PROGRESS">Đang xử lý tại hiện trường (IN_PROGRESS)</option>
+                        <option value="REOPENED">Yêu cầu làm lại (REOPENED - Dân phản hồi)</option>
                         <option value="RESOLVED">Đã xử lý xong (RESOLVED - Neo Blockchain)</option>
                         <option value="REJECTED">Từ chối / Tin báo sai (REJECTED)</option>
                       </select>
@@ -817,16 +858,107 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                 </div>
                 <span
                   className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                    lookupResult.status === 'RESOLVED'
+                    lookupResult.status === 'REOPENED'
+                      ? 'bg-rose-100 dark:bg-rose-950/70 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700 animate-pulse'
+                      : lookupResult.status === 'RESOLVED'
                       ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 dark:border dark:border-emerald-800'
                       : lookupResult.status === 'IN_PROGRESS'
                       ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 dark:border dark:border-blue-800'
                       : 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 dark:border dark:border-amber-800'
                   }`}
                 >
-                  {lookupResult.status}
+                  {lookupResult.status === 'REOPENED' ? `⚠️ TÁI XỬ LÝ (Lần ${lookupResult.reopenedCount || 1})` : lookupResult.status}
                 </span>
               </div>
+
+              {lookupReopenSuccess && (
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-500/40 rounded-xl text-xs text-emerald-900 dark:text-emerald-200 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>{lookupReopenSuccess}</span>
+                </div>
+              )}
+
+              {/* Notice when REOPENED */}
+              {lookupResult.status === 'REOPENED' && (
+                <div className="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-700 rounded-xl space-y-1.5 text-xs text-rose-900 dark:text-rose-200">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                    <span>Yêu cầu tái xử lý từ người dân (Lần {lookupResult.reopenedCount || 1}):</span>
+                  </div>
+                  <p className="italic bg-white/70 dark:bg-slate-900/60 p-2 rounded-lg border border-rose-200 dark:border-rose-900">
+                    "{lookupResult.reopenedReason}"
+                  </p>
+                  <div className="text-[11px] text-rose-700 dark:text-rose-400 flex items-center gap-1 pt-0.5">
+                    <Clock className="w-3.5 h-3.5 animate-spin" />
+                    <span>Đội xe cơ động Cần Thơ đã nhận lệnh khẩn cấp quay lại xử lý triệt để.</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Citizen Re-report Box when RESOLVED */}
+              {lookupResult.status === 'RESOLVED' && (
+                <div className="p-3.5 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-500/30 rounded-xl space-y-3 text-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-amber-900 dark:text-amber-300">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                      <span className="font-semibold">Hiện trường thực tế chưa ổn thỏa hoặc chưa sạch sẽ?</span>
+                    </div>
+                    <button
+                      onClick={() => setShowLookupReopenForm(!showLookupReopenForm)}
+                      className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1 shrink-0"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>{showLookupReopenForm ? 'Đóng form' : 'Tái báo cáo'}</span>
+                    </button>
+                  </div>
+
+                  {showLookupReopenForm && (
+                    <form onSubmit={handleLookupReopenSubmit} className="space-y-3 pt-2 border-t border-amber-200 dark:border-amber-900/60 animate-fade-in">
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-700 dark:text-slate-300">
+                          Nêu rõ lý do chưa đạt yêu cầu <span className="text-rose-500">*</span>:
+                        </label>
+                        <textarea
+                          rows={2}
+                          required
+                          placeholder="Ví dụ: Cành cây mục phía trên vẫn chưa được cắt hết, cành lá rơi vãi chưa được dọn..."
+                          value={lookupReopenReason}
+                          onChange={(e) => setLookupReopenReason(e.target.value)}
+                          className="w-full p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-amber-500 resize-none"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-700 dark:text-slate-300">
+                          Link ảnh đối chứng (nếu có):
+                        </label>
+                        <input
+                          type="url"
+                          placeholder="https://... hoặc dán URL ảnh hiện trường"
+                          value={lookupReopenImageUrl}
+                          onChange={(e) => setLookupReopenImageUrl(e.target.value)}
+                          className="w-full p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                        />
+                      </div>
+
+                      <div className="flex justify-end">
+                        <button
+                          type="submit"
+                          disabled={isSubmittingLookupReopen || !lookupReopenReason.trim()}
+                          className={`px-4 py-2 rounded-lg text-white font-bold transition-all shadow-xs flex items-center gap-1.5 ${
+                            isSubmittingLookupReopen || !lookupReopenReason.trim()
+                              ? 'bg-amber-400 opacity-60 cursor-not-allowed'
+                              : 'bg-amber-600 hover:bg-amber-700 cursor-pointer active:scale-95'
+                          }`}
+                        >
+                          <RotateCcw className={`w-3.5 h-3.5 ${isSubmittingLookupReopen ? 'animate-spin' : ''}`} />
+                          <span>{isSubmittingLookupReopen ? 'Đang gửi...' : 'Gửi yêu cầu làm lại'}</span>
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              )}
 
               <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl space-y-1 border border-transparent dark:border-slate-800">
                 <span className="text-slate-400 dark:text-slate-500 text-[10px] block">Nội dung phản ánh:</span>

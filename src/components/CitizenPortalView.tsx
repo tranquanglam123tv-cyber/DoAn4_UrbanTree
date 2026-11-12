@@ -38,6 +38,7 @@ import {
   ChevronDown,
   ChevronUp,
   X,
+  RotateCcw,
 } from 'lucide-react';
 import { storage } from '../db/storage';
 import { Incident, Tree, User } from '../types';
@@ -58,13 +59,20 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   onOpenMap,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('reports');
-  const [reportFilter, setReportFilter] = useState<'ALL' | 'IN_PROGRESS' | 'RESOLVED'>('ALL');
+  const [reportFilter, setReportFilter] = useState<'ALL' | 'IN_PROGRESS' | 'RESOLVED' | 'REOPENED'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedIncidentId, setExpandedIncidentId] = useState<string | null>(null);
   const [showQrModal, setShowQrModal] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [ratings, setRatings] = useState<Record<string, number>>({});
   const [redeemedReward, setRedeemedReward] = useState<string | null>(null);
+
+  // Re-report (Tái báo cáo khi chưa ổn thỏa) state
+  const [reopenModalIncident, setReopenModalIncident] = useState<Incident | null>(null);
+  const [reopenReason, setReopenReason] = useState('');
+  const [reopenImageUrl, setReopenImageUrl] = useState('');
+  const [isSubmittingReopen, setIsSubmittingReopen] = useState(false);
+  const [reopenSuccessMsg, setReopenSuccessMsg] = useState<string | null>(null);
 
   const incidents = storage.getIncidents();
   const trees = storage.getTrees();
@@ -89,6 +97,8 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
           ? true
           : reportFilter === 'RESOLVED'
           ? inc.status === 'RESOLVED'
+          : reportFilter === 'REOPENED'
+          ? inc.status === 'REOPENED'
           : inc.status === 'IN_PROGRESS' || inc.status === 'RECEIVED' || inc.status === 'ASSIGNED';
 
       const matchSearch =
@@ -103,7 +113,8 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
 
   // Dynamic metrics
   const resolvedCount = myIncidents.filter((i) => i.status === 'RESOLVED').length;
-  const inProgressCount = myIncidents.filter((i) => i.status !== 'RESOLVED').length;
+  const inProgressCount = myIncidents.filter((i) => i.status !== 'RESOLVED' && i.status !== 'REOPENED').length;
+  const reopenedCount = myIncidents.filter((i) => i.status === 'REOPENED').length;
   const totalPoints = myIncidents.length * 100 + resolvedCount * 50;
   const carbonOffsetKg = (myIncidents.length * 24.6 + resolvedCount * 18.2).toFixed(1);
 
@@ -118,6 +129,31 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
 
   const handleRate = (incidentId: string, star: number) => {
     setRatings((prev) => ({ ...prev, [incidentId]: star }));
+  };
+
+  const handleSubmitReopen = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reopenModalIncident || !reopenReason.trim()) return;
+
+    setIsSubmittingReopen(true);
+    try {
+      await storage.reopenIncident({
+        incidentId: reopenModalIncident.id,
+        actorUserId: currentUser.id,
+        actorName: currentUser.fullName,
+        reason: reopenReason.trim(),
+        imageUrl: reopenImageUrl.trim() || undefined,
+      });
+      setReopenSuccessMsg(`Đã gửi yêu cầu tái xử lý cho sự cố [${reopenModalIncident.publicCode}]! Đội cơ động Cần Thơ đã tiếp nhận lệnh ưu tiên cao.`);
+      setReopenModalIncident(null);
+      setReopenReason('');
+      setReopenImageUrl('');
+      setTimeout(() => setReopenSuccessMsg(null), 6000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmittingReopen(false);
+    }
   };
 
   const citizenCardNumber = `CT-ECO·2026·${currentUser.username ? currentUser.username.slice(0, 4).toUpperCase() : '8892'}`;
@@ -427,6 +463,17 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>Đã giải quyết ({resolvedCount})</span>
               </button>
+              <button
+                onClick={() => setReportFilter('REOPENED')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  reportFilter === 'REOPENED'
+                    ? 'bg-rose-600 text-white'
+                    : 'bg-rose-50 text-rose-800 hover:bg-rose-100 dark:bg-rose-950/50 dark:text-rose-300 dark:hover:bg-rose-900/60'
+                }`}
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Cần làm lại ({reopenedCount})</span>
+              </button>
             </div>
 
             <div className="relative flex-1 max-w-md">
@@ -440,6 +487,22 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
               />
             </div>
           </div>
+
+          {/* Reopen Success Alert */}
+          {reopenSuccessMsg && (
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-500/40 rounded-2xl text-xs text-emerald-900 dark:text-emerald-200 flex items-center justify-between shadow-xs animate-fade-in">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>{reopenSuccessMsg}</span>
+              </div>
+              <button
+                onClick={() => setReopenSuccessMsg(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
           {/* Incident Cards List */}
           {filteredIncidents.length === 0 ? (
@@ -487,7 +550,12 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                           </button>
                         </span>
 
-                        {isResolved ? (
+                        {inc.status === 'REOPENED' ? (
+                          <span className="px-3 py-1 rounded-full bg-rose-100 dark:bg-rose-950/70 text-rose-900 dark:text-rose-300 text-xs font-bold flex items-center gap-1.5 border border-rose-300 dark:border-rose-700 shadow-2xs animate-pulse">
+                            <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                            Đang tái xử lý (Dân phản hồi chưa đạt)
+                          </span>
+                        ) : isResolved ? (
                           <span className="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-300 text-xs font-bold flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-500/30 shadow-2xs">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -657,38 +725,93 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                         </div>
                       </div>
 
-                      {/* Citizen Feedback Rating (Interactive 5-star) */}
-                      {isResolved && (
-                        <div className="p-3.5 bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-500/30 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                          <div className="space-y-0.5">
-                            <div className="font-bold text-emerald-950 dark:text-emerald-200 flex items-center gap-1.5">
-                              <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                              <span>Đánh giá mức độ hài lòng về Kỹ thuật viên xử lý:</span>
+                      {/* Alert when incident is REOPENED (đang tái xử lý) */}
+                      {inc.status === 'REOPENED' && (
+                        <div className="p-4 bg-rose-50/80 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-700/60 rounded-2xl space-y-2 animate-fade-in">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+                            <span className="font-bold text-rose-900 dark:text-rose-200 flex items-center gap-1.5">
+                              <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                              <span>Yêu cầu tái xử lý từ bạn (Lần {inc.reopenedCount || 1}):</span>
+                            </span>
+                            <span className="text-[11px] text-rose-700 dark:text-rose-400 font-mono">
+                              {new Date(inc.reopenedAt || inc.updatedAt).toLocaleString('vi-VN')}
+                            </span>
+                          </div>
+                          <p className="text-xs text-rose-900 dark:text-rose-200 font-medium italic bg-white/70 dark:bg-slate-900/60 p-2.5 rounded-xl border border-rose-200 dark:border-rose-900">
+                            "{inc.reopenedReason}"
+                          </p>
+                          {inc.reopenedImageUrl && (
+                            <div className="pt-1">
+                              <div className="text-[10px] font-bold text-rose-800 dark:text-rose-300 uppercase mb-1">
+                                Ảnh chụp đối chứng bạn đã gửi bổ sung:
+                              </div>
+                              <img
+                                src={inc.reopenedImageUrl}
+                                alt="Ảnh đối chứng"
+                                className="w-36 h-24 object-cover rounded-xl border border-rose-300"
+                              />
                             </div>
-                            <div className="text-[11px] text-emerald-800/80 dark:text-emerald-400/80">
-                              Ý kiến của bạn giúp nâng cao chất lượng dịch vụ đô thị Cần Thơ.
+                          )}
+                          <div className="text-[11px] text-rose-700 dark:text-rose-400 flex items-center gap-1.5 pt-1">
+                            <Clock className="w-3.5 h-3.5 animate-spin" />
+                            <span>Hệ thống đã phát lệnh ưu tiên khẩn cấp cho tổ Kỹ thuật viên phụ trách.</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Citizen Feedback Rating (Interactive 5-star) & Re-report Action */}
+                      {isResolved && (
+                        <div className="space-y-3">
+                          <div className="p-3.5 bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-500/30 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                            <div className="space-y-0.5">
+                              <div className="font-bold text-emerald-950 dark:text-emerald-200 flex items-center gap-1.5">
+                                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                                <span>Đánh giá mức độ hài lòng về Kỹ thuật viên xử lý:</span>
+                              </div>
+                              <div className="text-[11px] text-emerald-800/80 dark:text-emerald-400/80">
+                                Ý kiến của bạn giúp nâng cao chất lượng dịch vụ đô thị Cần Thơ.
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                  key={star}
+                                  onClick={() => handleRate(inc.id, star)}
+                                  className="p-1 rounded-lg hover:bg-emerald-200/60 dark:hover:bg-emerald-900/60 transition-transform active:scale-110 cursor-pointer"
+                                >
+                                  <Star
+                                    className={`w-5 h-5 ${
+                                      (ratings[inc.id] || 5) >= star
+                                        ? 'text-amber-500 fill-amber-500'
+                                        : 'text-slate-300 dark:text-slate-600'
+                                    }`}
+                                  />
+                                </button>
+                              ))}
+                              <span className="ml-2 font-bold text-emerald-900 dark:text-emerald-300 font-mono">
+                                {ratings[inc.id] ? `${ratings[inc.id]}/5 Sao` : '5/5 Rất Tốt'}
+                              </span>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-1">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <button
-                                key={star}
-                                onClick={() => handleRate(inc.id, star)}
-                                className="p-1 rounded-lg hover:bg-emerald-200/60 dark:hover:bg-emerald-900/60 transition-transform active:scale-110 cursor-pointer"
-                              >
-                                <Star
-                                  className={`w-5 h-5 ${
-                                    (ratings[inc.id] || 5) >= star
-                                      ? 'text-amber-500 fill-amber-500'
-                                      : 'text-slate-300 dark:text-slate-600'
-                                  }`}
-                                />
-                              </button>
-                            ))}
-                            <span className="ml-2 font-bold text-emerald-900 dark:text-emerald-300 font-mono">
-                              {ratings[inc.id] ? `${ratings[inc.id]}/5 Sao` : '5/5 Rất Tốt'}
-                            </span>
+                          {/* ⚠️ Nút Tái Báo Cáo Nếu Hiện Trường Chưa Ổn Thỏa */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-500/30 rounded-2xl text-xs">
+                            <div className="flex items-center gap-2 text-amber-900 dark:text-amber-300">
+                              <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                              <span>Hiện trường thực tế sau khi xử lý vẫn còn nguy cơ hoặc chưa sạch sẽ?</span>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setReopenModalIncident(inc);
+                                setReopenReason('');
+                                setReopenImageUrl('');
+                              }}
+                              className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition-all shadow-xs active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span>Tái báo cáo (Chưa ổn thỏa)</span>
+                            </button>
                           </div>
                         </div>
                       )}
@@ -1236,6 +1359,123 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
             >
               Đóng thẻ
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ⚠️ RE-REPORT / TÁI BÁO CÁO MODAL */}
+      {reopenModalIncident && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-[#0c1812] rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-amber-500/30 space-y-5 relative max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setReopenModalIncident(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Header */}
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-900 dark:text-amber-300 text-xs font-bold border border-amber-300 dark:border-amber-500/40">
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>YÊU CẦU TÁI XỬ LÝ (CHƯA ỔN THỎA)</span>
+              </div>
+              <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">
+                Khiếu Nại Sự Cố [{reopenModalIncident.publicCode}]
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Địa điểm: <strong>{reopenModalIncident.address}</strong>
+              </p>
+            </div>
+
+            {/* Explanation notice */}
+            <div className="p-3 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-500/30 rounded-2xl text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
+              💡 <strong>Quyền lợi công dân:</strong> Nếu sau khi Kỹ thuật viên báo đã hoàn tất mà hiện trường vẫn chưa sạch sẽ, còn cành nguy hiểm hoặc chưa triệt để, bạn có quyền gửi yêu cầu làm lại. Lệnh điều xe thang khẩn cấp sẽ được phát tức thì lên On-Chain.
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmitReopen} className="space-y-4 text-xs">
+              {/* Quick Reason Chips */}
+              <div className="space-y-1.5">
+                <label className="font-bold text-slate-700 dark:text-slate-300">
+                  Chọn nhanh nguyên nhân chưa đạt:
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    'Cành mục lớn nguy hiểm vẫn chưa cắt',
+                    'Chưa dọn dẹp cành lá, chắn lối đi',
+                    'Cây vẫn còn nghiêng đè vào dây điện',
+                    'Chỉ tỉa cành nhỏ, chưa xử lý dứt điểm',
+                    'Hiện trường còn rác bừa bãi',
+                  ].map((quickText) => (
+                    <button
+                      key={quickText}
+                      type="button"
+                      onClick={() => setReopenReason(quickText)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer border ${
+                        reopenReason === quickText
+                          ? 'bg-amber-600 text-white border-amber-600'
+                          : 'bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-amber-50 dark:hover:bg-amber-950/40'
+                      }`}
+                    >
+                      {quickText}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Textarea */}
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700 dark:text-slate-300">
+                  Mô tả chi tiết điểm chưa ổn thỏa <span className="text-rose-500">*</span>:
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Ví dụ: KTV chỉ cắt 1 cành nhỏ phía dưới, cành khô mục lớn phía trên vẫn còn vướng vào dây điện sinh hoạt, rất nguy hiểm khi trời mưa bão..."
+                  value={reopenReason}
+                  onChange={(e) => setReopenReason(e.target.value)}
+                  className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#070e0a] border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all resize-none"
+                />
+              </div>
+
+              {/* Photo Proof */}
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700 dark:text-slate-300">
+                  Link ảnh đối chứng hiện trường hiện tại (nếu có):
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://... hoặc dán URL ảnh chụp thực tế"
+                  value={reopenImageUrl}
+                  onChange={(e) => setReopenImageUrl(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-[#070e0a] border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setReopenModalIncident(null)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingReopen || !reopenReason.trim()}
+                  className={`px-5 py-2.5 rounded-xl text-white font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer ${
+                    isSubmittingReopen || !reopenReason.trim()
+                      ? 'bg-amber-400 opacity-60 cursor-not-allowed'
+                      : 'bg-amber-600 hover:bg-amber-700 active:scale-95'
+                  }`}
+                >
+                  <RotateCcw className={`w-3.5 h-3.5 ${isSubmittingReopen ? 'animate-spin' : ''}`} />
+                  <span>{isSubmittingReopen ? 'Đang gửi On-Chain...' : 'Gửi Yêu Cầu Tái Xử Lý'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

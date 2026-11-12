@@ -77,7 +77,7 @@ export interface CareRecord {
 }
 
 export type IncidentSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-export type IncidentStatus = 'RECEIVED' | 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED' | 'REJECTED';
+export type IncidentStatus = 'RECEIVED' | 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED' | 'REJECTED' | 'REOPENED';
 
 export interface Incident {
   id: string;
@@ -96,6 +96,10 @@ export interface Incident {
   assignedToName?: string;
   reportedAt: string; // ISO-8601 UTC
   resolvedAt?: string | null;
+  reopenedReason?: string;
+  reopenedAt?: string;
+  reopenedImageUrl?: string;
+  reopenedCount?: number;
   createdAt: string;
   updatedAt: string;
   // Blockchain metadata
