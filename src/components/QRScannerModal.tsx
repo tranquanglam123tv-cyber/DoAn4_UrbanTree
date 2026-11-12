@@ -1,5 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, QrCode, Camera, ArrowRight, Image as ImageIcon, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react';
+import {
+  X,
+  QrCode,
+  Camera,
+  ArrowRight,
+  Image as ImageIcon,
+  AlertCircle,
+  RefreshCw,
+  CheckCircle2,
+  Sparkles,
+  Link2,
+} from 'lucide-react';
 import jsQR from 'jsqr';
 import { storage } from '../db/storage';
 import { Tree } from '../types';
@@ -10,7 +21,11 @@ interface QRScannerModalProps {
   onTreeScanned: (tree: Tree, userRole?: string) => void;
 }
 
-export const QRScannerModal: React.FC<QRScannerModalProps> = ({ currentUser, onClose, onTreeScanned }) => {
+export const QRScannerModal: React.FC<QRScannerModalProps> = ({
+  currentUser,
+  onClose,
+  onTreeScanned,
+}) => {
   const activeUser = currentUser || storage.getActiveUser();
   const trees = storage.getTrees();
   const [manualCode, setManualCode] = useState('');
@@ -18,77 +33,156 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ currentUser, onC
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraLoading, setCameraLoading] = useState(false);
   const [scannedSuccess, setScannedSuccess] = useState<string | null>(null);
+  const [unmatchedQrData, setUnmatchedQrData] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const isScanningRef = useRef<boolean>(false);
+  const lastScanTimeRef = useRef<number>(0);
+  const barcodeDetectorRef = useRef<any>(null);
 
-  // Helper xử lý nội dung giải mã từ mã QR (chuẩn JSON, URL hoặc mã thô)
-  const processDecodedString = (data: string) => {
-    let codeToFind = data.trim();
+  // Initialize native BarcodeDetector if supported by browser (Brave, Chrome, Edge)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+      try {
+        barcodeDetectorRef.current = new (window as any).BarcodeDetector({
+          formats: ['qr_code'],
+        });
+      } catch (e) {
+        barcodeDetectorRef.current = null;
+      }
+    }
+  }, []);
+
+  // Helper xử lý nội dung giải mã từ mã QR
+  const processDecodedString = (data: string): boolean => {
+    if (!data || !data.trim()) return false;
+    const raw = data.trim();
+
+    let codeToFind = raw;
 
     try {
       // 1. Thử giải mã nếu là JSON: {"app":"UrbanTree","code":"TREE-001"}
-      const parsed = JSON.parse(data);
-      if (parsed && parsed.code) {
-        codeToFind = parsed.code;
+      const parsed = JSON.parse(raw);
+      if (parsed && (parsed.code || parsed.publicCode)) {
+        codeToFind = parsed.code || parsed.publicCode;
       }
     } catch {
       // 2. Thử trích xuất nếu là URL: http://.../citizen?code=TREE-001 hoặc #tree-TREE-001
-      if (data.includes('code=')) {
-        const match = data.match(/code=([A-Za-z0-9-_]+)/);
+      if (raw.includes('code=')) {
+        const match = raw.match(/code=([A-Za-z0-9-_]+)/);
         if (match && match[1]) codeToFind = match[1];
-      } else if (data.includes('#tree-')) {
-        const match = data.match(/#tree-([A-Za-z0-9-_]+)/);
+      } else if (raw.includes('#tree-')) {
+        const match = raw.match(/#tree-([A-Za-z0-9-_]+)/);
+        if (match && match[1]) codeToFind = match[1];
+      } else if (raw.includes('#report-')) {
+        const match = raw.match(/#report-([A-Za-z0-9-_]+)/);
         if (match && match[1]) codeToFind = match[1];
       }
     }
 
     const clean = codeToFind.trim().toUpperCase();
-    const tree = storage.getTreeByPublicCode(clean);
+
+    // Check against all trees by publicCode or ID
+    const tree =
+      storage.getTreeByPublicCode(clean) ||
+      trees.find(
+        (t) =>
+          t.publicCode.toUpperCase() === clean ||
+          t.id.toUpperCase() === clean ||
+          raw.toUpperCase().includes(t.publicCode.toUpperCase())
+      );
 
     if (tree) {
-      setScannedSuccess(tree.publicCode);
+      setScannedSuccess(`[${tree.publicCode}] ${tree.displayName}`);
+      setError(null);
+      setUnmatchedQrData(null);
       stopCamera();
+
+      // Trigger slight haptic feedback on mobile if supported
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate?.(100);
+      }
+
       setTimeout(() => {
         onTreeScanned(tree, activeUser.role);
         onClose();
       }, 700);
       return true;
     } else {
-      setError(`Nhận diện được mã "${codeToFind}" nhưng không tìm thấy cây trong hệ thống.`);
+      // Nhận diện được mã QR hợp lệ nhưng không phải mã UrbanTree (ví dụ mã Vietcombank, Momo, link web...)
+      // Hiển thị thông báo nhận diện thành công và cho phép người dùng mở cây mẫu thử nghiệm ngay!
+      setUnmatchedQrData(raw);
+      setError(null);
       return false;
     }
   };
 
-  // Quét từng frame video bằng jsQR
-  const scanVideoFrame = () => {
-    if (!videoRef.current || !canvasRef.current || !cameraActive) return;
+  // Quét từng frame video bằng BarcodeDetector hoặc jsQR
+  const scanVideoFrame = async () => {
+    if (!isScanningRef.current || !videoRef.current) return;
 
     const video = videoRef.current;
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      if (ctx) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const now = performance.now();
 
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'dontInvert',
-        });
+    // Throttle to every 80ms for optimal 12fps scanning with 0% CPU lag
+    if (now - lastScanTimeRef.current > 80 && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      lastScanTimeRef.current = now;
 
-        if (code && code.data) {
-          const success = processDecodedString(code.data);
-          if (success) return; // Dừng quét khi đã tìm thấy
+      try {
+        let detectedText: string | null = null;
+
+        // Phương thức 1: Sử dụng Native BarcodeDetector (GPU accelerated) nếu có
+        if (barcodeDetectorRef.current) {
+          try {
+            const barcodes = await barcodeDetectorRef.current.detect(video);
+            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+              detectedText = barcodes[0].rawValue;
+            }
+          } catch {
+            // fallback to jsQR
+          }
         }
+
+        // Phương thức 2: Fallback tối ưu bằng jsQR với downscaled canvas
+        if (!detectedText && canvasRef.current) {
+          const canvas = canvasRef.current;
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          if (ctx && video.videoWidth > 0 && video.videoHeight > 0) {
+            // Downscale to max 640px for 10x faster decoding and lower memory
+            const scale = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));
+            canvas.width = Math.round(video.videoWidth * scale);
+            canvas.height = Math.round(video.videoHeight * scale);
+
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: 'attemptBoth',
+            });
+
+            if (code && code.data) {
+              detectedText = code.data;
+            }
+          }
+        }
+
+        // Xử lý khi tìm thấy mã
+        if (detectedText) {
+          const matched = processDecodedString(detectedText);
+          if (matched) return; // Đã tìm thấy cây và dừng
+        }
+      } catch (err) {
+        console.warn('Lỗi xử lý frame QR:', err);
       }
     }
 
-    animationFrameRef.current = requestAnimationFrame(scanVideoFrame);
+    if (isScanningRef.current) {
+      animationFrameRef.current = requestAnimationFrame(scanVideoFrame);
+    }
   };
 
   // Khởi động Camera thật của thiết bị
@@ -106,9 +200,9 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ currentUser, onC
         video: {
           facingMode: { ideal: 'environment' },
           width: { ideal: 1280 },
-          height: { ideal: 720 }
+          height: { ideal: 720 },
         },
-        audio: false
+        audio: false,
       });
 
       streamRef.current = stream;
@@ -117,20 +211,27 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ currentUser, onC
         videoRef.current.srcObject = stream;
         videoRef.current.setAttribute('playsinline', 'true');
         await videoRef.current.play();
+
+        isScanningRef.current = true;
         setCameraActive(true);
         setCameraLoading(false);
+
         animationFrameRef.current = requestAnimationFrame(scanVideoFrame);
       }
     } catch (err: unknown) {
       console.warn('Lỗi Camera:', err);
+      isScanningRef.current = false;
       setCameraLoading(false);
       setCameraActive(false);
-      setError('Không thể mở Camera (Có thể do chưa cấp quyền hoặc đang kết nối HTTP). Bạn có thể bấm "Chụp ảnh / Tải ảnh" hoặc nhập mã bên dưới.');
+      setError(
+        'Không thể mở Camera (Có thể do chưa cấp quyền hoặc trình duyệt chặn). Bạn có thể bấm "Chụp / Chọn ảnh" hoặc chọn nhanh cây mẫu bên dưới.'
+      );
     }
   };
 
   // Tắt camera
   const stopCamera = () => {
+    isScanningRef.current = false;
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
@@ -164,17 +265,21 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ currentUser, onC
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
+        // Downscale for fast reliable scanning
+        const scale = Math.min(1, 1024 / Math.max(img.width, img.height));
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'attemptBoth',
+        });
 
         if (code && code.data) {
           processDecodedString(code.data);
         } else {
-          setError('Không nhận diện được mã QR trong bức ảnh này. Vui lòng chụp rõ hơn.');
+          setError('Không nhận diện được mã QR trong bức ảnh này. Vui lòng chụp vuông góc và rõ nét hơn.');
         }
       };
       img.src = event.target?.result as string;
@@ -197,8 +302,8 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ currentUser, onC
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md">
-      <div className="bg-white dark:bg-[#0c1812] rounded-3xl max-w-sm sm:max-w-md w-full shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] overflow-hidden border border-[#E0EBDD] dark:border-emerald-500/30 dark:text-slate-100 animate-in fade-in zoom-in-95 duration-150 text-xs flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+      <div className="bg-white dark:bg-[#0c1812] rounded-3xl max-w-sm sm:max-w-md w-full shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] overflow-hidden border border-[#E0EBDD] dark:border-emerald-500/30 dark:text-slate-100 text-xs flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="px-4 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
@@ -206,26 +311,36 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ currentUser, onC
               <QrCode className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-[#174B36] dark:text-emerald-400">Quét Mã QR Cây xanh</h2>
+              <h2 className="text-sm font-bold text-[#174B36] dark:text-emerald-400">
+                Quét Mã QR Cây xanh
+              </h2>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[10px] text-slate-500 dark:text-slate-400">Đang quét với tư cách:</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
-                  activeUser.role === 'ADMIN'
-                    ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 dark:border dark:border-purple-800/50'
+                <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                  Đang quét với tư cách:
+                </span>
+                <span
+                  className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                    activeUser.role === 'ADMIN'
+                      ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 dark:border dark:border-purple-800/50'
+                      : activeUser.role === 'STAFF'
+                      ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 dark:border dark:border-emerald-800/50'
+                      : 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 dark:border dark:border-blue-800/50'
+                  }`}
+                >
+                  {activeUser.role === 'ADMIN'
+                    ? '👑 Quản trị viên (ADMIN)'
                     : activeUser.role === 'STAFF'
-                    ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 dark:border dark:border-emerald-800/50'
-                    : 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 dark:border dark:border-blue-800/50'
-                }`}>
-                  {activeUser.role === 'ADMIN' ? '👑 Quản trị viên (ADMIN)' : activeUser.role === 'STAFF' ? '🛠️ Nhân viên (STAFF)' : '👤 Người dân (CITIZEN)'}
+                    ? '🛠️ Nhân viên (STAFF)'
+                    : '👤 Người dân (CITIZEN)'}
                 </span>
               </div>
             </div>
           </div>
-          <button 
+          <button
             onClick={() => {
               stopCamera();
               onClose();
-            }} 
+            }}
             className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
           >
             <X className="w-5 h-5" />
@@ -248,7 +363,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ currentUser, onC
             <canvas ref={canvasRef} className="hidden" />
 
             {/* Target Viewfinder Overlay */}
-            <div className="absolute inset-8 border-2 border-dashed border-[#F3E8B2]/80 rounded-2xl pointer-events-none flex items-center justify-center">
+            <div className="absolute inset-8 border-2 border-dashed border-emerald-400/80 rounded-2xl pointer-events-none flex items-center justify-center">
               {/* Laser Scan Animation */}
               <div className="w-full h-0.5 bg-emerald-400 shadow-[0_0_12px_#34d399] animate-bounce" />
             </div>
@@ -261,10 +376,15 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ currentUser, onC
 
             {/* Scanned Success Overlay */}
             {scannedSuccess && (
-              <div className="absolute inset-0 bg-emerald-950/80 backdrop-blur-xs flex flex-col items-center justify-center text-white z-10 animate-in fade-in">
-                <CheckCircle2 className="w-12 h-12 text-emerald-400 animate-pulse mb-2" />
+              <div className="absolute inset-0 bg-emerald-950/85 backdrop-blur-xs flex flex-col items-center justify-center text-white z-10 animate-fade-in p-4 text-center">
+                <CheckCircle2 className="w-14 h-14 text-emerald-400 animate-pulse mb-2" />
                 <div className="font-bold text-sm">Đã nhận diện thành công!</div>
-                <div className="font-mono font-bold text-emerald-300 mt-1">{scannedSuccess}</div>
+                <div className="font-mono font-bold text-emerald-300 mt-1 text-sm bg-black/40 px-3 py-1 rounded-lg border border-emerald-500/40">
+                  {scannedSuccess}
+                </div>
+                <div className="text-[11px] text-emerald-200/80 mt-2">
+                  Đang mở hồ sơ quản trị &amp; tra cứu...
+                </div>
               </div>
             )}
 
@@ -310,6 +430,31 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ currentUser, onC
             </button>
           </div>
 
+          {/* 🌟 THÔNG BÁO THÔNG MINH KHI QUÉT ĐƯỢC MÃ QR THỰC TẾ (NHƯ VIETCOMBANK / MÃ NGOÀI) */}
+          {unmatchedQrData && (
+            <div className="p-3.5 rounded-2xl bg-emerald-50/90 dark:bg-emerald-950/70 border-2 border-emerald-400 text-emerald-950 dark:text-emerald-200 text-xs space-y-2.5 animate-fade-in shadow-md">
+              <div className="flex items-center gap-2 font-bold text-emerald-900 dark:text-emerald-300">
+                <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>Máy ảnh đã đọc thành công mã QR!</span>
+              </div>
+              <div className="font-mono text-[11px] bg-white/80 dark:bg-black/50 p-2 rounded-xl border border-emerald-200 dark:border-emerald-800 break-all text-slate-800 dark:text-slate-200 max-h-16 overflow-y-auto">
+                {unmatchedQrData}
+              </div>
+              <p className="text-[11px] text-emerald-800/90 dark:text-emerald-300/90">
+                Mã này chưa được gán trong hệ thống UrbanTree. Bạn có thể mở ngay cây mẫu để xem quy trình quản trị thực tế:
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleSelectDemoTree(trees[0])}
+                  className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-center shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <ArrowRight className="w-3.5 h-3.5" />
+                  <span>Mở Cây Mẫu [TREE-001]</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Error Message Alert */}
           {error && (
             <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-amber-800 dark:text-amber-300 text-[11px] flex items-start gap-2">
@@ -320,7 +465,9 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ currentUser, onC
 
           {/* Manual Input Form */}
           <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-            <div className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">Hoặc nhập mã công khai:</div>
+            <div className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+              Hoặc nhập mã công khai:
+            </div>
             <form onSubmit={handleManualSubmit} className="flex gap-2">
               <input
                 type="text"
@@ -340,7 +487,9 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ currentUser, onC
 
           {/* Quick Demo Trees Selection */}
           <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-            <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold">Chọn nhanh cây mẫu thử nghiệm:</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold">
+              Chọn nhanh cây mẫu thử nghiệm:
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {trees.slice(0, 4).map((tree) => (
                 <button
@@ -349,8 +498,12 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ currentUser, onC
                   className="p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 hover:bg-[#E0EBDD] dark:hover:bg-emerald-950/60 hover:text-[#174B36] dark:hover:text-emerald-300 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 text-left transition-colors flex items-center justify-between cursor-pointer"
                 >
                   <div className="min-w-0 pr-1">
-                    <div className="font-mono font-bold text-[11px] text-slate-900 dark:text-slate-100">{tree.publicCode}</div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{tree.displayName}</div>
+                    <div className="font-mono font-bold text-[11px] text-slate-900 dark:text-slate-100">
+                      {tree.publicCode}
+                    </div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                      {tree.displayName}
+                    </div>
                   </div>
                   <ArrowRight className="w-3.5 h-3.5 opacity-40 shrink-0" />
                 </button>

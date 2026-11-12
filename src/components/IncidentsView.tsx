@@ -101,7 +101,6 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
       setLookupReopenReason('');
       setLookupReopenImageUrl('');
       setLookupReopenSuccess(`Đã gửi yêu cầu tái xử lý cho sự cố [${lookupResult.publicCode}]!`);
-      setIncidents(storage.getIncidents());
       setTimeout(() => setLookupReopenSuccess(null), 5000);
     } catch (err) {
       console.error(err);

@@ -728,7 +728,6 @@ class StorageService {
       const { hash, canonicalJson } = computeRecordHash('INCIDENT_RESOLUTION', incident, {
         resolvedBy: actorUserId,
         note,
-        imageUrl: imageUrl || incident.imageUrl,
       });
 
       const receipt = await blockchainService.anchorRecord({
@@ -785,11 +784,7 @@ class StorageService {
     }
 
     // Anchor REOPEN request to blockchain for transparency
-    const { hash, canonicalJson } = computeRecordHash('INCIDENT_REPORT', incident, {
-      reopenedBy: actorUserId,
-      reason,
-      reopenedCount: incident.reopenedCount,
-    });
+    const { hash, canonicalJson } = computeRecordHash('INCIDENT_REPORT', incident);
 
     const receipt = await blockchainService.anchorRecord({
       recordType: 'INCIDENT_REPORT',

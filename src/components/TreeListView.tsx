@@ -221,7 +221,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                     <div className="grid grid-cols-3 gap-2 text-center text-xs">
                       <div className="bg-slate-50 dark:bg-[#08120c] p-2 rounded-xl border border-slate-100 dark:border-slate-800/80">
                         <div className="text-[10px] text-slate-400 dark:text-slate-500">Chiều cao</div>
-                        <div className="font-bold text-slate-800 dark:text-slate-100 font-mono">{tree.heightMeters || tree.heightM || 8} m</div>
+                        <div className="font-bold text-slate-800 dark:text-slate-100 font-mono">{tree.heightM || 8} m</div>
                       </div>
                       <div className="bg-slate-50 dark:bg-[#08120c] p-2 rounded-xl border border-slate-100 dark:border-slate-800/80">
                         <div className="text-[10px] text-slate-400 dark:text-slate-500">Đường kính</div>
@@ -229,7 +229,9 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                       </div>
                       <div className="bg-slate-50 dark:bg-[#08120c] p-2 rounded-xl border border-slate-100 dark:border-slate-800/80">
                         <div className="text-[10px] text-slate-400 dark:text-slate-500">Tuổi ước tính</div>
-                        <div className="font-bold text-slate-800 dark:text-slate-100 font-mono">{tree.ageYears || 15} năm</div>
+                        <div className="font-bold text-slate-800 dark:text-slate-100 font-mono">
+                          {tree.plantedAt ? Math.max(1, new Date().getFullYear() - new Date(tree.plantedAt).getFullYear()) : 15} năm
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -338,7 +340,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                         </span>
                       </td>
                       <td className="py-3 px-4 font-mono text-[11px] text-slate-600 dark:text-slate-300">
-                        {tree.diameterCm || 30}cm / {tree.heightMeters || tree.heightM || 8}m
+                        {tree.diameterCm || 30}cm / {tree.heightM || 8}m
                       </td>
                       <td className="py-3 px-4">
                         <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 dark:text-[#00FF9D] font-semibold font-mono">
