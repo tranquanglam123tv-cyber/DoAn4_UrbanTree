@@ -142,28 +142,6 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <span>Quét Mã QR Cây</span>
           </button>
         </div>
-
-        {/* Cổng đăng nhập cán bộ đặt tinh tế bên dưới thay vì để nút đen trơ trọi ở giữa */}
-        <div className="pt-1 flex items-center justify-center text-xs text-slate-500 gap-1.5 flex-wrap">
-          <span>Dành cho Cán bộ &amp; Kỹ thuật viên:</span>
-          {currentUser && currentUser.role !== 'CITIZEN' ? (
-            <button
-              onClick={onOpenAdminDashboard}
-              className="font-bold text-emerald-800 hover:text-emerald-900 flex items-center gap-1.5 cursor-pointer bg-emerald-100/70 hover:bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300 transition-colors"
-            >
-              <Sliders className="w-3.5 h-3.5 text-emerald-700" />
-              <span>Vào Dashboard Quản Trị ({currentUser.role}) ➔</span>
-            </button>
-          ) : (
-            <button
-              onClick={onOpenLogin}
-              className="font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-1 cursor-pointer bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded-full border border-slate-200 transition-colors"
-            >
-              <LogIn className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Đăng nhập Cán bộ Quản trị ➔</span>
-            </button>
-          )}
-        </div>
       </div>
 
       {/* 🚀 2. AUTOMARK 3D PERSPECTIVE SCROLL TILT SHOWCASE (TỪ NẰM SANG ĐỨNG) */}

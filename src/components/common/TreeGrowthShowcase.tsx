@@ -294,3 +294,4 @@ export const TreeGrowthShowcase: React.FC = () => {
     </div>
   );
 };
+
