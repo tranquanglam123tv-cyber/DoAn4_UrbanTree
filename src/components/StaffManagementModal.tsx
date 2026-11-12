@@ -533,7 +533,19 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
         Boolean(u.teamName && u.teamName.toLowerCase().includes(q));
 
       const matchesRole = filterRole === 'ALL' || u.role === filterRole;
-      const matchesDistrict = filterDistrict === 'ALL' || (u.assignedDistrict && u.assignedDistrict.includes(filterDistrict));
+      const assigned = (u.assignedDistrict || '').toLowerCase();
+      const target = filterDistrict.toLowerCase();
+      const matchesDistrict =
+        filterDistrict === 'ALL' ||
+        (assigned.length > 0 &&
+          (assigned.includes(target) ||
+            (target === 'cần thơ' &&
+              (assigned.includes('ninh kiều') ||
+                assigned.includes('bình thủy') ||
+                assigned.includes('cái răng') ||
+                assigned.includes('ô môn') ||
+                assigned.includes('thốt nốt') ||
+                assigned.includes('phong điền')))));
       const matchesDepartment = filterDepartment === 'ALL' || u.department === filterDepartment || u.teamName === filterDepartment;
       const matchesStatus =
         filterStatus === 'ALL' ||
@@ -931,11 +943,17 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                     onChange={(e) => setAssignedDistrict(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
                   >
+                    <option value="Toàn quốc (Tất cả địa bàn)">🌐 Toàn quốc (Tất cả địa bàn)</option>
                     {CAN_THO_ZONES.map((z) => (
                       <option key={z.id} value={z.name}>
                         {z.name}
                       </option>
                     ))}
+                    <optgroup label="Tỉnh / Thành khác">
+                      <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
+                      <option value="TP. Đà Nẵng">TP. Đà Nẵng</option>
+                      <option value="TP. Hà Nội">TP. Hà Nội</option>
+                    </optgroup>
                   </select>
                 </div>
 
@@ -1196,12 +1214,22 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                       onChange={(e) => setFilterDistrict(e.target.value)}
                       className="w-full pl-8 pr-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-medium shadow-2xs cursor-pointer focus:outline-none focus:ring-1.5 focus:ring-emerald-500 transition-all truncate"
                     >
-                      <option value="ALL">Địa bàn: Toàn TP. Cần Thơ (Tất cả)</option>
-                      <option value="Ninh Kiều">Quận Ninh Kiều</option>
-                      <option value="Bình Thủy">Quận Bình Thủy</option>
-                      <option value="Cái Răng">Quận Cái Răng</option>
-                      <option value="Ô Môn">Quận Ô Môn</option>
-                      <option value="Thốt Nốt">Quận Thốt Nốt</option>
+                      <option value="ALL">🌐 Địa bàn: Toàn quốc (Tất cả)</option>
+                      <optgroup label="📍 TP. Cần Thơ (Địa bàn trọng điểm)">
+                        <option value="Cần Thơ">Toàn TP. Cần Thơ</option>
+                        <option value="Ninh Kiều">— Quận Ninh Kiều</option>
+                        <option value="Bình Thủy">— Quận Bình Thủy</option>
+                        <option value="Cái Răng">— Quận Cái Răng</option>
+                        <option value="Ô Môn">— Quận Ô Môn</option>
+                        <option value="Thốt Nốt">— Quận Thốt Nốt</option>
+                        <option value="Phong Điền">— Huyện Phong Điền</option>
+                      </optgroup>
+                      <optgroup label="🏙️ Các Tỉnh / Thành phố Khác">
+                        <option value="Hồ Chí Minh">TP. Hồ Chí Minh</option>
+                        <option value="Đà Nẵng">TP. Đà Nẵng</option>
+                        <option value="Hà Nội">TP. Hà Nội</option>
+                        <option value="Hải Phòng">TP. Hải Phòng</option>
+                      </optgroup>
                     </select>
                   </div>
 
@@ -1774,11 +1802,17 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                     onChange={(e) => setTransferDistrict(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
                   >
+                    <option value="Toàn quốc (Tất cả địa bàn)">🌐 Toàn quốc (Tất cả địa bàn)</option>
                     {CAN_THO_ZONES.map((z) => (
                       <option key={z.id} value={z.name}>
                         {z.name}
                       </option>
                     ))}
+                    <optgroup label="Tỉnh / Thành khác">
+                      <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
+                      <option value="TP. Đà Nẵng">TP. Đà Nẵng</option>
+                      <option value="TP. Hà Nội">TP. Hà Nội</option>
+                    </optgroup>
                   </select>
                 </div>
 
