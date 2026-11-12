@@ -175,24 +175,26 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600">
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-700/50 flex items-center justify-center text-amber-600 dark:text-amber-400">
               <AlertTriangle className="w-4 h-4" />
             </div>
             <span className="leading-snug">Quản lý Tiếp nhận &amp; Xử lý Sự cố Cây xanh</span>
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Quy trình tiếp nhận phản ánh, phân công đội ngũ kỹ thuật, lưu vết lịch sử bất biến và bảo chứng kết quả giải quyết.
           </p>
         </div>
 
         {/* Tab switchers (Pill Tabs) */}
-        <div className="bg-slate-100/80 p-1 rounded-full flex items-center gap-1 border border-slate-200/80 text-xs overflow-x-auto max-w-full scrollbar-none">
+        <div className="bg-slate-100/80 dark:bg-slate-900/80 p-1 rounded-full flex items-center gap-1 border border-slate-200/80 dark:border-slate-800 text-xs overflow-x-auto max-w-full scrollbar-none">
           {currentUser.role !== 'CITIZEN' && (
             <button
               onClick={() => setActiveSubTab('admin')}
               className={`px-3.5 py-1.5 rounded-full font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                activeSubTab === 'admin' ? 'bg-emerald-600 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                activeSubTab === 'admin'
+                  ? 'bg-emerald-600 dark:bg-emerald-500 text-white shadow-xs font-bold'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
               }`}
             >
               Điều phối Sự cố (Admin)
@@ -201,7 +203,9 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
           <button
             onClick={() => setActiveSubTab('public_report')}
             className={`px-3.5 py-1.5 rounded-full font-semibold transition-all whitespace-nowrap cursor-pointer ${
-              activeSubTab === 'public_report' ? 'bg-emerald-600 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+              activeSubTab === 'public_report'
+                ? 'bg-emerald-600 dark:bg-emerald-500 text-white shadow-xs font-bold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
             }`}
           >
             Cổng Phản ánh Người dân
@@ -209,7 +213,9 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
           <button
             onClick={() => setActiveSubTab('public_lookup')}
             className={`px-3.5 py-1.5 rounded-full font-semibold transition-all whitespace-nowrap cursor-pointer ${
-              activeSubTab === 'public_lookup' ? 'bg-emerald-600 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+              activeSubTab === 'public_lookup'
+                ? 'bg-emerald-600 dark:bg-emerald-500 text-white shadow-xs font-bold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
             }`}
           >
             Tra cứu theo Mã
@@ -221,7 +227,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
       {activeSubTab === 'admin' && (
         <div className="space-y-4">
           {/* Filter and Search Bar */}
-          <div className="p-3 bg-white rounded-xl border border-[#E0EBDD] shadow-2xs flex flex-wrap items-center gap-3">
+          <div className="p-3 bg-white dark:bg-[#0c1812] rounded-xl border border-[#E0EBDD] dark:border-emerald-500/20 shadow-2xs flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[220px]">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
               <input
@@ -229,16 +235,16 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Tìm mã sự cố (INC-84920), mô tả, địa chỉ..."
-                className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:border-[#347A50] focus:ring-1 focus:ring-[#347A50]"
+                className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 rounded-lg dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 focus:border-[#347A50] dark:focus:border-emerald-400 focus:ring-1 focus:ring-[#347A50]"
               />
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">Trạng thái:</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Trạng thái:</span>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg bg-white"
+                className="px-2.5 py-1.5 text-xs border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
               >
                 <option value="ALL">Tất cả trạng thái</option>
                 <option value="RECEIVED">Mới tiếp nhận (RECEIVED)</option>
@@ -254,7 +260,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <div className="lg:col-span-2 space-y-3">
               {filteredIncidents.length === 0 ? (
-                <div className="p-12 text-center bg-white rounded-xl border border-dashed border-slate-200 text-slate-400 text-xs">
+                <div className="p-12 text-center bg-white dark:bg-[#0c1812] rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 text-xs">
                   Không tìm thấy sự cố nào phù hợp.
                 </div>
               ) : (
@@ -267,55 +273,55 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                       onClick={() => setSelectedIncident(inc)}
                       className={`p-4 rounded-xl border transition-all cursor-pointer ${
                         isSelected
-                          ? 'bg-[#F8FAF8] border-[#174B36] ring-1 ring-[#174B36]'
-                          : 'bg-white border-[#E0EBDD] hover:border-[#347A50] shadow-2xs'
+                          ? 'bg-[#F8FAF8] dark:bg-[#12241b] border-[#174B36] dark:border-emerald-500 ring-1 ring-[#174B36] dark:ring-emerald-500 shadow-sm'
+                          : 'bg-white dark:bg-[#0c1812] border-[#E0EBDD] dark:border-slate-800/80 hover:border-[#347A50] dark:hover:border-emerald-500/40 shadow-2xs'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-[#E0EBDD] text-[#174B36]">
+                          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-[#E0EBDD] dark:bg-emerald-950/80 text-[#174B36] dark:text-emerald-400 dark:border dark:border-emerald-800/50">
                             {inc.publicCode}
                           </span>
                           <span
                             className={`text-[10px] font-bold px-2 py-0.5 rounded ${
                               inc.severity === 'CRITICAL'
-                                ? 'bg-red-100 text-red-700'
+                                ? 'bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400 dark:border dark:border-red-800/50'
                                 : inc.severity === 'HIGH'
-                                ? 'bg-orange-100 text-orange-700'
-                                : 'bg-amber-100 text-amber-700'
+                                ? 'bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-400 dark:border dark:border-orange-800/50'
+                                : 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 dark:border dark:border-amber-800/50'
                             }`}
                           >
                             {inc.severity}
                           </span>
-                          <span className="text-[11px] font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                          <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/90 px-2 py-0.5 rounded border border-transparent dark:border-slate-700/60">
                             {inc.status}
                           </span>
                         </div>
 
-                        <span className="text-[10px] text-slate-400 font-mono">
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                           {new Date(inc.reportedAt).toLocaleDateString('vi-VN')}
                         </span>
                       </div>
 
-                      <p className="text-xs text-slate-800 font-medium leading-relaxed mb-2">
+                      <p className="text-xs text-slate-800 dark:text-slate-200 font-medium leading-relaxed mb-2">
                         {inc.description}
                       </p>
 
-                      <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-100">
+                      <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800/80">
                         <span className="truncate max-w-[240px] flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                          <MapPin className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                           <span>{inc.address || 'Khu vực nội ô'}</span>
                         </span>
 
                         <div className="flex items-center gap-2">
                           {tree && (
-                            <span className="text-[#347A50] font-semibold">
+                            <span className="text-[#347A50] dark:text-emerald-400 font-semibold">
                               Cây: {tree.publicCode}
                             </span>
                           )}
                           {inc.assignedToName && (
-                            <span className="text-slate-600">
-                              Phụ trách: <strong>{inc.assignedToName}</strong>
+                            <span className="text-slate-600 dark:text-slate-400">
+                              Phụ trách: <strong className="text-slate-800 dark:text-slate-200">{inc.assignedToName}</strong>
                             </span>
                           )}
                         </div>
@@ -329,56 +335,56 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
             {/* Incident Details & Workflow State Machine Panel */}
             <div className="lg:col-span-1">
               {selectedIncident ? (
-                <div className="bg-white p-5 rounded-2xl border border-[#E0EBDD] shadow-sm sticky top-20 space-y-4 text-xs">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="bg-white dark:bg-[#0c1812] p-5 rounded-2xl border border-[#E0EBDD] dark:border-emerald-500/20 shadow-sm sticky top-20 space-y-4 text-xs">
+                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
                     <div>
-                      <span className="font-mono font-bold text-sm text-[#174B36]">
+                      <span className="font-mono font-bold text-sm text-[#174B36] dark:text-emerald-400">
                         {selectedIncident.publicCode}
                       </span>
-                      <div className="text-[10px] text-slate-400">Chi tiết & Tiến trình xử lý</div>
+                      <div className="text-[10px] text-slate-400 dark:text-slate-500">Chi tiết & Tiến trình xử lý</div>
                     </div>
-                    <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-slate-100 text-slate-700">
+                    <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-transparent dark:border-slate-700">
                       {selectedIncident.status}
                     </span>
                   </div>
 
                   {/* Incident Info */}
-                  <div className="space-y-2 text-slate-700">
+                  <div className="space-y-2 text-slate-700 dark:text-slate-300">
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Người gửi phản ánh:</span>
-                      <span className="font-semibold">{selectedIncident.reporterName}</span>
+                      <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Người gửi phản ánh:</span>
+                      <span className="font-semibold text-slate-900 dark:text-slate-100">{selectedIncident.reporterName}</span>
                       {selectedIncident.reporterPhone && (
-                        <span className="text-slate-500 font-mono ml-2">({selectedIncident.reporterPhone})</span>
+                        <span className="text-slate-500 dark:text-slate-400 font-mono ml-2">({selectedIncident.reporterPhone})</span>
                       )}
                     </div>
 
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Mô tả hiện trường:</span>
-                      <p className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 leading-relaxed text-[11px]">
+                      <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Mô tả hiện trường:</span>
+                      <p className="bg-slate-50 dark:bg-slate-900/70 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 leading-relaxed text-[11px] text-slate-800 dark:text-slate-200">
                         {selectedIncident.description}
                       </p>
                     </div>
 
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Địa chỉ:</span>
-                      <span>{selectedIncident.address}</span>
+                      <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Địa chỉ:</span>
+                      <span className="text-slate-800 dark:text-slate-200">{selectedIncident.address}</span>
                     </div>
                   </div>
 
                   {/* Status Transition Form */}
-                  <form onSubmit={handleUpdateStatus} className="pt-3 border-t border-slate-100 space-y-3">
-                    <div className="font-bold text-[#174B36] text-[11px] uppercase tracking-wider">
+                  <form onSubmit={handleUpdateStatus} className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                    <div className="font-bold text-[#174B36] dark:text-emerald-400 text-[11px] uppercase tracking-wider">
                       Cập nhật trạng thái sự cố
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
                         Chuyển sang trạng thái:
                       </label>
                       <select
                         value={newStatus}
                         onChange={(e) => setNewStatus(e.target.value as IncidentStatus)}
-                        className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white font-medium"
+                        className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white font-medium focus:border-[#347A50] dark:focus:border-emerald-400"
                       >
                         <option value="ASSIGNED">Phân công nhân viên (ASSIGNED)</option>
                         <option value="IN_PROGRESS">Đang xử lý tại hiện trường (IN_PROGRESS)</option>
@@ -388,13 +394,13 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
                         Nhân viên phân công:
                       </label>
                       <select
                         value={assignStaffId}
                         onChange={(e) => setAssignStaffId(e.target.value)}
-                        className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white"
+                        className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white focus:border-[#347A50] dark:focus:border-emerald-400"
                       >
                         <option value="">-- Chưa chỉ định --</option>
                         {users.filter((u) => u.role === 'STAFF').map((staff) => (
@@ -406,7 +412,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
                         Ghi chú cập nhật (bắt buộc):
                       </label>
                       <textarea
@@ -414,17 +420,17 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                         value={transitionNote}
                         onChange={(e) => setTransitionNote(e.target.value)}
                         placeholder="Ghi rõ hành động (ví dụ: Đã cử xe nâng cắt cành an toàn)"
-                        className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg"
+                        className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white dark:placeholder-slate-500 focus:border-[#347A50] dark:focus:border-emerald-400"
                       />
                     </div>
 
                     {/* Ảnh chụp hiện trường xử lý thực địa */}
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="block text-[11px] font-semibold text-slate-600">
+                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300">
                           Ảnh chụp hiện trường xử lý:
                         </label>
-                        <span className="text-[10px] text-emerald-700 font-medium bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                        <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
                           Minh chứng thực tế
                         </span>
                       </div>
@@ -450,7 +456,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                       />
 
                       {transitionImagePreview ? (
-                        <div className="relative rounded-lg overflow-hidden border border-emerald-300 max-h-28 group flex items-center justify-center bg-slate-900">
+                        <div className="relative rounded-lg overflow-hidden border border-emerald-300 dark:border-emerald-600/60 max-h-28 group flex items-center justify-center bg-slate-900">
                           <img
                             src={transitionImagePreview}
                             alt="Ảnh xử lý"
@@ -460,7 +466,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                             <button
                               type="button"
                               onClick={() => statusPhotoInputRef.current?.click()}
-                              className="px-2 py-1 bg-white text-slate-800 rounded text-[10px] font-semibold"
+                              className="px-2 py-1 bg-white text-slate-800 rounded text-[10px] font-semibold cursor-pointer"
                             >
                               Đổi ảnh
                             </button>
@@ -470,7 +476,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                                 setTransitionImagePreview(null);
                                 setTransitionImageUrl('');
                               }}
-                              className="px-2 py-1 bg-red-600 text-white rounded text-[10px] font-semibold"
+                              className="px-2 py-1 bg-red-600 text-white rounded text-[10px] font-semibold cursor-pointer"
                             >
                               Xóa
                             </button>
@@ -480,9 +486,9 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                         <button
                           type="button"
                           onClick={() => statusPhotoInputRef.current?.click()}
-                          className="w-full py-1.5 border border-dashed border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50 rounded-lg flex items-center justify-center gap-1.5 text-[11px] text-emerald-800 font-medium"
+                          className="w-full py-1.5 border border-dashed border-emerald-300 dark:border-emerald-700/60 bg-emerald-50/50 dark:bg-emerald-950/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg flex items-center justify-center gap-1.5 text-[11px] text-emerald-800 dark:text-emerald-300 font-medium cursor-pointer transition-colors"
                         >
-                          <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                          <Camera className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                           <span>Chụp / Tải ảnh xử lý sự cố</span>
                         </button>
                       )}
@@ -491,37 +497,37 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                     <button
                       type="submit"
                       disabled={isUpdating}
-                      className="w-full py-2 bg-[#174B36] hover:bg-[#347A50] text-white font-semibold rounded-lg text-xs transition-colors shadow-2xs"
+                      className="w-full py-2 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold rounded-lg text-xs transition-colors shadow-2xs cursor-pointer"
                     >
                       {isUpdating ? 'Đang lưu & băm lịch sử...' : 'Lưu cập nhật trạng thái'}
                     </button>
                   </form>
 
                   {/* Immutable Timeline History */}
-                  <div className="pt-3 border-t border-slate-100 space-y-2">
-                    <span className="font-bold text-[#174B36] text-[11px] uppercase tracking-wider block">
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                    <span className="font-bold text-[#174B36] dark:text-emerald-400 text-[11px] uppercase tracking-wider block">
                       Lịch sử diễn biến (Bất biến)
                     </span>
                     <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                       {storage.getIncidentUpdates(selectedIncident.id).map((upd) => (
-                        <div key={upd.id} className="p-2 rounded-lg bg-slate-50 border border-slate-100 text-[11px] space-y-0.5">
-                          <div className="flex items-center justify-between text-slate-500">
-                            <span className="font-bold text-slate-800">{upd.actorName}</span>
+                        <div key={upd.id} className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-[11px] space-y-0.5">
+                          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                            <span className="font-bold text-slate-800 dark:text-slate-200">{upd.actorName}</span>
                             <span className="font-mono text-[10px]">
                               {new Date(upd.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
-                          <div className="text-[#347A50] font-semibold">
+                          <div className="text-[#347A50] dark:text-emerald-400 font-semibold">
                             {upd.oldStatus} ➔ {upd.newStatus}
                           </div>
-                          <p className="text-slate-600">{upd.note}</p>
+                          <p className="text-slate-600 dark:text-slate-300">{upd.note}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="p-8 text-center bg-white rounded-2xl border border-[#E0EBDD] text-slate-400 text-xs">
+                <div className="p-8 text-center bg-white dark:bg-[#0c1812] rounded-2xl border border-[#E0EBDD] dark:border-emerald-500/20 text-slate-400 dark:text-slate-500 text-xs">
                   Chọn một sự cố từ danh sách bên trái để điều phối và xem tiến trình xử lý.
                 </div>
               )}
@@ -532,32 +538,32 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
 
       {/* Subtab 2: Citizen Report Portal */}
       {activeSubTab === 'public_report' && (
-        <div className="max-w-xl mx-auto bg-white p-6 rounded-2xl border border-[#E0EBDD] shadow-sm space-y-5 text-xs">
+        <div className="max-w-xl mx-auto bg-white dark:bg-[#0c1812] p-6 rounded-2xl border border-[#E0EBDD] dark:border-emerald-500/20 shadow-sm space-y-5 text-xs">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E0EBDD] text-[#174B36] font-bold text-[10px] mb-2">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E0EBDD] dark:bg-emerald-950/80 text-[#174B36] dark:text-emerald-400 dark:border dark:border-emerald-800/50 font-bold text-[10px] mb-2">
               <span>Cổng Dịch vụ Đô thị</span>
               <span>·</span>
               <span>Tiếp nhận 24/7</span>
             </div>
-            <h2 className="text-lg font-bold text-[#174B36]">Gửi Phản ánh Sự cố Cây xanh</h2>
-            <p className="text-slate-500 mt-1">
+            <h2 className="text-lg font-bold text-[#174B36] dark:text-emerald-400">Gửi Phản ánh Sự cố Cây xanh</h2>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">
               Người dân không cần tạo tài khoản. Mọi phản ánh được số hóa, cấp mã tra cứu tức thì và bảo chứng minh bạch.
             </p>
           </div>
 
           {reportSuccessCode ? (
-            <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-3">
-              <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
-              <div className="text-base font-bold text-emerald-900">
+            <div className="p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-center space-y-3">
+              <CheckCircle2 className="w-12 h-12 text-emerald-600 dark:text-emerald-400 mx-auto" />
+              <div className="text-base font-bold text-emerald-900 dark:text-emerald-200">
                 Gửi phản ánh thành công!
               </div>
-              <p className="text-xs text-emerald-800">
+              <p className="text-xs text-emerald-800 dark:text-emerald-300">
                 Mã tra cứu tiến trình xử lý của bạn là:
               </p>
-              <div className="p-3 bg-white rounded-xl border border-emerald-200 text-xl font-bold font-mono text-[#174B36] tracking-wider shadow-xs">
+              <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-emerald-200 dark:border-emerald-700/60 text-xl font-bold font-mono text-[#174B36] dark:text-emerald-400 tracking-wider shadow-xs">
                 {reportSuccessCode}
               </div>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Vui lòng lưu lại mã này. Bạn có thể sang mục <strong>"Tra cứu theo Mã"</strong> để theo dõi nhân viên xử lý bất cứ lúc nào.
               </p>
               <button
@@ -565,7 +571,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                   setLookupCode(reportSuccessCode);
                   setActiveSubTab('public_lookup');
                 }}
-                className="px-4 py-2 bg-[#174B36] text-white rounded-lg font-semibold text-xs hover:bg-[#347A50] transition-colors"
+                className="px-4 py-2 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white rounded-lg font-semibold text-xs transition-colors cursor-pointer"
               >
                 Theo dõi tiến độ ngay
               </button>
@@ -573,27 +579,27 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
           ) : (
             <form onSubmit={handleCitizenSubmit} className="space-y-4">
               {reportTreeId && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-900 animate-fade-in">
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/60 rounded-xl flex items-center justify-between text-xs text-emerald-900 dark:text-emerald-200 animate-fade-in">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
                     <span>
                       Đang phản ánh cho cây: <strong>[{trees.find((t) => t.id === reportTreeId)?.publicCode}]</strong> {trees.find((t) => t.id === reportTreeId)?.displayName}
                     </span>
                   </div>
-                  <span className="text-[10px] bg-emerald-200/70 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] bg-emerald-200/70 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full">
                     Đã nhận diện QR
                   </span>
                 </div>
               )}
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Chọn cây xanh liên quan (Nếu có quét mã QR trên cây)
                 </label>
                 <select
                   value={reportTreeId}
                   onChange={(e) => setReportTreeId(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white"
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:border-[#347A50] dark:focus:border-emerald-400"
                 >
                   <option value="">-- Không xác định mã cây / Sự cố cây chung --</option>
                   {trees.map((t) => (
@@ -605,13 +611,13 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Mức độ khẩn cấp *
                 </label>
                 <select
                   value={reportSeverity}
                   onChange={(e) => setReportSeverity(e.target.value as IncidentSeverity)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white font-medium"
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-medium focus:border-[#347A50] dark:focus:border-emerald-400"
                 >
                   <option value="CRITICAL">Nguy cấp (Cây sắp đổ trúng đường / Gãy cành to)</option>
                   <option value="HIGH">Cao (Cành khô nứt nẻ / Cây nghiêng sau mưa)</option>
@@ -621,7 +627,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Mô tả chi tiết sự cố *
                 </label>
                 <textarea
@@ -630,12 +636,12 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                   value={reportDesc}
                   onChange={(e) => setReportDesc(e.target.value)}
                   placeholder="Ví dụ: Cành cây me tây đối diện số nhà 45 có vết nứt lớn, nguy cơ rơi khi có gió giật..."
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white dark:placeholder-slate-500 focus:border-[#347A50] dark:focus:border-emerald-400"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Địa chỉ hiện trường *
                 </label>
                 <input
@@ -643,17 +649,17 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                   value={reportAddress}
                   onChange={(e) => setReportAddress(e.target.value)}
                   placeholder="Ví dụ: Vỉa hè trước cổng ĐH Cần Thơ, Đường 3/2, Xuân Khánh, Ninh Kiều"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white dark:placeholder-slate-500 focus:border-[#347A50] dark:focus:border-emerald-400"
                 />
               </div>
 
               {/* Citizen Photo capture */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block font-semibold text-slate-700">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300">
                     Ảnh chụp thực tế hiện trường sự cố
                   </label>
-                  <span className="text-[10px] text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
                     Khuyến khích chụp để xử lý nhanh
                   </span>
                 </div>
@@ -679,7 +685,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                 />
 
                 {reportImagePreview ? (
-                  <div className="relative rounded-xl overflow-hidden border border-emerald-300 bg-slate-900 group aspect-video max-h-40 flex items-center justify-center">
+                  <div className="relative rounded-xl overflow-hidden border border-emerald-300 dark:border-emerald-600/60 bg-slate-900 group aspect-video max-h-40 flex items-center justify-center">
                     <img
                       src={reportImagePreview}
                       alt="Ảnh sự cố"
@@ -689,7 +695,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                       <button
                         type="button"
                         onClick={() => citizenPhotoInputRef.current?.click()}
-                        className="px-3 py-1.5 bg-white text-slate-800 rounded-lg text-xs font-semibold shadow hover:bg-slate-100"
+                        className="px-3 py-1.5 bg-white text-slate-800 rounded-lg text-xs font-semibold shadow hover:bg-slate-100 cursor-pointer"
                       >
                         Chụp / Chọn ảnh khác
                       </button>
@@ -699,7 +705,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                           setReportImagePreview(null);
                           setReportImageUrl('');
                         }}
-                        className="px-2.5 py-1.5 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700"
+                        className="px-2.5 py-1.5 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700 cursor-pointer"
                       >
                         Xóa
                       </button>
@@ -708,16 +714,16 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                 ) : (
                   <div
                     onClick={() => citizenPhotoInputRef.current?.click()}
-                    className="border-2 border-dashed border-emerald-200 hover:border-emerald-400 bg-emerald-50/30 hover:bg-emerald-50/60 rounded-xl p-3 flex items-center justify-center gap-2.5 cursor-pointer transition-colors"
+                    className="border-2 border-dashed border-emerald-200 dark:border-emerald-800/80 hover:border-emerald-400 dark:hover:border-emerald-600 bg-emerald-50/30 dark:bg-emerald-950/20 hover:bg-emerald-50/60 dark:hover:bg-emerald-950/40 rounded-xl p-3 flex items-center justify-center gap-2.5 cursor-pointer transition-colors"
                   >
-                    <div className="p-2 bg-white rounded-full shadow-xs text-emerald-600 border border-emerald-100">
+                    <div className="p-2 bg-white dark:bg-slate-900 rounded-full shadow-xs text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/60">
                       <Camera className="w-4 h-4" />
                     </div>
                     <div className="text-left">
-                      <div className="text-xs font-bold text-emerald-900">
+                      <div className="text-xs font-bold text-emerald-900 dark:text-emerald-300">
                         Chụp ảnh hiện trường từ máy ảnh
                       </div>
-                      <div className="text-[10px] text-slate-500">
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400">
                         hoặc bấm để tải ảnh từ thư viện thiết bị
                       </div>
                     </div>
@@ -727,7 +733,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Họ tên người báo (Tùy chọn)
                   </label>
                   <input
@@ -735,11 +741,11 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                     value={reporterName}
                     onChange={(e) => setReporterName(e.target.value)}
                     placeholder="Nguyễn Văn A"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white dark:placeholder-slate-500 focus:border-[#347A50] dark:focus:border-emerald-400"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Số điện thoại (Nhận tin nhắn)
                   </label>
                   <input
@@ -747,14 +753,14 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                     value={reporterPhone}
                     onChange={(e) => setReporterPhone(e.target.value)}
                     placeholder="0901234567"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white dark:placeholder-slate-500 focus:border-[#347A50] dark:focus:border-emerald-400"
                   />
                 </div>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-2.5 bg-[#174B36] hover:bg-[#347A50] text-white font-bold rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Send className="w-4 h-4" />
                 <span>Gửi phản ánh ngay</span>
@@ -767,12 +773,12 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
       {/* Subtab 3: Citizen Lookup Portal */}
       {activeSubTab === 'public_lookup' && (
         <div className="max-w-xl mx-auto space-y-4 text-xs">
-          <div className="bg-white p-6 rounded-2xl border border-[#E0EBDD] shadow-sm space-y-4">
-            <h2 className="text-base font-bold text-[#174B36]">
+          <div className="bg-white dark:bg-[#0c1812] p-6 rounded-2xl border border-[#E0EBDD] dark:border-emerald-500/20 shadow-sm space-y-4">
+            <h2 className="text-base font-bold text-[#174B36] dark:text-emerald-400">
               Tra cứu Tiến trình Xử lý Sự cố theo Mã
             </h2>
-            <p className="text-slate-500">
-              Nhập mã phản ánh nhận được (ví dụ: <button onClick={() => setLookupCode('INC-84920')} className="text-[#174B36] font-bold underline font-mono">INC-84920</button> hoặc <button onClick={() => setLookupCode('INC-53219')} className="text-[#174B36] font-bold underline font-mono">INC-53219</button>)
+            <p className="text-slate-500 dark:text-slate-400">
+              Nhập mã phản ánh nhận được (ví dụ: <button onClick={() => setLookupCode('INC-84920')} className="text-[#174B36] dark:text-emerald-400 font-bold underline font-mono cursor-pointer">INC-84920</button> hoặc <button onClick={() => setLookupCode('INC-53219')} className="text-[#174B36] dark:text-emerald-400 font-bold underline font-mono cursor-pointer">INC-53219</button>)
             </p>
 
             <form onSubmit={handleCitizenLookup} className="flex gap-2">
@@ -781,74 +787,74 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                 value={lookupCode}
                 onChange={(e) => setLookupCode(e.target.value.toUpperCase())}
                 placeholder="INC-XXXXX"
-                className="flex-1 px-3 py-2 border border-slate-200 rounded-lg font-mono font-bold text-[#174B36] text-sm"
+                className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg font-mono font-bold text-[#174B36] dark:text-emerald-400 bg-white dark:bg-slate-900 text-sm focus:border-[#347A50] dark:focus:border-emerald-400"
               />
               <button
                 type="submit"
-                className="px-4 py-2 bg-[#174B36] hover:bg-[#347A50] text-white font-semibold rounded-lg shrink-0 transition-colors"
+                className="px-4 py-2 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold rounded-lg shrink-0 transition-colors cursor-pointer"
               >
                 Tra cứu
               </button>
             </form>
 
             {lookupError && (
-              <div className="p-3 rounded-lg bg-red-50 text-red-700 text-xs">
+              <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs">
                 {lookupError}
               </div>
             )}
           </div>
 
           {lookupResult && (
-            <div className="bg-white p-6 rounded-2xl border border-[#E0EBDD] shadow-sm space-y-4 animate-in fade-in duration-150">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="bg-white dark:bg-[#0c1812] p-6 rounded-2xl border border-[#E0EBDD] dark:border-emerald-500/20 shadow-sm space-y-4 animate-in fade-in duration-150">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
                 <div>
-                  <span className="font-mono text-base font-bold text-[#174B36]">
+                  <span className="font-mono text-base font-bold text-[#174B36] dark:text-emerald-400">
                     {lookupResult.publicCode}
                   </span>
-                  <div className="text-[11px] text-slate-500">
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
                     Ghi nhận lúc: {new Date(lookupResult.reportedAt).toLocaleString('vi-VN')}
                   </div>
                 </div>
                 <span
                   className={`px-2.5 py-1 rounded-full text-xs font-bold ${
                     lookupResult.status === 'RESOLVED'
-                      ? 'bg-emerald-100 text-emerald-800'
+                      ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 dark:border dark:border-emerald-800'
                       : lookupResult.status === 'IN_PROGRESS'
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-amber-100 text-amber-800'
+                      ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 dark:border dark:border-blue-800'
+                      : 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 dark:border dark:border-amber-800'
                   }`}
                 >
                   {lookupResult.status}
                 </span>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-xl space-y-1">
-                <span className="text-slate-400 text-[10px] block">Nội dung phản ánh:</span>
-                <p className="text-slate-800 font-medium">{lookupResult.description}</p>
-                <div className="text-slate-500 text-[11px] pt-1">
+              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl space-y-1 border border-transparent dark:border-slate-800">
+                <span className="text-slate-400 dark:text-slate-500 text-[10px] block">Nội dung phản ánh:</span>
+                <p className="text-slate-800 dark:text-slate-200 font-medium">{lookupResult.description}</p>
+                <div className="text-slate-500 dark:text-slate-400 text-[11px] pt-1">
                   Địa điểm: {lookupResult.address}
                 </div>
               </div>
 
               {/* Progress Timeline */}
               <div className="space-y-3 pt-2">
-                <span className="font-bold text-[#174B36] text-xs uppercase tracking-wider block">
+                <span className="font-bold text-[#174B36] dark:text-emerald-400 text-xs uppercase tracking-wider block">
                   Nhật ký tiến trình thực tế:
                 </span>
-                <div className="space-y-3 pl-3 border-l-2 border-[#174B36]/30">
+                <div className="space-y-3 pl-3 border-l-2 border-[#174B36]/30 dark:border-emerald-500/40">
                   {storage.getIncidentUpdates(lookupResult.id).map((upd) => (
                     <div key={upd.id} className="relative pl-3 space-y-0.5">
-                      <div className="absolute -left-[19px] top-1 w-2.5 h-2.5 rounded-full bg-[#174B36] ring-4 ring-white" />
-                      <div className="flex items-center justify-between text-slate-500 text-[10px]">
-                        <span className="font-bold text-slate-800">{upd.actorName}</span>
+                      <div className="absolute -left-[19px] top-1 w-2.5 h-2.5 rounded-full bg-[#174B36] dark:bg-emerald-400 ring-4 ring-white dark:ring-[#0c1812]" />
+                      <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[10px]">
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{upd.actorName}</span>
                         <span className="font-mono">
                           {new Date(upd.createdAt).toLocaleString('vi-VN')}
                         </span>
                       </div>
-                      <div className="text-[#347A50] font-semibold text-xs">
+                      <div className="text-[#347A50] dark:text-emerald-400 font-semibold text-xs">
                         {upd.oldStatus} ➔ {upd.newStatus}
                       </div>
-                      <p className="text-slate-700 text-xs bg-slate-50 p-2 rounded-lg border border-slate-100">
+                      <p className="text-slate-700 dark:text-slate-300 text-xs bg-slate-50 dark:bg-slate-900/60 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
                         {upd.note}
                       </p>
                     </div>

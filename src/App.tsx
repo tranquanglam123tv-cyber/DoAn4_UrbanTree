@@ -34,7 +34,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>('home');
   const [currentUser, setCurrentUser] = useState<User>(storage.getActiveUser());
   const [isDark, setIsDark] = useState<boolean>(() => {
-    return localStorage.getItem('urbantree_theme') === 'dark';
+    const saved = localStorage.getItem('urbantree_theme');
+    if (saved) return saved === 'dark';
+    return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
   useEffect(() => {
@@ -174,8 +176,8 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen flex flex-col relative transition-colors duration-200 ${
-      isDark ? 'dark bg-[#060B08] text-[#E2E8F0]' : 'bg-[#F8FAF9] text-[#0F172A]'
+    <div className={`min-h-screen flex flex-col relative transition-colors duration-300 ${
+      isDark ? 'dark bg-[#070e0a] text-slate-100' : 'bg-[#F8FAF9] text-slate-900'
     } selection:bg-emerald-500 selection:text-white`}>
       {/* Ambient Botanical Spore Canvas Particles (Automark) */}
       <SporeBackground isDark={isDark} />
@@ -298,15 +300,15 @@ export default function App() {
       </main>
 
       {/* Footnote */}
-      <footer className="border-t border-[#E0EBDD] bg-white py-4 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-500">
+      <footer className="border-t border-[#E0EBDD] dark:border-slate-800 bg-white dark:bg-[#08120d] py-4 mt-auto transition-colors duration-300">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400">
           <div>
             UrbanTree © 2026 · Hệ thống Quản lý Cây xanh Đô thị tích hợp QR Code & Blockchain
           </div>
           <div className="flex items-center gap-3">
-            <span>HĐ EVM: <strong className="font-mono text-[#174B36]">0x71C8...12C8</strong></span>
+            <span>HĐ EVM: <strong className="font-mono text-[#174B36] dark:text-emerald-400">0x71C8...12C8</strong></span>
             <span>·</span>
-            <span>Chuẩn: <strong>SHA-256 Canonical v1</strong></span>
+            <span>Chuẩn: <strong className="dark:text-slate-300">SHA-256 Canonical v1</strong></span>
           </div>
         </div>
       </footer>

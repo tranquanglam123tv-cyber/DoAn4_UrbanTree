@@ -95,7 +95,7 @@ export const PerspectiveTiltShowcase: React.FC<PerspectiveTiltShowcaseProps> = (
       <div
         ref={cardRef}
         data-gsap-video-showcase
-        className="relative w-full max-w-7xl rounded-[32px] sm:rounded-[40px] bg-white border border-slate-200/90 p-2 sm:p-4 shadow-2xl shadow-emerald-950/15 will-change-transform"
+        className="relative w-full max-w-7xl rounded-[32px] sm:rounded-[40px] bg-white dark:bg-[#0c1812] border border-slate-200/90 dark:border-emerald-500/20 p-2 sm:p-4 shadow-2xl shadow-emerald-950/15 dark:shadow-[0_4px_30px_rgba(0,0,0,0.6)] will-change-transform"
         style={{
           transformStyle: 'preserve-3d',
           transform: 'perspective(1400px) rotateX(32deg) scale(0.82) translateY(-60px)',
@@ -103,23 +103,23 @@ export const PerspectiveTiltShowcase: React.FC<PerspectiveTiltShowcaseProps> = (
         }}
       >
         {/* Thanh điều khiển Radar trung tâm */}
-        <div className="flex items-center justify-between px-4 sm:px-5 py-2.5 sm:py-3 mb-2 sm:mb-3 bg-slate-50/90 rounded-2xl border border-slate-200/60">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-2.5 sm:py-3 mb-2 sm:mb-3 bg-slate-50/90 dark:bg-slate-900/80 rounded-2xl border border-slate-200/60 dark:border-slate-800">
           <div className="flex items-center gap-2">
             <span className="w-2.5 sm:w-3 h-2.5 sm:h-3 rounded-full bg-rose-400" />
             <span className="w-2.5 sm:w-3 h-2.5 sm:h-3 rounded-full bg-amber-400" />
             <span className="w-2.5 sm:w-3 h-2.5 sm:h-3 rounded-full bg-emerald-400" />
-            <span className="hidden sm:inline-block ml-3 px-3 py-1 text-xs font-mono text-slate-500 bg-white rounded-md border border-slate-200">
+            <span className="hidden sm:inline-block ml-3 px-3 py-1 text-xs font-mono text-slate-500 dark:text-emerald-400 bg-white dark:bg-[#070e0a] rounded-md border border-slate-200 dark:border-emerald-500/20">
               {urlBarText}
             </span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200/70">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-xs font-bold border border-emerald-200/70 dark:border-emerald-500/30">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             {badgeText}
           </div>
         </div>
 
         {/* Nội dung bên trong: Bản đồ Leaflet hoặc Dashboard GIS */}
-        <div className="rounded-[24px] sm:rounded-[28px] overflow-hidden border border-emerald-100/60 bg-emerald-50/20">
+        <div className="rounded-[24px] sm:rounded-[28px] overflow-hidden border border-emerald-100/60 dark:border-emerald-500/20 bg-emerald-50/20 dark:bg-[#070e0a]/50">
           {children}
         </div>
       </div>

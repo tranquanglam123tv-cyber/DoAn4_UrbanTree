@@ -74,12 +74,12 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] shadow-2xl flex flex-col border border-[#E0EBDD] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+      <div className="bg-white dark:bg-[#0c1812] rounded-2xl max-w-2xl w-full max-h-[90vh] shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex flex-col border border-[#E0EBDD] dark:border-emerald-500/30 dark:text-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="px-6 py-4 bg-[#174B36] text-white flex items-center justify-between shrink-0">
+        <div className="px-6 py-4 bg-[#174B36] dark:bg-[#091b12] dark:border-b dark:border-emerald-500/30 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-[#F3E8B2] font-mono text-xs font-bold">
+            <div className="w-10 h-10 rounded-xl bg-white/10 dark:bg-emerald-900/40 flex items-center justify-center text-[#F3E8B2] dark:text-emerald-400 font-mono text-xs font-bold border border-white/10 dark:border-emerald-500/30">
               {tree.publicCode}
             </div>
             <div>
@@ -107,20 +107,20 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
             <button
               onClick={() => onOpenQrModal(tree)}
               title="Xem & in mã QR"
-              className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+              className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors cursor-pointer"
             >
               <QrCode className="w-4 h-4" />
             </button>
             <button
               onClick={() => onOpenEditModal(tree)}
               title="Chỉnh sửa thông tin cây"
-              className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+              className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors cursor-pointer"
             >
               <Edit className="w-4 h-4" />
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+              className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -128,48 +128,48 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-200 px-6 bg-slate-50 text-xs font-medium shrink-0">
+        <div className="flex border-b border-slate-200 dark:border-slate-800 px-6 bg-slate-50 dark:bg-slate-900/80 text-xs font-medium shrink-0">
           <button
             onClick={() => setActiveTab('info')}
-            className={`py-2.5 px-3 border-b-2 transition-colors ${
+            className={`py-2.5 px-3 border-b-2 transition-colors cursor-pointer ${
               activeTab === 'info'
-                ? 'border-[#174B36] text-[#174B36] font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-[#174B36] dark:border-emerald-400 text-[#174B36] dark:text-emerald-400 font-bold'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
             Thông tin thực địa
           </button>
           <button
             onClick={() => setActiveTab('care')}
-            className={`py-2.5 px-3 border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`py-2.5 px-3 border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'care'
-                ? 'border-[#174B36] text-[#174B36] font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-[#174B36] dark:border-emerald-400 text-[#174B36] dark:text-emerald-400 font-bold'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
             <span>Nhật ký chăm sóc</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-slate-200 text-[10px]">{careRecords.length}</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-800 text-[10px] text-slate-700 dark:text-slate-300">{careRecords.length}</span>
           </button>
           <button
             onClick={() => setActiveTab('incidents')}
-            className={`py-2.5 px-3 border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`py-2.5 px-3 border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'incidents'
-                ? 'border-[#174B36] text-[#174B36] font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-[#174B36] dark:border-emerald-400 text-[#174B36] dark:text-emerald-400 font-bold'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
             <span>Sự cố</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-slate-200 text-[10px]">{incidents.length}</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-800 text-[10px] text-slate-700 dark:text-slate-300">{incidents.length}</span>
           </button>
           <button
             onClick={() => setActiveTab('blockchain')}
-            className={`py-2.5 px-3 border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`py-2.5 px-3 border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'blockchain'
-                ? 'border-[#174B36] text-[#174B36] font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-[#174B36] dark:border-emerald-400 text-[#174B36] dark:text-emerald-400 font-bold'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            <ShieldCheck className="w-3.5 h-3.5 text-[#347A50]" />
+            <ShieldCheck className="w-3.5 h-3.5 text-[#347A50] dark:text-emerald-400" />
             <span>Xác minh Blockchain</span>
           </button>
         </div>
@@ -181,7 +181,7 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
               {/* Image & Quick specs */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-1">
-                  <div className="aspect-4/3 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 relative">
+                  <div className="aspect-4/3 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 relative">
                     <img
                       src={tree.imageUrl || 'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=600&q=80'}
                       alt={tree.displayName}
@@ -194,45 +194,45 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
                 </div>
 
                 <div className="sm:col-span-2 space-y-3">
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-2 text-xs">
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900/70 rounded-xl border border-slate-100 dark:border-slate-800 space-y-2 text-xs">
                     <div className="flex items-start gap-2">
-                      <MapPin className="w-4 h-4 text-[#174B36] shrink-0 mt-0.5" />
+                      <MapPin className="w-4 h-4 text-[#174B36] dark:text-emerald-400 shrink-0 mt-0.5" />
                       <div>
-                        <div className="font-semibold text-slate-800">{tree.address}</div>
-                        <div className="text-slate-500 font-mono text-[11px]">
+                        <div className="font-semibold text-slate-800 dark:text-slate-200">{tree.address}</div>
+                        <div className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">
                           Tọa độ: {tree.latitude.toFixed(6)}, {tree.longitude.toFixed(6)}
                         </div>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-200/60 text-slate-600">
+                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-800 text-slate-600 dark:text-slate-400">
                       <div>
-                        <span className="text-slate-400 block text-[10px]">Đường kính</span>
-                        <span className="font-bold text-slate-800 font-mono">{tree.diameterCm || 30} cm</span>
+                        <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Đường kính</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">{tree.diameterCm || 30} cm</span>
                       </div>
                       <div>
-                        <span className="text-slate-400 block text-[10px]">Chiều cao</span>
-                        <span className="font-bold text-slate-800 font-mono">{tree.heightM || 8} m</span>
+                        <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Chiều cao</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">{tree.heightM || 8} m</span>
                       </div>
                       <div>
-                        <span className="text-slate-400 block text-[10px]">Năm trồng</span>
-                        <span className="font-bold text-slate-800 font-mono">{tree.plantedAt || '2021'}</span>
+                        <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Năm trồng</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">{tree.plantedAt || '2021'}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="p-3 bg-[#F8FAF8] rounded-xl border border-[#E0EBDD] text-xs">
-                    <div className="font-semibold text-[#174B36] mb-1">Đặc tính sinh học & Hướng dẫn:</div>
-                    <p className="text-slate-600 leading-relaxed text-[11px]">{treeType?.careGuide}</p>
+                  <div className="p-3 bg-[#F8FAF8] dark:bg-[#091811] rounded-xl border border-[#E0EBDD] dark:border-emerald-500/20 text-xs">
+                    <div className="font-semibold text-[#174B36] dark:text-emerald-400 mb-1">Đặc tính sinh học & Hướng dẫn:</div>
+                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-[11px]">{treeType?.careGuide}</p>
                   </div>
                 </div>
               </div>
 
               {/* Quick actions row */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   onClick={() => onOpenPublicView(tree)}
-                  className="text-xs font-semibold text-[#174B36] hover:underline flex items-center gap-1.5"
+                  className="text-xs font-semibold text-[#174B36] dark:text-emerald-400 hover:underline flex items-center gap-1.5 cursor-pointer"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                   <span>Xem giao diện người dân khi quét QR</span>
@@ -241,14 +241,14 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => onOpenCareModal(tree.id)}
-                    className="px-3 py-1.5 bg-[#174B36] hover:bg-[#347A50] text-white text-xs font-medium rounded-lg flex items-center gap-1.5"
+                    className="px-3 py-1.5 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white text-xs font-medium rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors"
                   >
                     <ClipboardList className="w-3.5 h-3.5" />
                     <span>Ghi chăm sóc</span>
                   </button>
                   <button
                     onClick={() => onOpenQrModal(tree)}
-                    className="px-3 py-1.5 bg-[#E0EBDD] hover:bg-[#d0dfcc] text-[#174B36] text-xs font-semibold rounded-lg flex items-center gap-1.5"
+                    className="px-3 py-1.5 bg-[#E0EBDD] hover:bg-[#d0dfcc] dark:bg-emerald-950/60 hover:dark:bg-emerald-900/60 text-[#174B36] dark:text-emerald-300 dark:border dark:border-emerald-800/50 text-xs font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors"
                   >
                     <QrCode className="w-3.5 h-3.5" />
                     <span>Thẻ QR</span>
@@ -261,31 +261,31 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
           {activeTab === 'care' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-500 font-medium">Lịch sử chăm sóc thực tế</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Lịch sử chăm sóc thực tế</span>
                 <button
                   onClick={() => onOpenCareModal(tree.id)}
-                  className="px-2.5 py-1 bg-[#174B36] text-white text-xs font-medium rounded-lg hover:bg-[#347A50]"
+                  className="px-2.5 py-1 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors cursor-pointer"
                 >
                   + Ghi chăm sóc mới
                 </button>
               </div>
 
               {careRecords.length === 0 ? (
-                <div className="text-center py-8 text-xs text-slate-400">Chưa có bản ghi chăm sóc nào cho cây này.</div>
+                <div className="text-center py-8 text-xs text-slate-400 dark:text-slate-500">Chưa có bản ghi chăm sóc nào cho cây này.</div>
               ) : (
                 <div className="space-y-2.5">
                   {careRecords.map((care) => (
-                    <div key={care.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs space-y-1">
+                    <div key={care.id} className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800 text-xs space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-[#174B36]">{care.actionType}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">
+                        <span className="font-bold text-[#174B36] dark:text-emerald-400">{care.actionType}</span>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                           {new Date(care.performedAt).toLocaleDateString('vi-VN')}
                         </span>
                       </div>
-                      <p className="text-slate-700">{care.notes}</p>
-                      <div className="flex items-center justify-between pt-1 text-[10px] text-slate-500">
+                      <p className="text-slate-700 dark:text-slate-300">{care.notes}</p>
+                      <div className="flex items-center justify-between pt-1 text-[10px] text-slate-500 dark:text-slate-400">
                         <span>Nhân viên: {care.staffName || 'Đội kỹ thuật'}</span>
-                        <span className="text-emerald-700 font-mono">
+                        <span className="text-emerald-700 dark:text-emerald-400 font-mono">
                           {care.healthBefore} ➔ {care.healthAfter}
                         </span>
                       </div>
@@ -298,21 +298,21 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
 
           {activeTab === 'incidents' && (
             <div className="space-y-3">
-              <span className="text-xs text-slate-500 font-medium">Sự cố liên quan cây này</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Sự cố liên quan cây này</span>
               {incidents.length === 0 ? (
-                <div className="text-center py-8 text-xs text-slate-400">Không có sự cố nào được ghi nhận.</div>
+                <div className="text-center py-8 text-xs text-slate-400 dark:text-slate-500">Không có sự cố nào được ghi nhận.</div>
               ) : (
                 <div className="space-y-2.5">
                   {incidents.map((inc) => (
-                    <div key={inc.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs space-y-1">
+                    <div key={inc.id} className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800 text-xs space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="font-mono font-bold text-[#174B36]">{inc.publicCode}</span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800">
+                        <span className="font-mono font-bold text-[#174B36] dark:text-emerald-400">{inc.publicCode}</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 dark:border dark:border-amber-800/50">
                           {inc.status}
                         </span>
                       </div>
-                      <p className="text-slate-700">{inc.description}</p>
-                      <div className="text-[10px] text-slate-400">
+                      <p className="text-slate-700 dark:text-slate-300">{inc.description}</p>
+                      <div className="text-[10px] text-slate-400 dark:text-slate-500">
                         Báo cáo bởi: {inc.reporterName} · {new Date(inc.reportedAt).toLocaleDateString('vi-VN')}
                       </div>
                     </div>
@@ -324,18 +324,18 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
 
           {activeTab === 'blockchain' && (
             <div className="space-y-4">
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3 text-xs">
+              <div className="p-4 bg-slate-50 dark:bg-slate-900/70 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3 text-xs">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-5 h-5 text-[#347A50]" />
-                    <span className="font-bold text-slate-800">Bảo chứng Toàn vẹn Dữ liệu</span>
+                    <ShieldCheck className="w-5 h-5 text-[#347A50] dark:text-emerald-400" />
+                    <span className="font-bold text-slate-800 dark:text-slate-200">Bảo chứng Toàn vẹn Dữ liệu</span>
                   </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 dark:border dark:border-emerald-800/50 font-bold">
                     EVM Local Contract
                   </span>
                 </div>
 
-                <div className="font-mono text-[11px] space-y-1 text-slate-600">
+                <div className="font-mono text-[11px] space-y-1 text-slate-600 dark:text-slate-300">
                   <div className="truncate">Data Hash (SHA-256): {tree.payloadHash || 'Chưa neo'}</div>
                   <div className="truncate">Tx Hash: {tree.txHash || 'Chưa ghi nhận'}</div>
                 </div>
@@ -344,7 +344,7 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
                   <button
                     onClick={handleVerify}
                     disabled={isVerifying}
-                    className="px-3.5 py-1.5 bg-[#174B36] hover:bg-[#347A50] text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"
+                    className="px-3.5 py-1.5 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isVerifying ? 'animate-spin' : ''}`} />
                     <span>{isVerifying ? 'Đang băm lại & đối chiếu...' : 'Kiểm tra tính toàn vẹn'}</span>
@@ -357,22 +357,22 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
                 <div
                   className={`p-4 rounded-xl border text-xs space-y-2 ${
                     verifyResult.status === 'VALID'
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200'
                       : verifyResult.status === 'MISMATCH'
-                      ? 'bg-red-50 border-red-200 text-red-900'
-                      : 'bg-amber-50 border-amber-200 text-amber-900'
+                      ? 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900/60 text-red-900 dark:text-red-200'
+                      : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/60 text-amber-900 dark:text-amber-200'
                   }`}
                 >
                   <div className="flex items-center gap-2 font-bold text-sm">
                     {verifyResult.status === 'VALID' && (
                       <>
-                        <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                         <span>XÁC THỰC HỢP LỆ (VALID) — DỮ LIỆU NGUYÊN VẸN</span>
                       </>
                     )}
                     {verifyResult.status === 'MISMATCH' && (
                       <>
-                        <AlertTriangle className="w-5 h-5 text-red-600" />
+                        <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
                         <span>CẢNH BÁO BĂNG SAI LỆCH (MISMATCH) — DỮ LIỆU ĐÃ BỊ THAY ĐỔI TRÁI PHÉP!</span>
                       </>
                     )}
@@ -384,13 +384,13 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
                       : 'Phát hiện sai lệch giữa dữ liệu hiện thời và hash đã chốt trên Blockchain! Bằng chứng tính toán không trùng khớp.'}
                   </p>
 
-                  <div className="font-mono text-[10px] p-2 rounded bg-black/5 space-y-1">
+                  <div className="font-mono text-[10px] p-2 rounded bg-black/5 dark:bg-slate-900 space-y-1">
                     <div className="truncate">Hash hiện tại: {verifyResult.currentHash}</div>
                     <div className="truncate">Hash trên chuỗi: {verifyResult.onChainHash}</div>
                   </div>
 
                   {verifyResult.diffFields && verifyResult.diffFields.length > 0 && (
-                    <div className="pt-2 border-t border-red-200/60">
+                    <div className="pt-2 border-t border-red-200/60 dark:border-red-900/60">
                       <span className="font-bold text-[11px] block mb-1">Các trường dữ liệu bị can thiệp trái phép:</span>
                       {verifyResult.diffFields.map((d) => (
                         <div key={d.field} className="font-mono text-[11px]">
@@ -403,17 +403,17 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
               )}
 
               {/* Tamper Demonstration Box (Roadmap Section 10 defense scenario) */}
-              <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/60 space-y-3 text-xs">
-                <div className="flex items-center gap-2 font-bold text-amber-900">
-                  <Bug className="w-4 h-4 text-amber-700" />
+              <div className="p-4 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/30 space-y-3 text-xs">
+                <div className="flex items-center gap-2 font-bold text-amber-900 dark:text-amber-300">
+                  <Bug className="w-4 h-4 text-amber-700 dark:text-amber-400" />
                   <span>Kịch bản Diễn tập Bảo vệ Đồ án (Tamper Simulation)</span>
                 </div>
-                <p className="text-amber-800 text-[11px] leading-relaxed">
+                <p className="text-amber-800 dark:text-amber-400 text-[11px] leading-relaxed">
                   Để chứng minh với hội đồng cơ chế bảo mật chống sửa dữ liệu: Nhấn nút bên dưới để cố ý sửa trộm thuộc tính cây xanh trong DB mà không có giao dịch Blockchain, sau đó kiểm tra lại để xem hệ thống phát hiện gian lận.
                 </p>
 
                 {tamperMessage && (
-                  <div className="p-2.5 rounded bg-white border border-amber-200 text-amber-900 text-[11px]">
+                  <div className="p-2.5 rounded bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/60 text-amber-900 dark:text-amber-300 text-[11px]">
                     {tamperMessage}
                   </div>
                 )}
@@ -421,13 +421,13 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleTamperTest}
-                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors text-xs"
+                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors text-xs cursor-pointer"
                   >
                     Thử nghiệm sửa trộm DB
                   </button>
                   <button
                     onClick={handleRestoreTamper}
-                    className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium rounded-lg transition-colors text-xs"
+                    className="px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium rounded-lg transition-colors text-xs cursor-pointer"
                   >
                     Khôi phục dữ liệu gốc
                   </button>

@@ -197,24 +197,24 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ currentUser, onC
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs">
-      <div className="bg-white rounded-3xl max-w-sm sm:max-w-md w-full shadow-2xl overflow-hidden border border-[#E0EBDD] animate-in fade-in zoom-in-95 duration-150 text-xs flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md">
+      <div className="bg-white dark:bg-[#0c1812] rounded-3xl max-w-sm sm:max-w-md w-full shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] overflow-hidden border border-[#E0EBDD] dark:border-emerald-500/30 dark:text-slate-100 animate-in fade-in zoom-in-95 duration-150 text-xs flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between shrink-0">
+        <div className="px-4 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-[#E0EBDD] text-[#174B36] rounded-xl">
+            <div className="p-2 bg-[#E0EBDD] dark:bg-emerald-950/80 text-[#174B36] dark:text-emerald-400 dark:border dark:border-emerald-800/50 rounded-xl">
               <QrCode className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-[#174B36]">Quét Mã QR Cây xanh</h2>
+              <h2 className="text-sm font-bold text-[#174B36] dark:text-emerald-400">Quét Mã QR Cây xanh</h2>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[10px] text-slate-500">Đang quét với tư cách:</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400">Đang quét với tư cách:</span>
                 <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
                   activeUser.role === 'ADMIN'
-                    ? 'bg-purple-100 text-purple-800'
+                    ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 dark:border dark:border-purple-800/50'
                     : activeUser.role === 'STAFF'
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-blue-100 text-blue-800'
+                    ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 dark:border dark:border-emerald-800/50'
+                    : 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 dark:border dark:border-blue-800/50'
                 }`}>
                   {activeUser.role === 'ADMIN' ? '👑 Quản trị viên (ADMIN)' : activeUser.role === 'STAFF' ? '🛠️ Nhân viên (STAFF)' : '👤 Người dân (CITIZEN)'}
                 </span>
@@ -226,7 +226,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ currentUser, onC
               stopCamera();
               onClose();
             }} 
-            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100"
+            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -235,7 +235,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ currentUser, onC
         {/* Body (Scrollable) */}
         <div className="p-4 sm:p-5 space-y-4 overflow-y-auto">
           {/* Real Camera Viewport */}
-          <div className="relative aspect-square rounded-2xl bg-slate-950 overflow-hidden flex flex-col items-center justify-center border-2 border-slate-800 shadow-inner">
+          <div className="relative aspect-square rounded-2xl bg-slate-950 overflow-hidden flex flex-col items-center justify-center border-2 border-slate-800 dark:border-emerald-500/30 shadow-inner">
             {/* Live Video Feed */}
             <video
               ref={videoRef}
@@ -283,7 +283,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ currentUser, onC
                 <div className="font-semibold text-xs text-white/90">Máy ảnh chưa sẵn sàng</div>
                 <button
                   onClick={startCamera}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold text-xs transition-colors"
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold text-xs transition-colors cursor-pointer"
                 >
                   Thử lại máy ảnh
                 </button>
@@ -303,35 +303,35 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ currentUser, onC
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-[#E0EBDD] hover:bg-[#d2e2ce] text-[#174B36] font-bold rounded-xl transition-colors shadow-2xs"
+              className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-[#E0EBDD] hover:bg-[#d2e2ce] dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-[#174B36] dark:text-emerald-300 dark:border dark:border-emerald-800/50 font-bold rounded-xl transition-colors shadow-2xs cursor-pointer"
             >
-              <ImageIcon className="w-4 h-4 text-emerald-700" />
+              <ImageIcon className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
               <span>Chụp / Chọn ảnh mã QR</span>
             </button>
           </div>
 
           {/* Error Message Alert */}
           {error && (
-            <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-amber-800 dark:text-amber-300 text-[11px] flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
           {/* Manual Input Form */}
-          <div className="space-y-1.5 pt-2 border-t border-slate-100">
-            <div className="text-[11px] font-semibold text-slate-600">Hoặc nhập mã công khai:</div>
+          <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">Hoặc nhập mã công khai:</div>
             <form onSubmit={handleManualSubmit} className="flex gap-2">
               <input
                 type="text"
                 value={manualCode}
                 onChange={(e) => setManualCode(e.target.value)}
                 placeholder="Ví dụ: TREE-001"
-                className="flex-1 px-3 py-2 border border-slate-200 rounded-xl font-mono font-bold text-[#174B36] uppercase focus:outline-none focus:ring-2 focus:ring-[#174B36]/20"
+                className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold text-[#174B36] dark:text-emerald-400 bg-white dark:bg-slate-900 uppercase focus:outline-none focus:ring-2 focus:ring-[#174B36]/20 dark:focus:ring-emerald-500/30"
               />
               <button
                 type="submit"
-                className="px-4 py-2 bg-[#174B36] hover:bg-[#347A50] active:scale-95 text-white font-bold rounded-xl shrink-0 transition-transform shadow-xs"
+                className="px-4 py-2 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 active:scale-95 text-white font-bold rounded-xl shrink-0 transition-transform shadow-xs cursor-pointer"
               >
                 Mở cây
               </button>
@@ -339,18 +339,18 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ currentUser, onC
           </div>
 
           {/* Quick Demo Trees Selection */}
-          <div className="space-y-1.5 pt-2 border-t border-slate-100">
-            <div className="text-[11px] text-slate-500 font-semibold">Chọn nhanh cây mẫu thử nghiệm:</div>
+          <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold">Chọn nhanh cây mẫu thử nghiệm:</div>
             <div className="grid grid-cols-2 gap-2">
               {trees.slice(0, 4).map((tree) => (
                 <button
                   key={tree.id}
                   onClick={() => handleSelectDemoTree(tree)}
-                  className="p-2 rounded-xl bg-slate-50 hover:bg-[#E0EBDD] hover:text-[#174B36] text-slate-700 border border-slate-200 text-left transition-colors flex items-center justify-between"
+                  className="p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 hover:bg-[#E0EBDD] dark:hover:bg-emerald-950/60 hover:text-[#174B36] dark:hover:text-emerald-300 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 text-left transition-colors flex items-center justify-between cursor-pointer"
                 >
                   <div className="min-w-0 pr-1">
-                    <div className="font-mono font-bold text-[11px]">{tree.publicCode}</div>
-                    <div className="text-[10px] text-slate-500 truncate">{tree.displayName}</div>
+                    <div className="font-mono font-bold text-[11px] text-slate-900 dark:text-slate-100">{tree.publicCode}</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{tree.displayName}</div>
                   </div>
                   <ArrowRight className="w-3.5 h-3.5 opacity-40 shrink-0" />
                 </button>

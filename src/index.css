@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
     --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
@@ -19,9 +21,9 @@
 
   /* Dark Theme Palette Tokens (Cyber Botanical Eco-Tech) */
   html.dark, .dark {
-    --color-body: #070D0A;
-    --color-surface: #0E1712;
-    --color-surface-translucent: rgba(14, 23, 18, 0.88);
+    --color-body: #070e0a;
+    --color-surface: #0f1c15;
+    --color-surface-translucent: rgba(15, 28, 21, 0.88);
     --color-border-glass: rgba(255, 255, 255, 0.08);
     --color-border-emerald: rgba(16, 185, 129, 0.25);
     --color-emerald-primary: #10B981;
@@ -72,6 +74,27 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+html.dark ::-webkit-scrollbar-track,
+.dark ::-webkit-scrollbar-track {
+  background: rgba(7, 14, 10, 0.6);
+}
+
+html.dark ::-webkit-scrollbar-thumb,
+.dark ::-webkit-scrollbar-thumb {
+  background: #1a3326;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 9999px;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover,
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #254d39;
+}
+
+html.dark, .dark {
+  scrollbar-color: #1a3326 transparent;
 }
 
 /* ========================================================
@@ -266,35 +289,30 @@ html.dark, .dark {
 }
 
 html.dark, html.dark body, html.dark #root, .dark, .dark body, .dark #root {
-  background-color: #060B08 !important;
+  background-color: #070e0a !important;
   color: #CBD5E1 !important;
 }
 
 html.dark .bento-card, .dark .bento-card {
-  background: rgba(13, 22, 17, 0.88) !important;
+  background: rgba(15, 28, 21, 0.88) !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
   color: #F1F5F9 !important;
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5) !important;
 }
 
 html.dark .glass-panel, .dark .glass-panel {
-  background: rgba(13, 22, 17, 0.9) !important;
+  background: rgba(15, 28, 21, 0.9) !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 html.dark header, .dark header {
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-html.dark header > div:first-child, .dark header > div:first-child {
-  background: rgba(10, 18, 14, 0.85) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 html.dark footer, .dark footer {
-  background-color: #070D0A !important;
+  background-color: #08120d !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
-  color: #64748B !important;
+  color: #94A3B8 !important;
 }
 
 /* Typography in Dark Mode */

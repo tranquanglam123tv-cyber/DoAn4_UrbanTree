@@ -78,25 +78,25 @@ export const TreeGrowthShowcase: React.FC = () => {
       title: 'Hạt Mầm Ươm Tạo',
       desc: 'Hạt giống bén rễ sâu vào đất phù sa Cần Thơ',
       tag: 'GIAI ĐOẠN 1: HẠT MẦM',
-      color: 'text-amber-700 bg-amber-50 border-amber-200',
+      color: 'text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-300 dark:bg-amber-950/60 dark:border-amber-500/30',
     },
     {
       title: 'Chồi Non Vươn Thẳng',
       desc: 'Thân vươn cao, tán lá non xanh mướt đung đưa đón nắng',
       tag: 'GIAI ĐOẠN 2: CHỒI NON',
-      color: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+      color: 'text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-300 dark:bg-emerald-950/60 dark:border-emerald-500/30',
     },
     {
       title: 'Cây Sinh Trưởng & Vươn Nhánh',
       desc: 'Phân nhánh xum xuê, tạo bóng mát vỉa hè tuyến phố',
       tag: 'GIAI ĐOẠN 3: SINH TRƯỞNG',
-      color: 'text-teal-700 bg-teal-50 border-teal-200',
+      color: 'text-teal-700 bg-teal-50 border-teal-200 dark:text-teal-300 dark:bg-teal-950/60 dark:border-teal-500/30',
     },
     {
       title: 'Đại Thụ Đô Thị 4.0',
       desc: 'Tán xum xuê che mát phố, định danh QR & Blockchain',
       tag: 'GIAI ĐOẠN 4: CỔ THỤ GIS',
-      color: 'text-emerald-800 bg-emerald-100 border-emerald-300',
+      color: 'text-emerald-800 bg-emerald-100 border-emerald-300 dark:text-emerald-200 dark:bg-emerald-900/60 dark:border-emerald-400/40',
     },
   ];
 
@@ -117,12 +117,12 @@ export const TreeGrowthShowcase: React.FC = () => {
       {/* 🏷️ Header: Dynamic Stage Badge */}
       <div className="mb-2 space-y-1">
         <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-extrabold uppercase tracking-widest shadow-2xs transition-colors duration-500 ${currentMeta.color}`}>
-          <Sparkles className="w-3 h-3 text-emerald-600 animate-spin" style={{ animationDuration: '6s' }} />
+          <Sparkles className="w-3 h-3 text-emerald-600 dark:text-emerald-400 animate-spin" style={{ animationDuration: '6s' }} />
           <span>{currentMeta.tag}</span>
         </div>
-        <div className="text-base sm:text-lg font-black text-slate-900 tracking-tight flex items-center justify-center gap-2">
+        <div className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center justify-center gap-2">
           <span>{currentMeta.title}</span>
-          <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-600 text-white font-bold">
+          <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 font-bold shadow-xs">
             {Math.round(progress * 100)}%
           </span>
         </div>
@@ -132,17 +132,17 @@ export const TreeGrowthShowcase: React.FC = () => {
       <div className="relative w-72 h-64 sm:w-80 sm:h-72 flex items-end justify-center overflow-visible">
         {/* Ambient Halo behind foliage */}
         <div
-          className="absolute inset-0 rounded-full bg-radial from-emerald-400/25 via-teal-300/10 to-transparent blur-2xl pointer-events-none transition-transform duration-700"
+          className="absolute inset-0 rounded-full bg-radial from-emerald-400/25 via-teal-300/10 to-transparent dark:from-emerald-500/35 dark:via-teal-400/20 blur-2xl pointer-events-none transition-transform duration-700"
           style={{ transform: `scale(${0.3 + foliageScale * 0.9})` }}
         />
 
         {/* Floating eco-spores (active when tree is lush) */}
         {foliageScale > 0.3 && (
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <span className="absolute left-1/4 top-1/4 w-2 h-2 rounded-full bg-amber-300/80 animate-ping" style={{ animationDuration: '3s' }} />
-            <span className="absolute right-1/4 top-1/3 w-2.5 h-2.5 rounded-full bg-emerald-400/80 animate-pulse" style={{ animationDuration: '2s' }} />
-            <span className="absolute left-1/3 top-1/6 w-1.5 h-1.5 rounded-full bg-teal-300/90 animate-bounce" style={{ animationDuration: '2.5s' }} />
-            <span className="absolute right-1/3 top-1/5 w-2 h-2 rounded-full bg-emerald-300/70 animate-ping" style={{ animationDuration: '4s' }} />
+            <span className="absolute left-1/4 top-1/4 w-2 h-2 rounded-full bg-amber-300/80 dark:bg-amber-300 animate-ping" style={{ animationDuration: '3s' }} />
+            <span className="absolute right-1/4 top-1/3 w-2.5 h-2.5 rounded-full bg-emerald-400/80 dark:bg-emerald-400 animate-pulse" style={{ animationDuration: '2s' }} />
+            <span className="absolute left-1/3 top-1/6 w-1.5 h-1.5 rounded-full bg-teal-300/90 dark:bg-teal-300 animate-bounce" style={{ animationDuration: '2.5s' }} />
+            <span className="absolute right-1/3 top-1/5 w-2 h-2 rounded-full bg-emerald-300/70 dark:bg-emerald-300 animate-ping" style={{ animationDuration: '4s' }} />
           </div>
         )}
 
@@ -188,9 +188,9 @@ export const TreeGrowthShowcase: React.FC = () => {
           </defs>
 
           {/* 1. GROUND MOUND & SOIL BASE */}
-          <ellipse cx="160" cy="242" rx="90" ry="14" fill="#dcfce7" />
-          <ellipse cx="160" cy="245" rx="70" ry="9" fill="#15803d" opacity="0.25" />
-          <ellipse cx="160" cy="247" rx="40" ry="5" fill="#14532d" opacity="0.4" />
+          <ellipse cx="160" cy="242" rx="90" ry="14" className="fill-emerald-100 dark:fill-emerald-950/80 transition-colors" />
+          <ellipse cx="160" cy="245" rx="70" ry="9" className="fill-emerald-700/25 dark:fill-emerald-600/35 transition-colors" />
+          <ellipse cx="160" cy="247" rx="40" ry="5" className="fill-emerald-900/40 dark:fill-emerald-500/40 transition-colors" />
 
           {/* Grass Tufts at Root Base */}
           <path d="M135 240 Q130 230 126 226 Q133 234 137 240 Z" fill="#10b981" />
@@ -341,28 +341,28 @@ export const TreeGrowthShowcase: React.FC = () => {
         </svg>
 
         {/* 📊 Live Metrics Pill Overlay */}
-        <div className="absolute -bottom-2 z-20 px-3.5 py-1.5 bg-white/95 backdrop-blur-md rounded-full border border-emerald-200/90 shadow-md flex items-center gap-3 text-[10px] font-bold text-slate-700 whitespace-nowrap">
-          <span className="flex items-center gap-1.5 text-emerald-800">
+        <div className="absolute -bottom-2 z-20 px-3.5 py-1.5 bg-white/95 dark:bg-[#0c1812]/95 backdrop-blur-md rounded-full border border-emerald-200/90 dark:border-emerald-500/30 shadow-md dark:shadow-[0_4px_20px_rgba(0,0,0,0.6)] flex items-center gap-3 text-[10px] font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">
+          <span className="flex items-center gap-1.5 text-emerald-800 dark:text-emerald-300">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>Cao: <strong>{currentHeight}m</strong></span>
           </span>
-          <span className="text-slate-300">|</span>
-          <span className="text-teal-800">Tán: <strong>{currentCanopy}m</strong></span>
-          <span className="text-slate-300">|</span>
-          <span className="text-emerald-700">CO₂: <strong>{currentCo2} kg/năm</strong></span>
+          <span className="text-slate-300 dark:text-slate-700">|</span>
+          <span className="text-teal-800 dark:text-teal-300">Tán: <strong>{currentCanopy}m</strong></span>
+          <span className="text-slate-300 dark:text-slate-700">|</span>
+          <span className="text-emerald-700 dark:text-emerald-400">CO₂: <strong>{currentCo2} kg/năm</strong></span>
         </div>
       </div>
 
       {/* Description caption */}
-      <p className="text-xs text-slate-600 mt-4 max-w-xs leading-relaxed line-clamp-2">
+      <p className="text-xs text-slate-600 dark:text-slate-400 mt-4 max-w-xs leading-relaxed line-clamp-2">
         {currentMeta.desc}
       </p>
 
       {/* 🎛️ Continuous Progress Scrubber Bar */}
       <div className="w-full max-w-xs mt-3 space-y-2">
-        <div className="relative w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+        <div className="relative w-full h-2 bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden border border-slate-200 dark:border-emerald-500/30 shadow-inner">
           <div
-            className="h-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 rounded-full transition-all duration-100 ease-linear"
+            className="h-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 rounded-full transition-all duration-100 ease-linear shadow-[0_0_12px_rgba(16,185,129,0.7)]"
             style={{ width: `${progress * 100}%` }}
           />
         </div>
@@ -373,8 +373,8 @@ export const TreeGrowthShowcase: React.FC = () => {
             onClick={() => handleSeek(0.1)}
             className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
               stageIndex === 0
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'bg-white hover:bg-emerald-50 text-slate-600 border border-slate-200'
+                ? 'bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 shadow-xs dark:shadow-[0_0_12px_rgba(16,185,129,0.5)]'
+                : 'bg-white hover:bg-emerald-50 text-slate-600 border border-slate-200 dark:bg-slate-900/90 dark:hover:bg-slate-800 dark:text-slate-300 dark:border-slate-800'
             }`}
           >
             🌱 Mầm
@@ -383,8 +383,8 @@ export const TreeGrowthShowcase: React.FC = () => {
             onClick={() => handleSeek(0.38)}
             className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
               stageIndex === 1
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'bg-white hover:bg-emerald-50 text-slate-600 border border-slate-200'
+                ? 'bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 shadow-xs dark:shadow-[0_0_12px_rgba(16,185,129,0.5)]'
+                : 'bg-white hover:bg-emerald-50 text-slate-600 border border-slate-200 dark:bg-slate-900/90 dark:hover:bg-slate-800 dark:text-slate-300 dark:border-slate-800'
             }`}
           >
             🌿 Chồi
@@ -393,8 +393,8 @@ export const TreeGrowthShowcase: React.FC = () => {
             onClick={() => handleSeek(0.68)}
             className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
               stageIndex === 2
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'bg-white hover:bg-emerald-50 text-slate-600 border border-slate-200'
+                ? 'bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 shadow-xs dark:shadow-[0_0_12px_rgba(16,185,129,0.5)]'
+                : 'bg-white hover:bg-emerald-50 text-slate-600 border border-slate-200 dark:bg-slate-900/90 dark:hover:bg-slate-800 dark:text-slate-300 dark:border-slate-800'
             }`}
           >
             🌳 Cây
@@ -403,8 +403,8 @@ export const TreeGrowthShowcase: React.FC = () => {
             onClick={() => handleSeek(1.0)}
             className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
               stageIndex === 3
-                ? 'bg-emerald-700 text-white shadow-xs'
-                : 'bg-white hover:bg-emerald-50 text-slate-600 border border-slate-200'
+                ? 'bg-emerald-700 dark:bg-emerald-500 text-white dark:text-slate-950 shadow-xs dark:shadow-[0_0_12px_rgba(16,185,129,0.5)]'
+                : 'bg-white hover:bg-emerald-50 text-slate-600 border border-slate-200 dark:bg-slate-900/90 dark:hover:bg-slate-800 dark:text-slate-300 dark:border-slate-800'
             }`}
           >
             🌲 Cổ Thụ
@@ -417,14 +417,14 @@ export const TreeGrowthShowcase: React.FC = () => {
               setIsPlaying(!isPlaying);
             }}
             title={isPlaying ? 'Tạm dừng xem chi tiết' : 'Bật tự động sinh trưởng'}
-            className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 transition-colors cursor-pointer border border-emerald-200"
+            className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/80 dark:text-emerald-300 dark:border-emerald-500/30 transition-colors cursor-pointer"
           >
             {isPlaying ? (
-              <Pause className="w-3.5 h-3.5 text-emerald-700" />
+              <Pause className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-300" />
             ) : progress >= 1.0 ? (
-              <RotateCcw className="w-3.5 h-3.5 text-emerald-700" />
+              <RotateCcw className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-300" />
             ) : (
-              <Play className="w-3.5 h-3.5 text-emerald-700" />
+              <Play className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-300" />
             )}
           </button>
         </div>

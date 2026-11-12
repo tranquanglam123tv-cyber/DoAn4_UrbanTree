@@ -55,6 +55,10 @@ export const SporeBackground: React.FC<SporeBackgroundProps> = ({ isDark = false
         ctx.save();
         ctx.globalAlpha = this.opacity;
         ctx.fillStyle = this.color;
+        if (isDark) {
+          ctx.shadowColor = this.color;
+          ctx.shadowBlur = 6;
+        }
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.fill();
