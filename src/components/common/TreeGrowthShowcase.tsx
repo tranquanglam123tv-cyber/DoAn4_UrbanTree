@@ -159,37 +159,37 @@ export const TreeGrowthShowcase: React.FC = () => {
 
       {/* 🌿 Main Botanical Canvas: Beautiful Living Tree */}
       <div className="relative w-72 h-64 sm:w-80 sm:h-72 flex items-end justify-center overflow-visible">
-        {/* 🌟 HÀO QUANG MÀU XANH LAN TỎA KHUẾCH TÁN ÊM DỊU (RỘNG, TRONG SUỐT, TÔN RÕ THÂN VÀ TÁN CÂY) */}
-        {/* Layer 1: Hào quang khí quyển lan tỏa diện rộng, tan dần mềm mại vào nền tối */}
+        {/* 🌟 HÀO QUANG MÀU XANH LAN TỎA RỘNG & ĐẬM ĐÀ RỰC RỠ VỪA ĐẸP (RỘNG HƠN, TÔN NỔI TÁN CÂY) */}
+        {/* Layer 1: Hào quang khí quyển lan tỏa diện rộng, vươn xa ra ngoài */}
         <div
           className="absolute pointer-events-none rounded-full"
           style={{
             top: `${canopyCenterPercent}%`,
             left: '50%',
-            width: `${120 + foliageScale * 380}px`,
-            height: `${120 + foliageScale * 380}px`,
+            width: `${140 + foliageScale * 440}px`,
+            height: `${140 + foliageScale * 440}px`,
             transform: 'translate(-50%, -50%)',
             background:
-              'radial-gradient(circle, rgba(16,185,129,0.3) 0%, rgba(5,150,105,0.15) 42%, rgba(4,120,87,0.05) 72%, transparent 88%)',
-            filter: 'blur(48px)',
-            opacity: (0.28 + foliageScale * 0.32) * cycleOpacity,
+              'radial-gradient(circle, rgba(16,185,129,0.55) 0%, rgba(5,150,105,0.32) 38%, rgba(4,120,87,0.12) 65%, transparent 85%)',
+            filter: 'blur(36px)',
+            opacity: (0.45 + foliageScale * 0.45) * cycleOpacity,
             transition: isPlaying ? 'none' : 'all 300ms ease-out',
           }}
         />
 
-        {/* Layer 2: Hào quang dịu êm viền quanh tán cây, không che khuất cành lá */}
+        {/* Layer 2: Hào quang năng lượng lõi sáng tươi tắn ôm phía sau tán */}
         <div
           className="absolute pointer-events-none rounded-full"
           style={{
             top: `${canopyCenterPercent}%`,
             left: '50%',
-            width: `${60 + foliageScale * 220}px`,
-            height: `${60 + foliageScale * 220}px`,
+            width: `${80 + foliageScale * 280}px`,
+            height: `${80 + foliageScale * 280}px`,
             transform: 'translate(-50%, -50%)',
             background:
-              'radial-gradient(circle, rgba(52,211,153,0.28) 0%, rgba(16,185,129,0.12) 50%, transparent 78%)',
-            filter: 'blur(26px)',
-            opacity: (0.2 + foliageScale * 0.25) * cycleOpacity,
+              'radial-gradient(circle, rgba(52,211,153,0.55) 0%, rgba(16,185,129,0.28) 45%, transparent 75%)',
+            filter: 'blur(20px)',
+            opacity: (0.35 + foliageScale * 0.35) * cycleOpacity,
             transition: isPlaying ? 'none' : 'all 300ms ease-out',
           }}
         />
@@ -263,20 +263,20 @@ export const TreeGrowthShowcase: React.FC = () => {
 
             {/* Ethereal Canopy Halo Filter (Làm mờ mềm mại, không đè vỡ hình ảnh) */}
             <filter id="canopyBloom" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="10" />
+              <feGaussianBlur in="SourceGraphic" stdDeviation="8" />
             </filter>
 
-            {/* Dynamic Canopy Background Halo Gradient inside SVG (Lan tỏa thoáng đãng & trong trẻo) */}
+            {/* Dynamic Canopy Background Halo Gradient inside SVG (Lan tỏa thoáng đãng & tươi sáng) */}
             <radialGradient id="canopyAuraGrad" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#34d399" stopOpacity="0.45" />
-              <stop offset="35%" stopColor="#10b981" stopOpacity="0.25" />
-              <stop offset="70%" stopColor="#059669" stopOpacity="0.08" />
+              <stop offset="0%" stopColor="#6ee7b7" stopOpacity="0.75" />
+              <stop offset="35%" stopColor="#34d399" stopOpacity="0.55" />
+              <stop offset="68%" stopColor="#10b981" stopOpacity="0.25" />
               <stop offset="100%" stopColor="#047857" stopOpacity="0" />
             </radialGradient>
 
             <radialGradient id="coreAuraGrad" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#6ee7b7" stopOpacity="0.5" />
-              <stop offset="45%" stopColor="#10b981" stopOpacity="0.2" />
+              <stop offset="0%" stopColor="#a7f3d0" stopOpacity="0.8" />
+              <stop offset="40%" stopColor="#34d399" stopOpacity="0.5" />
               <stop offset="100%" stopColor="#059669" stopOpacity="0" />
             </radialGradient>
           </defs>
@@ -393,14 +393,23 @@ export const TreeGrowthShowcase: React.FC = () => {
                   opacity: foliageOpacity,
                 }}
               >
-                {/* 🌟 VÒNG HÀO QUANG LAN TỎA DỊU NHẸ PHÍA SAU TÁN (TRONG SUỐT, TÔN NỔI TỪNG NHÁNH VÀ TÁN CÂY) */}
+                {/* 🌟 VÒNG HÀO QUANG LAN TỎA RỘNG & ĐẬM ĐÀ VỪA PHẢI SAU TÁN (RỘNG RÃI, KHÔNG CHE KHUẤT CÀNH LÁ) */}
                 <circle
                   cx="160"
                   cy="92"
-                  r="135"
+                  r="165"
                   fill="url(#canopyAuraGrad)"
                   filter="url(#canopyBloom)"
-                  opacity="0.45"
+                  opacity="0.65"
+                  className="pointer-events-none"
+                />
+                <circle
+                  cx="160"
+                  cy="92"
+                  r="120"
+                  fill="url(#coreAuraGrad)"
+                  filter="url(#canopyBloom)"
+                  opacity="0.7"
                   className="pointer-events-none"
                 />
 
@@ -440,14 +449,14 @@ export const TreeGrowthShowcase: React.FC = () => {
                   opacity: 1 - foliageScale * 2,
                 }}
               >
-                {/* Hào quang mầm non dịu nhẹ */}
+                {/* Hào quang mầm non rực rỡ vừa phải */}
                 <circle
                   cx="160"
                   cy={245 - trunkScaleY * 168}
-                  r="28"
+                  r="36"
                   fill="url(#coreAuraGrad)"
                   filter="url(#canopyBloom)"
-                  opacity="0.4"
+                  opacity="0.65"
                   className="pointer-events-none"
                 />
                 <ellipse cx="150" cy={245 - trunkScaleY * 165} rx="16" ry="10" fill="#34d399" transform={`rotate(-28 150 ${245 - trunkScaleY * 165})`} />
