@@ -554,7 +554,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
       onWheel={(e) => e.stopPropagation()}
     >
       <div
-        className="bg-white dark:bg-[#0c1812] rounded-3xl max-w-5xl w-full max-h-[92vh] shadow-2xl border border-slate-200 dark:border-emerald-500/30 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto text-xs"
+        className="bg-white dark:bg-[#0c1812] rounded-3xl max-w-6xl w-full max-h-[92vh] shadow-2xl border border-slate-200 dark:border-emerald-500/30 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto text-xs"
         onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER BAR */}
@@ -1222,16 +1222,16 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
               </div>
 
               {/* BẢNG DANH SÁCH NHÂN SỰ */}
-              <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-xs">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800 text-xs">
+              <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-x-auto bg-white dark:bg-slate-900 shadow-xs scrollbar-thin">
+                <table className="w-full text-left border-collapse min-w-[980px]">
+                  <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800 text-[11px] uppercase tracking-wider">
                     <tr>
-                      <th className="p-3">Họ Tên & Tài Khoản</th>
-                      <th className="p-3">Vai Trò</th>
-                      <th className="p-3">Địa Bàn Phụ Trách</th>
-                      <th className="p-3">Phòng Ban & Tổ Đội</th>
-                      <th className="p-3">Trạng Thái Công Tác</th>
-                      <th className="p-3 text-right">Điều Phối & Thao Tác</th>
+                      <th className="py-3 px-4 w-[240px]">Họ Tên & Tài Khoản</th>
+                      <th className="py-3 px-3 w-[120px] whitespace-nowrap">Vai Trò</th>
+                      <th className="py-3 px-3 w-[160px] whitespace-nowrap">Địa Bàn Phụ Trách</th>
+                      <th className="py-3 px-3 min-w-[190px]">Phòng Ban & Tổ Đội</th>
+                      <th className="py-3 px-3 w-[170px] whitespace-nowrap">Trạng Thái Công Tác</th>
+                      <th className="py-3 px-4 w-[160px] text-right whitespace-nowrap">Điều Phối & Thao Tác</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-xs">
@@ -1253,7 +1253,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                             className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors group"
                           >
                             {/* Cột 1: Tên & Username */}
-                            <td className="p-3">
+                            <td className="py-3 px-4">
                               <div className="flex items-center gap-2.5">
                                 <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-700 dark:text-slate-200 shrink-0 border border-slate-200 dark:border-slate-700">
                                   {(user.fullName || user.username || '?').charAt(0).toUpperCase()}
@@ -1262,7 +1262,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                                   <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                                     <span className="truncate">{user.fullName}</span>
                                     {user.staffCode && (
-                                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
                                         {user.staffCode}
                                       </span>
                                     )}
@@ -1276,7 +1276,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                             </td>
 
                             {/* Cột 2: Vai trò */}
-                            <td className="p-3">
+                            <td className="py-3 px-3 whitespace-nowrap">
                               <span
                                 className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] inline-flex items-center gap-1 ${
                                   isAdmin
@@ -1291,28 +1291,28 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                             </td>
 
                             {/* Cột 3: Địa bàn */}
-                            <td className="p-3">
-                              <div className="flex items-center gap-1 text-slate-700 dark:text-slate-300">
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
                                 <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                <span className="truncate max-w-[160px]">
+                                <span className="truncate font-medium">
                                   {user.assignedDistrict || 'Toàn TP. Cần Thơ'}
                                 </span>
                               </div>
                             </td>
 
                             {/* Cột 4: Phòng ban & Tổ đội */}
-                            <td className="p-3">
+                            <td className="py-3 px-3">
                               {isCitizen ? (
                                 <div className="text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
                                   <Users className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                                  <span className="font-medium">Cộng đồng Cư dân Đô thị</span>
+                                  <span className="font-medium truncate">Cộng đồng Cư dân Đô thị</span>
                                 </div>
                               ) : (
-                                <div>
-                                  <div className="text-slate-800 dark:text-slate-200 font-semibold truncate max-w-[190px]">
+                                <div className="space-y-0.5">
+                                  <div className="text-slate-800 dark:text-slate-200 font-semibold truncate max-w-[220px]">
                                     {user.teamName || 'Tổ Kỹ Thuật Đô Thị'}
                                   </div>
-                                  <div className="text-[10px] text-slate-400 truncate max-w-[190px]">
+                                  <div className="text-[10px] text-slate-400 truncate max-w-[220px]">
                                     {user.position || user.department || 'Kỹ thuật viên thực địa'}
                                   </div>
                                 </div>
@@ -1320,41 +1320,41 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                             </td>
 
                             {/* Cột 5: Trạng thái công tác */}
-                            <td className="p-3">
+                            <td className="py-3 px-3 whitespace-nowrap">
                               {!user.isActive ? (
-                                <span className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400 font-semibold text-[11px]">
-                                  <XCircle className="w-3 h-3 text-rose-500" />
-                                  Tạm khóa
+                                <span className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400 font-semibold text-[11px] whitespace-nowrap">
+                                  <XCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                  <span>Tạm khóa</span>
                                 </span>
                               ) : isCitizen ? (
-                                <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 font-semibold text-[11px]">
-                                  <CheckCircle2 className="w-3 h-3 text-blue-500" />
-                                  Cư dân hợp lệ
+                                <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 font-semibold text-[11px] whitespace-nowrap">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                                  <span>Cư dân hợp lệ</span>
                                 </span>
                               ) : isOnMission ? (
                                 <div
-                                  className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-[10px] font-bold"
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-[10px] font-bold whitespace-nowrap"
                                   title={user.missionNote || 'Đang công tác hiện trường'}
                                 >
-                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping shrink-0" />
                                   <span>Đang công tác</span>
                                 </div>
                               ) : user.workStatus === 'ON_LEAVE' ? (
-                                <span className="inline-flex items-center gap-1 text-slate-400 font-semibold text-[11px]">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                                  Nghỉ phép
+                                <span className="inline-flex items-center gap-1 text-slate-400 font-semibold text-[11px] whitespace-nowrap">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
+                                  <span>Nghỉ phép</span>
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-[#00FF9D] font-semibold text-[11px]">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                  Sẵn sàng trực chiến
+                                <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-[#00FF9D] font-bold text-[11px] whitespace-nowrap">
+                                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                                  <span>Sẵn sàng trực chiến</span>
                                 </span>
                               )}
                             </td>
 
                             {/* Cột 6: Thao tác */}
-                            <td className="p-3 text-right">
-                              <div className="flex items-center justify-end gap-1">
+                            <td className="py-3 px-4 text-right whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-1.5">
                                 {/* Xem chi tiết hồ sơ */}
                                 <button
                                   type="button"
