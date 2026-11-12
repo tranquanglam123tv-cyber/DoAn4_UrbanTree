@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { storage } from '../db/storage';
 import { Incident, IncidentSeverity, IncidentStatus, IncidentUpdate, User } from '../types';
+import { TreeSearchSelect } from './common/TreeSearchSelect';
 
 interface IncidentsViewProps {
   onSelectTree: (tree: any) => void;
@@ -633,21 +634,15 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
               )}
 
               <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Chọn cây xanh liên quan (Nếu có quét mã QR trên cây)
-                </label>
-                <select
+                <TreeSearchSelect
+                  trees={trees}
                   value={reportTreeId}
-                  onChange={(e) => setReportTreeId(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:border-[#347A50] dark:focus:border-emerald-400"
-                >
-                  <option value="">-- Không xác định mã cây / Sự cố cây chung --</option>
-                  {trees.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      [{t.publicCode}] {t.displayName} — {t.address}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(treeId) => setReportTreeId(treeId)}
+                  label="Chọn cây xanh liên quan (Nếu có quét mã QR trên cây)"
+                  allowEmpty={true}
+                  emptyLabel="-- Không xác định mã cây / Sự cố cây chung trên vỉa hè --"
+                  placeholder="Gõ mã cây (HB-01) hoặc số nhà để tìm nhanh..."
+                />
               </div>
 
               <div>

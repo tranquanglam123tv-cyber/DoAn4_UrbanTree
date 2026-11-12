@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, ClipboardList, Check, ShieldCheck, Camera, Upload, Image as ImageIcon } from 'lucide-react';
 import { CareActionType, TreeHealthStatus } from '../types';
 import { storage } from '../db/storage';
+import { TreeSearchSelect } from './common/TreeSearchSelect';
 
 interface CareFormModalProps {
   initialTreeId?: string;
@@ -123,25 +124,21 @@ export const CareFormModal: React.FC<CareFormModalProps> = ({
           )}
 
           <div>
-            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Cây xanh được chăm sóc *</label>
-            <select
+            <TreeSearchSelect
+              trees={trees}
               value={treeId}
-              onChange={(e) => {
-                setTreeId(e.target.value);
-                const t = trees.find((item) => item.id === e.target.value);
+              onChange={(newTreeId) => {
+                setTreeId(newTreeId);
+                const t = trees.find((item) => item.id === newTreeId);
                 if (t) {
                   setHealthBefore(t.healthStatus);
                   setHealthAfter(t.healthStatus);
                 }
               }}
-              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:border-[#347A50] dark:focus:border-emerald-400 focus:ring-1 focus:ring-[#347A50] bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-medium"
-            >
-              {trees.map((t) => (
-                <option key={t.id} value={t.id}>
-                  [{t.publicCode}] {t.displayName} — {t.address}
-                </option>
-              ))}
-            </select>
+              label="Cây xanh được chăm sóc"
+              required
+              placeholder="Tìm theo mã cây (ví dụ: HB-01), tên cây hoặc số nhà..."
+            />
           </div>
 
           <div>

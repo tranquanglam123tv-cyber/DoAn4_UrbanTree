@@ -19,6 +19,7 @@ import { blockchainService } from '../services/blockchainService';
 import { storage } from '../db/storage';
 import { RecordType, Tree, TreeHealthStatus, VerificationResult } from '../types';
 import { computeRecordHash } from '../services/hashService';
+import { TreeSearchSelect } from './common/TreeSearchSelect';
 
 export const BlockchainVerifyView: React.FC = () => {
   const [nodeOnline, setNodeOnline] = useState(true);
@@ -185,34 +186,44 @@ export const BlockchainVerifyView: React.FC = () => {
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Chọn bản ghi cụ thể:</label>
-              <select
-                value={selectedRecordId}
-                onChange={(e) => {
-                  setSelectedRecordId(e.target.value);
-                  setVerifyResult(null);
-                }}
-                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700/80 rounded-xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-medium focus:border-emerald-500"
-              >
-                {selectedRecordType === 'TREE_PROFILE' &&
-                  trees.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      [{t.publicCode}] {t.displayName}
-                    </option>
-                  ))}
-                {selectedRecordType === 'CARE_RECORD' &&
-                  careRecords.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      [{c.actionType}] Cây #{c.treeId.slice(-4)} · {new Date(c.performedAt).toLocaleDateString('vi-VN')}
-                    </option>
-                  ))}
-                {(selectedRecordType === 'INCIDENT_REPORT' || selectedRecordType === 'INCIDENT_RESOLUTION') &&
-                  incidents.map((i) => (
-                    <option key={i.id} value={i.id}>
-                      [{i.publicCode}] {i.severity} · {i.status}
-                    </option>
-                  ))}
-              </select>
+              {selectedRecordType === 'TREE_PROFILE' ? (
+                <TreeSearchSelect
+                  trees={trees}
+                  value={selectedRecordId}
+                  onChange={(treeId) => {
+                    setSelectedRecordId(treeId);
+                    setVerifyResult(null);
+                  }}
+                  label="Chọn cá thể cây xanh cần kiểm tra đối soát"
+                  placeholder="Gõ mã cây (HB-01), tên cây hoặc vị trí để tìm nhanh..."
+                  required
+                />
+              ) : (
+                <>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Chọn bản ghi cụ thể:</label>
+                  <select
+                    value={selectedRecordId}
+                    onChange={(e) => {
+                      setSelectedRecordId(e.target.value);
+                      setVerifyResult(null);
+                    }}
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700/80 rounded-xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-medium focus:border-emerald-500"
+                  >
+                    {selectedRecordType === 'CARE_RECORD' &&
+                      careRecords.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          [{c.actionType}] Cây #{c.treeId.slice(-4)} · {new Date(c.performedAt).toLocaleDateString('vi-VN')}
+                        </option>
+                      ))}
+                    {(selectedRecordType === 'INCIDENT_REPORT' || selectedRecordType === 'INCIDENT_RESOLUTION') &&
+                      incidents.map((i) => (
+                        <option key={i.id} value={i.id}>
+                          [{i.publicCode}] {i.severity} · {i.status}
+                        </option>
+                      ))}
+                  </select>
+                </>
+              )}
             </div>
           </div>
 
