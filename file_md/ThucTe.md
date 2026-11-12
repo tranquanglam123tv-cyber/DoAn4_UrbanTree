@@ -209,6 +209,12 @@ Trong nghiệp vụ hạ tầng đô thị thông minh cấp quốc gia (Multi-T
   - Ngay trên Admin Dashboard có nút `[📄 Xuất Báo Cáo Sở Xây Dựng]`.
   - Hệ thống tự động tổng hợp thành văn bản hành chính khổ A4 chuẩn thể thức Nhà nước (có Quốc hiệu, Tiêu ngữ, Số hiệu công văn, Bảng số liệu phân cấp Thông tư 20, Chỉ số Carbon Allometric, Tỷ lệ SLA và Khung chữ ký duyệt 3 cấp) cho phép in trực tiếp hoặc xuất file PDF nộp báo cáo chỉ với 1 click.
 
+### Câu 12: Tại sao tài khoản Kỹ thuật viên (Staff) không được mở đăng ký tự do ngoài đường mà chỉ cho Người dân đăng ký?
+- **Trả lời chuẩn nguyên lý Bảo mật & Phân quyền Chính phủ Điện tử:**
+  - **Tài khoản Người dân (B2C / Public):** Được tự do đăng ký bằng Số điện thoại + mã OTP SMS, hoặc 1-click qua Google OAuth 2.0 để khuyến khích xã hội hóa, báo cáo sự cố và tích lũy điểm sinh thái.
+  - **Tài khoản Kỹ thuật viên (B2G / Staff):** Là tài khoản công vụ có quyền năng trực tiếp tác động đến tài sản công cộng (đóng lệnh sự cố, chuyển đổi trạng thái cây chết, phê duyệt đốn hạ On-Chain). Theo quy chế an ninh đô thị, **tuyệt đối không được mở form đăng ký công khai ngoài đường** (tránh trường hợp kẻ xấu tự đăng ký làm nhân viên rồi lên hệ thống xác nhận chặt hạ cây xanh trái phép).
+  - Vì vậy, tài khoản KTV **bắt buộc phải do Phòng Tổ chức Cán bộ / Admin cấp phát** thông qua module Quản lý Nhân sự (nhập đơn lẻ hoặc import file Excel nhân sự chuẩn). Tuy nhiên, KTV được trang bị các tính năng bảo mật: **Quên mật khẩu qua OTP**, **Đổi mật khẩu** và **Đăng nhập 2 lớp (2FA)**.
+
 ---
 
 ## 📋 PHẦN 7: TỔNG HỢP DANH MỤC TOÀN BỘ 38 CHỨC NĂNG HỆ THỐNG URBANTREE ECO-GIS 4.0
