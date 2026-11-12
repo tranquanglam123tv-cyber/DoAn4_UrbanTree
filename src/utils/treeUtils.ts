@@ -377,25 +377,41 @@ export function calculateIncidentSLA(incident: {
   // Tính % thời gian đã tiêu tốn
   const percentUsed = Math.min(Math.round((elapsedMinutes / config.minutes) * 100), 100);
 
+  // Helper format thời gian trễ / quá hạn thông minh (theo giờ, quá 24h thì theo ngày)
+  const formatDurationSmart = (totalMinutes: number): string => {
+    const mins = Math.abs(totalMinutes);
+    if (mins < 60) {
+      return `${mins} phút`;
+    }
+    const hours = Math.floor(mins / 60);
+    const remMins = mins % 60;
+    if (hours < 24) {
+      return remMins > 0 ? `${hours} giờ ${remMins} phút` : `${hours} giờ`;
+    }
+    const days = Math.floor(hours / 24);
+    const remHours = hours % 24;
+    return remHours > 0 ? `${days} ngày ${remHours} giờ` : `${days} ngày`;
+  };
+
   let statusText = '';
   let badgeClass = '';
 
   if (isResolved) {
     if (isOverdue) {
-      statusText = `Đã xong (Trễ hạn SLA ${Math.abs(remainingMinutes)}p)`;
+      const delayText = formatDurationSmart(remainingMinutes);
+      statusText = `Đã xong (Trễ hạn SLA: ${delayText})`;
       badgeClass = 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-300 dark:border-amber-800';
     } else {
-      statusText = `Đạt chuẩn SLA (${elapsedMinutes}p / ${config.label})`;
+      statusText = `Đạt chuẩn SLA (${formatDurationSmart(elapsedMinutes)} / ${config.label})`;
       badgeClass = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800';
     }
   } else {
     if (isOverdue) {
-      const overdueMins = Math.abs(remainingMinutes);
-      const overdueText = overdueMins >= 60 ? `${Math.floor(overdueMins / 60)}h ${overdueMins % 60}p` : `${overdueMins} phút`;
+      const overdueText = formatDurationSmart(remainingMinutes);
       statusText = `🚨 VI PHẠM SLA: Quá hạn ${overdueText}!`;
       badgeClass = 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-200 border-rose-300 dark:border-rose-700 animate-pulse font-bold';
     } else {
-      const remText = remainingMinutes >= 60 ? `${Math.floor(remainingMinutes / 60)}h ${remainingMinutes % 60}p` : `${remainingMinutes} phút`;
+      const remText = formatDurationSmart(remainingMinutes);
       if (percentUsed >= 70) {
         statusText = `⚠️ Khẩn cấp: Còn ${remText} (SLA ${config.label})`;
         badgeClass = 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-300 dark:border-amber-700 font-semibold';
