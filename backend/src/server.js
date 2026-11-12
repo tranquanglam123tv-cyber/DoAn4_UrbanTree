@@ -66,9 +66,13 @@ app.use('/api/v1/ai', aiRoutes);
 app.use('/api/ai', aiRoutes);
 
 // 3. Database & Nghiệp vụ quản lý cây xanh theo từng Module chuẩn hóa (Thuận)
+app.use('/api/v1/trees', treeRoutes);
 app.use('/api/trees', treeRoutes);
+app.use('/api/v1/incidents', incidentRoutes);
 app.use('/api/incidents', incidentRoutes);
+app.use('/api/v1/care-records', careRoutes);
 app.use('/api/care-records', careRoutes);
+app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api', apiRoutes); // Giữ tương thích ngược
 
