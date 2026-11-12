@@ -583,9 +583,9 @@ export const INITIAL_INCIDENTS: Incident[] = [
     status: 'IN_PROGRESS',
     assignedToUserId: 'user-staff-2',
     assignedToName: 'Lê Tuấn Anh',
-    reportedAt: '2026-11-02T03:20:00.000Z',
-    createdAt: '2026-11-02T03:20:00.000Z',
-    updatedAt: '2026-11-03T02:00:00.000Z',
+    reportedAt: new Date(Date.now() - 35 * 60 * 1000).toISOString(), // Báo cách đây 35 phút (SLA 2 giờ -> Còn 85 phút)
+    createdAt: new Date(Date.now() - 35 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
   },
   {
     id: 'inc-002',
@@ -598,11 +598,13 @@ export const INITIAL_INCIDENTS: Incident[] = [
     longitude: 105.77612,
     address: 'Đường 30 Tháng 4 (Gần Vincom Plaza), Quận Ninh Kiều, Cần Thơ',
     severity: 'CRITICAL',
-    status: 'RECEIVED',
-    assignedToUserId: null,
-    reportedAt: '2026-11-04T10:15:00.000Z',
-    createdAt: '2026-11-04T10:15:00.000Z',
-    updatedAt: '2026-11-04T10:15:00.000Z',
+    status: 'RESOLVED',
+    assignedToUserId: 'user-staff-2',
+    assignedToName: 'Lê Tuấn Anh',
+    reportedAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
+    createdAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
+    resolvedAt: new Date(Date.now() - 65 * 60 * 1000).toISOString(), // Giải quyết sau 25 phút -> Đạt chuẩn SLA 30 phút
+    updatedAt: new Date(Date.now() - 65 * 60 * 1000).toISOString(),
   },
   {
     id: 'inc-003',
@@ -618,10 +620,10 @@ export const INITIAL_INCIDENTS: Incident[] = [
     status: 'RESOLVED',
     assignedToUserId: 'user-staff-1',
     assignedToName: 'Trần Quang Lâm',
-    reportedAt: '2026-10-18T04:10:00.000Z',
-    resolvedAt: '2026-10-19T09:00:00.000Z',
-    createdAt: '2026-10-18T04:10:00.000Z',
-    updatedAt: '2026-10-19T09:00:00.000Z',
+    reportedAt: new Date(Date.now() - 360 * 60 * 1000).toISOString(),
+    createdAt: new Date(Date.now() - 360 * 60 * 1000).toISOString(),
+    resolvedAt: new Date(Date.now() - 180 * 60 * 1000).toISOString(), // Giải quyết sau 3 giờ -> Đạt chuẩn SLA 24 giờ
+    updatedAt: new Date(Date.now() - 180 * 60 * 1000).toISOString(),
   },
 ];
 
@@ -727,6 +729,21 @@ class StorageService {
         this.treeTypes = JSON.parse(localStorage.getItem(TREE_TYPES_STORAGE_KEY) || JSON.stringify(INITIAL_TREE_TYPES));
         this.careRecords = JSON.parse(localStorage.getItem(CARE_RECORDS_STORAGE_KEY) || JSON.stringify(INITIAL_CARE_RECORDS));
         this.incidents = JSON.parse(localStorage.getItem(INCIDENTS_STORAGE_KEY) || JSON.stringify(INITIAL_INCIDENTS));
+
+        // Chuẩn hóa thời gian resolvedAt cho các sự cố đã hoàn thành trong quá khứ để không bị lệch SLA
+        let needSaveInc = false;
+        this.incidents.forEach((inc) => {
+          if (inc.status === 'RESOLVED' && !inc.resolvedAt) {
+            const created = new Date(inc.createdAt).getTime();
+            const mockMins = inc.severity === 'CRITICAL' ? 25 : inc.severity === 'HIGH' ? 80 : 210;
+            inc.resolvedAt = new Date(created + mockMins * 60 * 1000).toISOString();
+            needSaveInc = true;
+          }
+        });
+        if (needSaveInc) {
+          localStorage.setItem(INCIDENTS_STORAGE_KEY, JSON.stringify(this.incidents));
+        }
+
         this.incidentUpdates = JSON.parse(localStorage.getItem(INCIDENT_UPDATES_STORAGE_KEY) || JSON.stringify(INITIAL_INCIDENT_UPDATES));
 
         const storedActiveUser = localStorage.getItem(ACTIVE_USER_KEY);
