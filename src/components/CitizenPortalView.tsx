@@ -138,6 +138,78 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
     return [];
   }, [trees, currentUser]);
 
+  // Dynamic Citizen Tier & Level (Calculated dynamically based on real user activity)
+  const citizenTier = useMemo(() => {
+    const count = myIncidents.length;
+    if (count >= 10) {
+      return {
+        level: 4,
+        tierName: 'Hạng Kim Cương',
+        title: 'Hiệp Sĩ Rừng Cổ Thụ',
+        badgeIcon: '💎',
+        colorClass: 'from-cyan-400 to-blue-600',
+        nextTargetText: 'Đã đạt Cấp Bậc Tối Cao',
+        remainingToNext: 0,
+        progressPercent: 100,
+        targetCount: 10,
+        statusDesc: 'Danh hiệu danh dự tối cao của Thành phố',
+      };
+    } else if (count >= 5) {
+      return {
+        level: 3,
+        tierName: 'Hạng Vàng',
+        title: 'Đại Sứ Môi Trường Tây Đô',
+        badgeIcon: '🥇',
+        colorClass: 'from-amber-400 to-yellow-600',
+        nextTargetText: '💎 Hiệp Sĩ Rừng Cổ Thụ (Hạng Kim Cương)',
+        remainingToNext: 10 - count,
+        progressPercent: Math.min(100, Math.round(((count - 5) / 5) * 100)),
+        targetCount: 10,
+        statusDesc: 'Uy tín cấp độ 3 · Ưu tiên xử lý nhanh',
+      };
+    } else if (count >= 2) {
+      return {
+        level: 2,
+        tierName: 'Hạng Bạc',
+        title: 'Vệ Binh Rừng Phố',
+        badgeIcon: '🥈',
+        colorClass: 'from-slate-300 to-teal-500',
+        nextTargetText: '🥇 Đại Sứ Môi Trường Tây Đô (Hạng Vàng)',
+        remainingToNext: 5 - count,
+        progressPercent: Math.min(100, Math.round(((count - 2) / 3) * 100)),
+        targetCount: 5,
+        statusDesc: 'Uy tín cấp độ 2 · Tích cực bảo vệ cây xanh',
+      };
+    } else if (count >= 1) {
+      return {
+        level: 1,
+        tierName: 'Hạng Đồng',
+        title: 'Mầm Xanh Tiên Phong',
+        badgeIcon: '🌱',
+        colorClass: 'from-emerald-400 to-teal-700',
+        nextTargetText: '🥈 Vệ Binh Rừng Phố (Hạng Bạc)',
+        remainingToNext: 2 - count,
+        progressPercent: 50,
+        targetCount: 2,
+        statusDesc: 'Uy tín cấp độ 1 · Đã có đóng góp đầu tiên',
+      };
+    } else {
+      // 0 incidents - Brand new citizen
+      return {
+        level: 0,
+        tierName: 'Công Dân Mới',
+        title: 'Cộng Tác Viên Khởi Động',
+        badgeIcon: '🌿',
+        colorClass: 'from-emerald-600 to-teal-900',
+        nextTargetText: '🌱 Mầm Xanh Tiên Phong (Hạng Đồng)',
+        remainingToNext: 1,
+        progressPercent: 0,
+        targetCount: 1,
+        statusDesc: 'Tài khoản mới · Hãy gửi phản ánh đầu tiên để thăng hạng',
+      };
+    }
+  }, [myIncidents.length]);
+
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopiedCode(id);
@@ -299,20 +371,20 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
               </div>
             </div>
 
-            {/* Rank Badge Visual */}
+            {/* Rank Badge Visual - 100% Dynamic */}
             <div className="p-4 rounded-2xl bg-white/10 dark:bg-black/30 backdrop-blur-xl border border-white/15 dark:border-emerald-500/20 flex items-center gap-3.5 self-start md:self-center shadow-lg">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-300 to-amber-600 flex items-center justify-center text-slate-950 font-black text-xl shadow-md">
-                🥈
+              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${citizenTier.colorClass} flex items-center justify-center text-slate-950 font-black text-2xl shadow-md`}>
+                {citizenTier.badgeIcon}
               </div>
               <div>
                 <div className="text-[10px] uppercase font-bold text-amber-200 tracking-wider">
                   Cấp Bậc Công Dân
                 </div>
                 <div className="text-base font-extrabold text-white">
-                  Vệ Binh Rừng Phố
+                  {citizenTier.title}
                 </div>
-                <div className="text-[11px] text-emerald-200/80 font-medium">
-                  Hạng Bạc · Uy tín cấp độ 2
+                <div className="text-[11px] text-emerald-200/90 font-medium">
+                  {citizenTier.tierName} {citizenTier.level > 0 ? `· Cấp độ ${citizenTier.level}` : '· Thành viên mới'}
                 </div>
               </div>
             </div>
@@ -361,21 +433,21 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
             </div>
           </div>
 
-          {/* Tier Progression Bar */}
+          {/* Tier Progression Bar - 100% Dynamic */}
           <div className="pt-3 border-t border-white/10 space-y-2">
             <div className="flex items-center justify-between text-xs text-emerald-200/90">
               <span className="flex items-center gap-1.5 font-medium">
                 <Award className="w-4 h-4 text-amber-300" />
-                <span>Mục tiêu tiếp theo: <strong>🥇 Đại Sứ Môi Trường Tây Đô (Hạng Vàng)</strong></span>
+                <span>Mục tiêu tiếp theo: <strong>{citizenTier.nextTargetText}</strong></span>
               </span>
               <span className="font-mono font-bold text-white bg-white/10 px-2 py-0.5 rounded-md">
-                {myIncidents.length} / 5 Phản ánh (Còn 2 phản ánh)
+                {myIncidents.length} / {citizenTier.targetCount} Phản ánh {citizenTier.remainingToNext > 0 ? `(Cần thêm ${citizenTier.remainingToNext})` : '(Đạt tối đa)'}
               </span>
             </div>
             <div className="w-full h-2.5 bg-black/40 rounded-full overflow-hidden p-0.5 border border-white/10">
               <div
                 className="h-full bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300 rounded-full transition-all duration-1000 shadow-[0_0_12px_rgba(52,211,153,0.8)]"
-                style={{ width: `${Math.min(100, (myIncidents.length / 5) * 100)}%` }}
+                style={{ width: `${citizenTier.progressPercent}%` }}
               />
             </div>
           </div>
@@ -1009,131 +1081,263 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Badge 1 */}
-              <div className="p-5 rounded-2xl border-2 border-emerald-300 dark:border-emerald-500/40 bg-gradient-to-br from-emerald-50/60 to-white dark:from-emerald-950/40 dark:to-[#0c1812] space-y-3 relative overflow-hidden">
-                <div className="flex items-center justify-between">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-2xl shadow-md">
-                    🌱
+              {/* Badge 1: Mầm Xanh Tiên Phong */}
+              {myIncidents.length >= 1 ? (
+                <div className="p-5 rounded-2xl border-2 border-emerald-300 dark:border-emerald-500/40 bg-gradient-to-br from-emerald-50/60 to-white dark:from-emerald-950/40 dark:to-[#0c1812] space-y-3 relative overflow-hidden">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-2xl shadow-md">
+                      🌱
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200 dark:border-emerald-500/40">
+                      ✓ ĐÃ MỞ KHÓA
+                    </span>
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200 dark:border-emerald-500/40">
-                    ✓ ĐÃ MỞ KHÓA
-                  </span>
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">Mầm Xanh Tiên Phong</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Gửi phản ánh sự cố cây xanh đầu tiên giúp cơ quan quản lý phát hiện sớm.
+                    </p>
+                  </div>
+                  <div className="text-[11px] font-mono font-bold text-emerald-700 dark:text-emerald-400 pt-2 border-t border-emerald-100 dark:border-emerald-800/60">
+                    +100 Điểm Eco-Points
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">Mầm Xanh Tiên Phong</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Gửi phản ánh sự cố cây xanh đầu tiên giúp cơ quan quản lý phát hiện sớm.
-                  </p>
+              ) : (
+                <div className="p-5 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-3 relative opacity-80">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-slate-800 text-slate-400 flex items-center justify-center text-2xl">
+                      🌱
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold">
+                      🔒 CẦN 1 PHẢN ÁNH
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-700 dark:text-slate-300 text-sm">Mầm Xanh Tiên Phong</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Gửi phản ánh sự cố cây xanh đầu tiên giúp cơ quan quản lý phát hiện sớm.
+                    </p>
+                  </div>
+                  <div className="text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-800">
+                    Thưởng: +100 Điểm Eco-Points
+                  </div>
                 </div>
-                <div className="text-[11px] font-mono font-bold text-emerald-700 dark:text-emerald-400 pt-2 border-t border-emerald-100 dark:border-emerald-800/60">
-                  +100 Điểm Eco-Points
-                </div>
-              </div>
+              )}
 
-              {/* Badge 2 */}
-              <div className="p-5 rounded-2xl border-2 border-teal-300 dark:border-teal-500/40 bg-gradient-to-br from-teal-50/60 to-white dark:from-teal-950/40 dark:to-[#0c1812] space-y-3 relative overflow-hidden">
-                <div className="flex items-center justify-between">
-                  <div className="w-12 h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-2xl shadow-md">
-                    🥈
+              {/* Badge 2: Vệ Binh Rừng Phố */}
+              {myIncidents.length >= 2 ? (
+                <div className="p-5 rounded-2xl border-2 border-teal-300 dark:border-teal-500/40 bg-gradient-to-br from-teal-50/60 to-white dark:from-teal-950/40 dark:to-[#0c1812] space-y-3 relative overflow-hidden">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-2xl shadow-md">
+                      🥈
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300 text-[10px] font-bold border border-teal-200 dark:border-teal-500/40">
+                      ✓ ĐÃ MỞ KHÓA
+                    </span>
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300 text-[10px] font-bold border border-teal-200 dark:border-teal-500/40">
-                    ✓ ĐANG KÍCH HOẠT
-                  </span>
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">Vệ Binh Rừng Phố</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Đóng góp từ 2 phản ánh chính xác đã được tiếp nhận và xử lý.
+                    </p>
+                  </div>
+                  <div className="text-[11px] font-mono font-bold text-teal-700 dark:text-teal-400 pt-2 border-t border-teal-100 dark:border-teal-800/60">
+                    +250 Điểm Eco-Points
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">Vệ Binh Rừng Phố</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Đóng góp 3 phản ánh chính xác đã được KTV cắt tỉa an toàn thành công.
-                  </p>
+              ) : (
+                <div className="p-5 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-3 relative opacity-80">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-slate-800 text-slate-400 flex items-center justify-center text-2xl">
+                      🥈
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold">
+                      🔒 TIẾN ĐỘ: {myIncidents.length}/2
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-700 dark:text-slate-300 text-sm">Vệ Binh Rừng Phố</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Đóng góp từ 2 phản ánh chính xác đã được tiếp nhận và xử lý.
+                    </p>
+                  </div>
+                  <div className="text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-800">
+                    Thưởng: +250 Điểm Eco-Points
+                  </div>
                 </div>
-                <div className="text-[11px] font-mono font-bold text-teal-700 dark:text-teal-400 pt-2 border-t border-teal-100 dark:border-teal-800/60">
-                  +250 Điểm Eco-Points
-                </div>
-              </div>
+              )}
 
-              {/* Badge 3 */}
-              <div className="p-5 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-3 relative">
-                <div className="flex items-center justify-between">
-                  <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-slate-800 text-slate-400 flex items-center justify-center text-2xl">
-                    🥇
+              {/* Badge 3: Đại Sứ Môi Trường Tây Đô */}
+              {myIncidents.length >= 5 ? (
+                <div className="p-5 rounded-2xl border-2 border-amber-300 dark:border-amber-500/40 bg-gradient-to-br from-amber-50/60 to-white dark:from-amber-950/40 dark:to-[#0c1812] space-y-3 relative overflow-hidden">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-2xl shadow-md">
+                      🥇
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[10px] font-bold border border-amber-200 dark:border-amber-500/40">
+                      ✓ ĐÃ MỞ KHÓA
+                    </span>
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold">
-                    🔒 TIẾN ĐỘ: 3/5
-                  </span>
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">Đại Sứ Môi Trường Tây Đô</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Đạt mốc 5 phản ánh thực địa chính xác cho phong trào cây xanh đô thị.
+                    </p>
+                  </div>
+                  <div className="text-[11px] font-mono font-bold text-amber-700 dark:text-amber-400 pt-2 border-t border-amber-100 dark:border-amber-800/60">
+                    +500 Điểm &amp; Bằng khen điện tử
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-slate-800 dark:text-slate-200 text-sm">Đại Sứ Môi Trường Tây Đô</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Đạt mốc 5 phản ánh thực địa chính xác và bảo trợ 3 cây xanh trong khu phố.
-                  </p>
+              ) : (
+                <div className="p-5 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-3 relative opacity-80">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-slate-800 text-slate-400 flex items-center justify-center text-2xl">
+                      🥇
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold">
+                      🔒 TIẾN ĐỘ: {myIncidents.length}/5
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-700 dark:text-slate-300 text-sm">Đại Sứ Môi Trường Tây Đô</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Đạt mốc 5 phản ánh thực địa chính xác cho phong trào cây xanh đô thị.
+                    </p>
+                  </div>
+                  <div className="text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-800">
+                    Thưởng: +500 Điểm &amp; Bằng khen điện tử
+                  </div>
                 </div>
-                <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-800">
-                  Thưởng: +500 Điểm &amp; Bằng khen điện tử
-                </div>
-              </div>
+              )}
 
-              {/* Badge 4 */}
-              <div className="p-5 rounded-2xl border-2 border-rose-300 dark:border-rose-500/40 bg-gradient-to-br from-rose-50/60 to-white dark:from-rose-950/40 dark:to-[#0c1812] space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-2xl shadow-md">
-                    💧
+              {/* Badge 4: Bàn Tay Xanh Nghĩa Tình (Bảo trợ cây) */}
+              {followedTrees.length >= 1 ? (
+                <div className="p-5 rounded-2xl border-2 border-rose-300 dark:border-rose-500/40 bg-gradient-to-br from-rose-50/60 to-white dark:from-rose-950/40 dark:to-[#0c1812] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-2xl shadow-md">
+                      💧
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 text-[10px] font-bold border border-rose-200 dark:border-rose-500/40">
+                      ✓ ĐÃ MỞ KHÓA
+                    </span>
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 text-[10px] font-bold border border-rose-200 dark:border-rose-500/40">
-                    ✓ ĐÃ MỞ KHÓA
-                  </span>
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">Bàn Tay Xanh Nghĩa Tình</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Theo dõi và bảo trợ bóng mát cho cây xanh xung quanh khu vực bạn sinh sống.
+                    </p>
+                  </div>
+                  <div className="text-[11px] font-mono font-bold text-rose-700 dark:text-rose-400 pt-2 border-t border-rose-100 dark:border-rose-800/60">
+                    +150 Điểm Eco-Points
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">Bàn Tay Xanh Nghĩa Tình</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Theo dõi và nhận cập nhật định kỳ cho 3 cây xanh bóng mát trước ngõ.
-                  </p>
+              ) : (
+                <div className="p-5 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-3 opacity-80">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-slate-800 text-slate-400 flex items-center justify-center text-2xl">
+                      💧
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold">
+                      🔒 CHƯA BẢO TRỢ CÂY
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-700 dark:text-slate-300 text-sm">Bàn Tay Xanh Nghĩa Tình</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Theo dõi và bảo trợ bóng mát cho cây xanh xung quanh khu vực bạn sinh sống.
+                    </p>
+                  </div>
+                  <div className="text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-800">
+                    Thưởng: +150 Điểm Eco-Points
+                  </div>
                 </div>
-                <div className="text-[11px] font-mono font-bold text-rose-700 dark:text-rose-400 pt-2 border-t border-rose-100 dark:border-rose-800/60">
-                  +150 Điểm Eco-Points
-                </div>
-              </div>
+              )}
 
-              {/* Badge 5 */}
-              <div className="p-5 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-slate-800 text-slate-400 flex items-center justify-center text-2xl">
-                    ⚡
+              {/* Badge 5: Mắt Thần Mùa Mưa Bão (Sự cố Critical) */}
+              {myIncidents.some((i) => i.severity === 'CRITICAL') ? (
+                <div className="p-5 rounded-2xl border-2 border-amber-400 dark:border-amber-500/60 bg-gradient-to-br from-amber-50/70 to-white dark:from-amber-950/40 dark:to-[#0c1812] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-2xl shadow-md">
+                      ⚡
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[10px] font-bold border border-amber-300 dark:border-amber-500/50">
+                      ✓ ĐÃ MỞ KHÓA
+                    </span>
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold">
-                    🔒 CHỜ SỰ CỐ KHẨN CẤP
-                  </span>
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">Mắt Thần Mùa Mưa Bão</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Phát hiện sớm cành sà nguy hiểm cấp độ Khẩn cấp (Critical) trước giông lốc.
+                    </p>
+                  </div>
+                  <div className="text-[11px] font-mono font-bold text-amber-700 dark:text-amber-400 pt-2 border-t border-amber-100 dark:border-amber-800/60">
+                    +300 Điểm &amp; Huy hiệu vàng
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-slate-800 dark:text-slate-200 text-sm">Mắt Thần Mùa Mưa Bão</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Phát hiện sớm cành sà nguy hiểm cấp độ Khẩn cấp (Critical) trước giông lốc.
-                  </p>
+              ) : (
+                <div className="p-5 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-3 opacity-80">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-slate-800 text-slate-400 flex items-center justify-center text-2xl">
+                      ⚡
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold">
+                      🔒 CHỜ SỰ CỐ KHẨN CẤP
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-700 dark:text-slate-300 text-sm">Mắt Thần Mùa Mưa Bão</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Phát hiện sớm cành sà nguy hiểm cấp độ Khẩn cấp (Critical) trước giông lốc.
+                    </p>
+                  </div>
+                  <div className="text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-800">
+                    Thưởng: +300 Điểm &amp; Huy hiệu vàng
+                  </div>
                 </div>
-                <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-800">
-                  Thưởng: +300 Điểm &amp; Huy hiệu vàng
-                </div>
-              </div>
+              )}
 
-              {/* Badge 6 */}
-              <div className="p-5 rounded-2xl border-2 border-blue-300 dark:border-blue-500/40 bg-gradient-to-br from-blue-50/60 to-white dark:from-blue-950/40 dark:to-[#0c1812] space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-2xl shadow-md">
-                    🔗
+              {/* Badge 6: Công Dân Web3 Tiên Phong */}
+              {myIncidents.some((i) => i.status === 'RESOLVED') ? (
+                <div className="p-5 rounded-2xl border-2 border-blue-300 dark:border-blue-500/40 bg-gradient-to-br from-blue-50/60 to-white dark:from-blue-950/40 dark:to-[#0c1812] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-2xl shadow-md">
+                      🔗
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 text-[10px] font-bold border border-blue-200 dark:border-blue-500/40">
+                      ✓ ĐÃ MỞ KHÓA
+                    </span>
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 text-[10px] font-bold border border-blue-200 dark:border-blue-500/40">
-                    ✓ ĐÃ MỞ KHÓA
-                  </span>
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">Công Dân Web3 Tiên Phong</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Phản ánh của bạn đã được đóng dấu mật mã SHA-256 lên Smart Contract On-Chain.
+                    </p>
+                  </div>
+                  <div className="text-[11px] font-mono font-bold text-blue-700 dark:text-blue-400 pt-2 border-t border-blue-100 dark:border-blue-800/60">
+                    +100 Điểm On-Chain
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">Công Dân Web3 Tiên Phong</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Phản ánh của bạn đã được đóng dấu mật mã SHA-256 lên Smart Contract On-Chain.
-                  </p>
+              ) : (
+                <div className="p-5 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-3 opacity-80">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-slate-800 text-slate-400 flex items-center justify-center text-2xl">
+                      🔗
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold">
+                      🔒 CHỜ NGHIỆM THU ĐẦU TIÊN
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-700 dark:text-slate-300 text-sm">Công Dân Web3 Tiên Phong</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Phản ánh của bạn đã được đóng dấu mật mã SHA-256 lên Smart Contract On-Chain.
+                    </p>
+                  </div>
+                  <div className="text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-800">
+                    Thưởng: +100 Điểm On-Chain
+                  </div>
                 </div>
-                <div className="text-[11px] font-mono font-bold text-blue-700 dark:text-blue-400 pt-2 border-t border-blue-100 dark:border-blue-800/60">
-                  +100 Điểm On-Chain
-                </div>
-              </div>
+              )}
             </div>
           </div>
 
