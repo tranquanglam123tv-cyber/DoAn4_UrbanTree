@@ -28,6 +28,7 @@ import {
   FileText,
   Radio,
   Search,
+  Filter,
   LocateFixed,
   Cpu,
 } from 'lucide-react';
@@ -39,6 +40,7 @@ import {
   getTreeCorridor,
   getTreeMilestone,
   getTreeStreetCode,
+  STREET_CORRIDORS_LIST,
 } from '../utils/treeUtils';
 
 interface StaffWorkstationViewProps {
@@ -68,6 +70,11 @@ export const StaffWorkstationView: React.FC<StaffWorkstationViewProps> = ({
   const [selectedTreeIds, setSelectedTreeIds] = useState<string[]>([]);
   const [isSubmittingBatch, setIsSubmittingBatch] = useState(false);
   const [batchSuccessMsg, setBatchSuccessMsg] = useState<string | null>(null);
+
+  const [corridorViewSelectedId, setCorridorViewSelectedId] = useState<string>('ALL');
+  const [corridorSearchQuery, setCorridorSearchQuery] = useState<string>('');
+  const [corridorPage, setCorridorPage] = useState<number>(1);
+  const corridorPageSize = 24;
 
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -111,7 +118,7 @@ export const StaffWorkstationView: React.FC<StaffWorkstationViewProps> = ({
 
   // Trees in selected corridor
   const corridorTrees = useMemo(() => {
-    const targetCorridor = STREET_CORRIDORS.find((c) => c.id === selectedCorridorId);
+    const targetCorridor = STREET_CORRIDORS_LIST.find((c) => c.id === selectedCorridorId) || STREET_CORRIDORS.find((c) => c.id === selectedCorridorId);
     if (!targetCorridor) return trees.slice(0, 5);
 
     const matches = trees.filter((t) => {
@@ -122,6 +129,38 @@ export const StaffWorkstationView: React.FC<StaffWorkstationViewProps> = ({
 
     return matches.length > 0 ? matches : trees.slice(0, 5);
   }, [trees, selectedCorridorId]);
+
+  // Danh mục cây tuyến phố (Tab 3: Corridors) - Tối ưu lọc & phân trang thông minh (24 cây/trang)
+  const filteredCorridorTabTrees = useMemo(() => {
+    const q = corridorSearchQuery.trim().toLowerCase();
+    return trees.filter((tree) => {
+      if (corridorViewSelectedId !== 'ALL') {
+        const target = STREET_CORRIDORS_LIST.find((c) => c.id === corridorViewSelectedId);
+        if (target) {
+          const c = getTreeCorridor(tree);
+          const code = getTreeStreetCode(tree);
+          if (c !== target.name && !code.startsWith(target.prefix)) return false;
+        }
+      }
+      if (q) {
+        const sc = getTreeStreetCode(tree).toLowerCase();
+        const ms = getTreeMilestone(tree).toLowerCase();
+        const dn = (tree.displayName || '').toLowerCase();
+        const cd = (tree.publicCode || '').toLowerCase();
+        const ad = (tree.address || '').toLowerCase();
+        if (!sc.includes(q) && !ms.includes(q) && !dn.includes(q) && !cd.includes(q) && !ad.includes(q)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [trees, corridorViewSelectedId, corridorSearchQuery]);
+
+  const totalCorridorPages = Math.max(1, Math.ceil(filteredCorridorTabTrees.length / corridorPageSize));
+  const paginatedCorridorTrees = useMemo(() => {
+    const start = (corridorPage - 1) * corridorPageSize;
+    return filteredCorridorTabTrees.slice(start, start + corridorPageSize);
+  }, [filteredCorridorTabTrees, corridorPage, corridorPageSize]);
 
   // 📍 Radar GPS State & Auto-Detect for Staff
   const [isScanningGps, setIsScanningGps] = useState(false);
@@ -948,54 +987,132 @@ export const StaffWorkstationView: React.FC<StaffWorkstationViewProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {trees.map((tree, idx) => {
-              const streetCode = getTreeStreetCode(tree);
-              const milestone = getTreeMilestone(tree);
-              const corridor = getTreeCorridor(tree);
+          {/* Thanh công cụ lọc & tìm kiếm tuyến đường dành cho KTV */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <span className="text-xs font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                <Filter className="w-3.5 h-3.5" /> Tuyến phố:
+              </span>
+              <select
+                value={corridorViewSelectedId}
+                onChange={(e) => {
+                  setCorridorViewSelectedId(e.target.value);
+                  setCorridorPage(1);
+                }}
+                className="px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="ALL">🌐 Tất cả tuyến phố ({trees.length} cây)</option>
+                {STREET_CORRIDORS_LIST.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    📍 {c.name} ({c.prefix})
+                  </option>
+                ))}
+              </select>
+            </div>
 
-              return (
-                <div
-                  key={tree.id}
-                  className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-emerald-400 transition-all space-y-3"
-                >
-                  <div className="w-full h-36 rounded-xl overflow-hidden relative bg-slate-100">
-                    <img src={tree.imageUrl} alt={tree.displayName} className="w-full h-full object-cover" />
-                    <span className="absolute top-2 left-2 px-2.5 py-1 rounded-lg bg-slate-950/90 text-amber-300 font-mono text-[11px] font-black border border-slate-700 shadow-md">
-                      [{streetCode}]
-                    </span>
-                    <span className={`absolute top-2 right-2 px-2 py-0.5 rounded-md font-bold text-[10px] ${
-                      tree.healthStatus === 'GOOD' ? 'bg-emerald-600 text-white' : 'bg-amber-600 text-white'
-                    }`}>
-                      ● {tree.healthStatus}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1">
-                    <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">{tree.displayName}</h3>
-                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 truncate">
-                      <MapPin className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                      <span>{milestone}</span>
-                    </p>
-                    <p className="text-[10px] text-slate-500 pl-4">{corridor}</p>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <span>Cao: <strong>{tree.heightM}m</strong></span>
-                    <span>ĐK: <strong>{tree.diameterCm}cm</strong></span>
-                    <span className="text-emerald-600 font-bold font-mono">EVM v1</span>
-                  </div>
-
-                  <button
-                    onClick={() => onSelectTree(tree)}
-                    className="w-full py-2 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-800 dark:text-emerald-300 font-bold rounded-xl text-xs text-center transition-colors cursor-pointer"
-                  >
-                    Xem Biển Nhôm &amp; Hồ Sơ ➔
-                  </button>
-                </div>
-              );
-            })}
+            <div className="relative w-full sm:w-72">
+              <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+              <input
+                type="text"
+                value={corridorSearchQuery}
+                onChange={(e) => {
+                  setCorridorSearchQuery(e.target.value);
+                  setCorridorPage(1);
+                }}
+                placeholder="Tìm mã [HB-01], số nhà, loài..."
+                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
           </div>
+
+          {/* Grid Cây hiển thị mượt mà theo phân trang */}
+          {paginatedCorridorTrees.length === 0 ? (
+            <div className="p-12 text-center text-slate-400 italic">
+              Không tìm thấy cây nào thuộc tuyến phố này.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {paginatedCorridorTrees.map((tree, idx) => {
+                const streetCode = getTreeStreetCode(tree);
+                const milestone = getTreeMilestone(tree);
+                const corridor = getTreeCorridor(tree);
+
+                return (
+                  <div
+                    key={tree.id}
+                    className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-emerald-400 transition-all space-y-3"
+                  >
+                    <div className="w-full h-36 rounded-xl overflow-hidden relative bg-slate-100">
+                      <img
+                        src={tree.imageUrl}
+                        alt={tree.displayName}
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                      />
+                      <span className="absolute top-2 left-2 px-2.5 py-1 rounded-lg bg-slate-950/90 text-amber-300 font-mono text-[11px] font-black border border-slate-700 shadow-md">
+                        [{streetCode}]
+                      </span>
+                      <span className={`absolute top-2 right-2 px-2 py-0.5 rounded-md font-bold text-[10px] ${
+                        tree.healthStatus === 'GOOD' ? 'bg-emerald-600 text-white' : 'bg-amber-600 text-white'
+                      }`}>
+                        ● {tree.healthStatus}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">{tree.displayName}</h3>
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 truncate">
+                        <MapPin className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                        <span>{milestone}</span>
+                      </p>
+                      <p className="text-[10px] text-slate-500 pl-4">{corridor}</p>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <span>Cao: <strong>{tree.heightM}m</strong></span>
+                      <span>ĐK: <strong>{tree.diameterCm}cm</strong></span>
+                      <span className="text-emerald-600 font-bold font-mono">EVM v1</span>
+                    </div>
+
+                    <button
+                      onClick={() => onSelectTree(tree)}
+                      className="w-full py-2 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-800 dark:text-emerald-300 font-bold rounded-xl text-xs text-center transition-colors cursor-pointer"
+                    >
+                      Xem Biển Nhôm &amp; Hồ Sơ ➔
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Thanh phân trang thông minh cho KTV */}
+          {totalCorridorPages > 1 && (
+            <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800 text-xs">
+              <span className="text-slate-500 font-medium">
+                Đang xem trang <strong>{corridorPage}</strong> / {totalCorridorPages} (Tổng số <strong>{filteredCorridorTabTrees.length}</strong> cây)
+              </span>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={corridorPage <= 1}
+                  onClick={() => setCorridorPage((p) => Math.max(1, p - 1))}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                >
+                  Trang trước
+                </button>
+                <button
+                  type="button"
+                  disabled={corridorPage >= totalCorridorPages}
+                  onClick={() => setCorridorPage((p) => Math.min(totalCorridorPages, p + 1))}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-emerald-700 cursor-pointer shadow-2xs"
+                >
+                  Trang sau
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
