@@ -92,5 +92,69 @@ Một lập luận cực kỳ giá trị để ghi điểm tuyệt đối trư�
 - **Giai đoạn 3 (Xã hội hóa / Crowdsourcing):** Cung cấp Cổng phản ánh cho Người dân (Citizen Portal). Người dân khi thấy cây trước cửa nhà bị nghiêng, sâu bệnh có thể quét QR phản ánh, qua đó gián tiếp giúp chính quyền cập nhật dữ liệu liên tục theo thời gian thực mà không tốn ngân sách thuê người khảo sát lại.
 
 ---
+
+## 🌍 PHẦN 6: BẢN ĐỒ ĐA TỈNH THÀNH (MULTI-TENANT GIS) & PHÂN QUYỀN ĐỊA BÀN HÀNH CHÍNH
+
+### 1. Câu hỏi thực tế: "Nếu muốn quản lý thêm cây ở TP.HCM thì Admin có cần tạo thêm bản đồ mới không?"
+
+> **Hội đồng hỏi:** *"Hệ thống hiện tại đang làm cho Cần Thơ. Nếu sau này bán bản quyền hoặc triển khai cho Sở Xây Dựng TP.HCM hay Hà Nội, các em có phải đập đi xây lại hoặc tạo ra một bản đồ riêng cho TP.HCM không?"*
+
+👉 **Câu trả lời xuất sắc:**
+> *"Dạ thưa Thầy/Cô, hoàn toàn KHÔNG CẦN thêm hay vẽ lại bất kỳ bản đồ nào cả!*  
+> *Bởi vì trong kiến trúc GIS chuẩn quốc tế (Leaflet, OpenStreetMap, Mapbox, Google Maps), **toàn bộ Trái Đất chỉ là MỘT BẢN ĐỒ DUY NHẤT** theo hệ quy chiếu tọa độ toàn cầu WGS-84 (`latitude, longitude`). Cả Cần Thơ, TP.HCM, Đà Nẵng, Hà Nội đều đã có sẵn trên cùng một mặt phẳng bản đồ số.*  
+>  
+> *Bản đồ giống như **mặt bàn kính khổng lồ**, còn dữ liệu cây xanh của từng thành phố giống như **các lớp dữ liệu (Data Layers)** đặt lên trên. Khi ta cắm một cây ở Bến Ninh Kiều (Cần Thơ) và một cây ở Chợ Bến Thành (TP.HCM), cả 2 cây đều đã cùng tồn tại trên một bản đồ chung. Tương tự như ứng dụng Grab hay Google Maps, người dùng ở Cần Thơ thì ứng dụng trượt về Cần Thơ, khi di chuyển lên TP.HCM thì ứng dụng tự động hiển thị tài xế tại TP.HCM mà không cần tạo 2 app bản đồ khác nhau."*
+
+---
+
+### 2. Nghiệp vụ thực tế: "Cán bộ phụ trách khu vực nào thì chỉ quản lý khu vực đó" được tổ chức thế nào?
+
+Trong nghiệp vụ hạ tầng đô thị thông minh cấp quốc gia (Multi-Tenancy Architecture), hệ thống phân cấp chặt chẽ theo **Mã định danh Địa bàn Hành chính (Administrative Hierarchy Code)**:
+
+```
+                              HỆ THỐNG QUẢN TRỊ URBANTREE
+                                           │
+             ┌─────────────────────────────┴─────────────────────────────┐
+   [ĐỊA BÀN: TP. CẦN THƠ]                                     [ĐỊA BÀN: TP. HỒ CHÍ MINH]
+   (Mã vùng: 92)                                              (Mã vùng: 79)
+             │                                                           │
+   ┌─────────┴─────────┐                                       ┌─────────┴─────────┐
+[Quận Ninh Kiều]   [Quận Cái Răng]                          [Quận 1]            [Quận 3]
+  (KTV Lâm)          (KTV Tuấn)                               (KTV An)            (KTV Bình)
+```
+
+- **Cấp Cán bộ Kỹ thuật (Field Staff / Ward Operator):**  
+  Tài khoản được gán quyền theo địa bàn phụ trách (Scope: District/Ward). Khi KTV Lâm đăng nhập, bản đồ tự động bay (`flyTo`) về Quận Ninh Kiều và chỉ tải danh sách cây thuộc địa bàn mình phụ trách để chống quá tải dữ liệu và bảo mật thông tin.
+- **Cấp Lãnh đạo Sở Xây Dựng Địa phương (City Admin):**  
+  Có quyền bao quát toàn bộ các quận huyện trong tỉnh/thành phố đó.
+- **Cấp Tổng Quản Trị / Bộ Xây Dựng (Super Admin):**  
+  Nắm toàn quyền đa địa bàn, có thể chuyển đổi linh hoạt: `[📍 Chọn Tỉnh/Thành phố: Cần Thơ / TP.HCM / Đà Nẵng]` hoặc phóng to/thu nhỏ toàn quốc.
+
+---
+
+### 3. Hai khu vực ở 2 tỉnh cách xa nhau thì bản đồ hiển thị và tối ưu hiệu năng ra sao?
+
+1. **Cơ chế Tự động tính toán tầm nhìn (Auto-fit Bounds):**  
+   Thay vì fix cứng tọa độ trung tâm, hệ thống sử dụng thuật toán bao hình chữ nhật `L.latLngBounds(markers)`. Khi người dùng mở bản đồ, hệ thống tự động phóng to vừa vặn toàn bộ các cây đang có trong tầm nhìn.
+2. **Cơ chế Phân cụm điểm dữ liệu (Marker Clustering):**  
+   Khi zoom xa thấy toàn cảnh miền Nam: Cây ở Cần Thơ tự động gom thành 1 vòng tròn tròn số `[2.500 cây]`, cây ở TP.HCM gom thành 1 vòng tròn `[10.000 cây]`. Khi người dùng click vào cụm nào thì bản đồ tự động phóng nhanh vào thành phố đó.
+3. **Truy vấn theo Không gian địa lý (Spatial Bounding Box Query):**  
+   Server không bao giờ gửi 100.000 cây về trình duyệt cùng một lúc gây đơ lag. Bản đồ người dùng đang nhìn vào khung tọa độ nào (`north-east, south-west`) thì API chỉ nạp các cây nằm trong khung nhìn đó (Viewport Caching).
+
+---
+
+## 📌 BỘ CÂU HỎI THỰC TẾ & CÂU TRẢ LỜI SẮC BÉN KHI BẢO VỆ ĐỒ ÁN (FAQ)
+
+### Câu 1: Tại sao không dùng GPS dân sự đơn thuần để tự động gán mã cây luôn mà phải in thẻ dán mã QR?
+- **Trả lời:** Vì GPS trên điện thoại di động thông thường có sai số từ **3m đến 8m**, đặc biệt khi đứng dưới tán lá rậm rạp và nhà cao tầng (hiện tượng tán xạ sóng đa đường - Multipath Effect). Dưới tán cây, sai số 5m đủ để làm hệ thống nhận diện nhầm cây số 8 thành cây số 7 hoặc cây số 9. Do đó, GPS chỉ đóng vai trò **bộ lọc gợi ý vùng (Neighborhood Hint)**, còn chiếc thẻ nhôm khắc QR cố định trên thân cây mới là **vật chứng pháp lý 100% chuẩn xác** để định danh cá thể.
+
+### Câu 2: Lỡ dân chụp ảnh mã QR rồi về nhà quét báo cáo giả/phá hoại thì sao?
+- **Trả lời:** Hệ thống đối chiếu tọa độ kép (Cross-GPS Verification). Khi người dân quét mã QR gửi báo cáo sự cố, trình duyệt yêu cầu lấy GPS thực tế tại thời điểm quét. Nếu khoảng cách giữa GPS người gửi và GPS gốc cây đã neo trên Blockchain vượt quá 100m, hệ thống sẽ cảnh báo "Bạn đang không ở gần cây này" và gắn cờ rủi ro (Risk Flag) để quản trị viên sàng lọc trước.
+
+### Câu 3: Làm sao đảm bảo dữ liệu cây không bị công ty cây xanh làm đẹp số liệu hoặc khai khống để rút ngân sách bảo dưỡng?
+- **Trả lời:** Dữ liệu hồ sơ cây và nhật ký chăm sóc đều được băm mã theo chuẩn SHA-256 và neo khối mã hóa lên Smart Contract Blockchain A19. Bất kỳ hành vi sửa đổi lén trong cơ sở dữ liệu SQL/MongoDB (ví dụ sửa ngày trồng, sửa tình trạng sức khỏe từ CHẾT thành TỐT) đều sẽ bị hệ thống phát hiện ngay lập tức do lệch Hash gốc (Data Tampering Detected).
+
+---
 *Tài liệu lưu hành nội bộ đồ án tốt nghiệp UrbanTree - Cần Thơ Smart Eco-GIS 4.0.*
+
 
