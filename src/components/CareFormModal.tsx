@@ -26,6 +26,8 @@ export const CareFormModal: React.FC<CareFormModalProps> = ({
   const [healthBefore, setHealthBefore] = useState<TreeHealthStatus>(selectedTree?.healthStatus || 'FAIR');
   const [healthAfter, setHealthAfter] = useState<TreeHealthStatus>(selectedTree?.healthStatus || 'GOOD');
   const [notes, setNotes] = useState('');
+  const [equipmentUsed, setEquipmentUsed] = useState('Xe thang tự hành 18m & Cưa xích Stihl MS-194T trên cao');
+  const [chemicalsUsed, setChemicalsUsed] = useState('Keo liền sẹo cây Tree Seal & Sơn vôi sát trùng');
   const [imageUrl, setImageUrl] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -80,6 +82,8 @@ export const CareFormModal: React.FC<CareFormModalProps> = ({
         notes: notes.trim(),
         imageUrl: imageUrl || imagePreview || undefined,
         performedAt: new Date().toISOString(),
+        equipmentUsed: equipmentUsed.trim() || undefined,
+        chemicalsUsed: chemicalsUsed.trim() || undefined,
       });
 
       onSaved();
@@ -189,6 +193,44 @@ export const CareFormModal: React.FC<CareFormModalProps> = ({
                 <option value="FAIR">Bình thường (FAIR)</option>
                 <option value="POOR">Kém (POOR)</option>
                 <option value="CRITICAL">Nguy cấp (CRITICAL)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* 🚜 Cơ giới hóa & Vật tư Lâm sinh phục vụ Nghiệm thu Công ích */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-50 dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800">
+            <div>
+              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Thiết bị cơ giới huy động
+              </label>
+              <select
+                value={equipmentUsed}
+                onChange={(e) => setEquipmentUsed(e.target.value)}
+                className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-xs focus:border-[#347A50]"
+              >
+                <option value="Xe thang tự hành 18m & Cưa xích Stihl MS-194T trên cao">Xe thang 18m + Cưa xích Stihl trên cao</option>
+                <option value="Xe cẩu tự hành 5 tấn & Dây cáp giằng néo an toàn">Xe cẩu 5 tấn + Cáp giằng néo</option>
+                <option value="Xe bồn tưới chuyên dụng 5m3 & Vòi phun áp lực">Xe bồn tưới chuyên dụng 5m3</option>
+                <option value="Bình phun áp lực cao Stihl SR-450 xử lý nấm">Bình phun áp lực cao Stihl SR-450</option>
+                <option value="Bộ cưa tay lâm sinh & Kéo cắt tỉa cành sà vỉa hè">Bộ cưa tay lâm sinh & Kéo tỉa cành</option>
+                <option value="Dụng cụ xới rễ RPZ & Khoan lỗ bón phân sinh học">Dụng cụ xới rễ & Khoan bón phân</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Vật tư & Hóa chất lâm sinh
+              </label>
+              <select
+                value={chemicalsUsed}
+                onChange={(e) => setChemicalsUsed(e.target.value)}
+                className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-xs focus:border-[#347A50]"
+              >
+                <option value="Keo liền sẹo cây Tree Seal & Sơn vôi sát trùng">Keo liền sẹo Tree Seal + Sơn vôi quét gốc</option>
+                <option value="Chế phẩm sinh học Trichoderma phòng nấm rễ & mối mọt">Chế phẩm Trichoderma đối kháng nấm rễ</option>
+                <option value="Phân bón hữu cơ vi sinh NPK kích rễ phục hồi sinh khối">Phân vi sinh NPK kích rễ</option>
+                <option value="Cọc chống gỗ tròn phi 8cm & Đai cao su giảm chấn">Cọc chống gỗ phi 8cm + Đai cao su</option>
+                <option value="Dung dịch dinh dưỡng tiêm thân giải độc nấm">Dung dịch tiêm thân giải độc nấm</option>
               </select>
             </div>
           </div>

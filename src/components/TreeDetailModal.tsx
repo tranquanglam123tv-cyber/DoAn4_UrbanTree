@@ -13,12 +13,20 @@ import {
   RefreshCw,
   ExternalLink,
   Trees,
+  Compass,
+  Activity,
+  Truck,
+  Wrench,
+  FileText,
+  ShieldAlert,
+  Sprout,
+  Users,
 } from 'lucide-react';
 import { CareRecord, Incident, Tree, TreeHealthStatus, VerificationResult } from '../types';
 import { storage } from '../db/storage';
 import { blockchainService } from '../services/blockchainService';
 import { DigitalAlloyTag } from './DigitalAlloyTag';
-import { getTreeCorridor, getTreeMilestone, getTreeStreetCode } from '../utils/treeUtils';
+import { calculateISATraqRating, getTreeCorridor, getTreeMilestone, getTreeStreetCode } from '../utils/treeUtils';
 
 interface TreeDetailModalProps {
   tree: Tree | null;
@@ -52,6 +60,10 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
   const treeType = storage.getTreeTypeById(tree.treeTypeId);
   const careRecords = storage.getCareRecords(tree.id);
   const incidents = storage.getIncidents().filter((i) => i.treeId === tree.id);
+  const traqResult = calculateISATraqRating(tree);
+  const tiltAngle = tree.tiltAngleDeg ?? 0;
+  const hollowRatio = tree.hollowRatioPercent ?? 0;
+  const rootRisk = tree.rootDamageRisk ?? 'NONE';
 
   const handleVerify = async () => {
     setIsVerifying(true);
@@ -292,6 +304,168 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
                 </div>
               </div>
 
+              {/* 🌲 KHỐI ĐÁNH GIÁ RỦI RO CHUẨN QUỐC TẾ ISA TRAQ & CHỈ SỐ LÂM SINH THỰC ĐỊA */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3.5 shadow-2xs">
+                <div className="flex items-center justify-between flex-wrap gap-2 pb-2.5 border-b border-slate-200/80 dark:border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center">
+                      <ShieldAlert className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        <span>Đánh Giá Rủi Ro ISA TRAQ Quốc Tế</span>
+                        <span className="text-[10px] text-slate-500 font-mono font-normal">(Tree Risk Assessment Qualification)</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Ma trận Xác suất đổ ngã × Mức độ tổn thương hạ tầng (Dây điện, nhà dân, lòng đường)
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                      Điểm rủi ro: <strong className="text-slate-800 dark:text-slate-100 text-xs">{traqResult.score}/12</strong>
+                    </span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider border shadow-2xs ${traqResult.badgeClass}`}>
+                      {traqResult.rating}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 3 Đồng hồ / Thước đo Thực địa */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Chỉ số 1: Góc nghiêng thân cây */}
+                  <div className="p-3 bg-white dark:bg-slate-950/70 rounded-xl border border-slate-200/90 dark:border-slate-800/80 space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium">
+                        <Compass className="w-3.5 h-3.5 text-blue-500" />
+                        <span>Góc nghiêng thân</span>
+                      </span>
+                      <span className={`font-mono font-bold ${tiltAngle >= 15 ? 'text-rose-600 dark:text-rose-400 font-black' : tiltAngle >= 8 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                        {tiltAngle}° {tiltAngle >= 15 ? '⚠️ Nguy hiểm' : tiltAngle >= 8 ? 'Cần chú ý' : 'An toàn'}
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${tiltAngle >= 15 ? 'bg-rose-500' : tiltAngle >= 8 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                        style={{ width: `${Math.min(100, (tiltAngle / 30) * 100)}%` }}
+                      />
+                    </div>
+                    <div className="text-[10px] text-slate-400 flex justify-between">
+                      <span>0° (Thẳng)</span>
+                      <span>15° (Ngưỡng bão)</span>
+                      <span>30°+</span>
+                    </div>
+                  </div>
+
+                  {/* Chỉ số 2: Độ rỗng thân (Siêu âm Arbotom) */}
+                  <div className="p-3 bg-white dark:bg-slate-950/70 rounded-xl border border-slate-200/90 dark:border-slate-800/80 space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium">
+                        <Activity className="w-3.5 h-3.5 text-purple-500" />
+                        <span>Rỗng thân Arbotom</span>
+                      </span>
+                      <span className={`font-mono font-bold ${hollowRatio >= 45 ? 'text-rose-600 dark:text-rose-400 font-black' : hollowRatio >= 25 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                        {hollowRatio}% {hollowRatio >= 45 ? '⚠️ Mục rỗng' : hollowRatio >= 25 ? 'Khuyết tật' : 'Thân đặc'}
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${hollowRatio >= 45 ? 'bg-rose-500' : hollowRatio >= 25 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                        style={{ width: `${Math.min(100, hollowRatio)}%` }}
+                      />
+                    </div>
+                    <div className="text-[10px] text-slate-400 flex justify-between">
+                      <span>0% (Đặc ruột)</span>
+                      <span>40% (Giới hạn gãy)</span>
+                      <span>100%</span>
+                    </div>
+                  </div>
+
+                  {/* Chỉ số 3: Tổn thương rễ vỉa hè */}
+                  <div className="p-3 bg-white dark:bg-slate-950/70 rounded-xl border border-slate-200/90 dark:border-slate-800/80 space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium">
+                        <Sprout className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Tổn thương bộ rễ</span>
+                      </span>
+                      <span className={`font-mono font-bold ${rootRisk === 'SEVERE' ? 'text-rose-600 dark:text-rose-400 font-black' : rootRisk === 'MODERATE' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                        {rootRisk === 'SEVERE' ? '⚠️ Đứt rễ cọc' : rootRisk === 'MODERATE' ? 'Nứt vỉa hè' : 'Rễ vững chắc'}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-600 dark:text-slate-300 font-medium pt-0.5">
+                      {rootRisk === 'SEVERE' ? 'Đào cống hạ ngầm gây đứt rễ bạnh chính' : rootRisk === 'MODERATE' ? 'Bồn cây hẹp, rễ nổi đội bê tông' : 'Vùng bảo vệ rễ (RPZ) đạt chuẩn BS 5837'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Khuyến nghị hành động kỹ thuật */}
+                <div className="p-2.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/70 text-[11px] text-slate-700 dark:text-slate-300 flex items-start gap-2">
+                  <span className="font-bold text-slate-900 dark:text-slate-100 shrink-0">Khuyến nghị ISA:</span>
+                  <span>{traqResult.actionRecommendation}</span>
+                </div>
+              </div>
+
+              {/* 📜 KHỐI BIÊN BẢN CẤP PHÉP ĐỐN HẠ & KẾ HOẠCH TRỒNG BÙ HOÀN TRẢ (COMPENSATORY PLANTING) */}
+              {tree.fellingPermit && (
+                <div className="p-4 bg-rose-50/70 dark:bg-rose-950/30 rounded-2xl border border-rose-200 dark:border-rose-900/60 space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-rose-200 dark:bg-rose-900 text-rose-800 dark:text-rose-200 flex items-center justify-center font-bold">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-rose-950 dark:text-rose-200 flex items-center gap-2">
+                          <span>Giấy Phép Đốn Hạ Cây Nguy Hiểm & Kế Hoạch Trồng Bù</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-rose-200 dark:bg-rose-900 text-rose-900 dark:text-rose-100 font-mono font-bold">
+                            {tree.fellingPermit.permitNumber}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-rose-800 dark:text-rose-300">
+                          Ban hành bởi: {tree.fellingPermit.issuedBy} · Ngày ký: {tree.fellingPermit.issuedDate}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] px-2.5 py-1 rounded-full bg-rose-600 text-white font-bold tracking-wide">
+                      CHỜ HẠ THÂN CÂY
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 bg-white dark:bg-slate-900 rounded-xl border border-rose-200/80 dark:border-rose-900/40 text-[11px] text-slate-700 dark:text-slate-300 space-y-1">
+                    <div><strong>Lý do kỹ thuật:</strong> {tree.fellingPermit.reason}</div>
+                    <div><strong>Cán bộ thẩm định:</strong> {tree.fellingPermit.approvedByOfficer}</div>
+                    {tree.fellingPermit.councilMembers && (
+                      <div><strong>Hội đồng 3 bên:</strong> {tree.fellingPermit.councilMembers.join(' · ')}</div>
+                    )}
+                    {tree.fellingPermit.trafficControlPlan && (
+                      <div className="text-amber-800 dark:text-amber-300">
+                        <strong>Phương án phân luồng:</strong> {tree.fellingPermit.trafficControlPlan}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Kế hoạch Trồng bù Hoàn trả (Compensatory Planting) */}
+                  {tree.fellingPermit.compensatoryPlanting && (
+                    <div className="p-3 bg-emerald-50/90 dark:bg-emerald-950/40 rounded-xl border border-emerald-300 dark:border-emerald-800 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
+                          <Sprout className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          <span>Kế Hoạch Trồng Hoàn Trả (Thông tư 20/2020/TT-BXD)</span>
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100">
+                          CAM KẾT BÙ CÂY MỚI
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-700 dark:text-slate-300">
+                        <div>Loài cây trồng bù: <strong className="text-emerald-800 dark:text-emerald-300">{tree.fellingPermit.compensatoryPlanting.treeSpecies}</strong></div>
+                        <div>Hạn chót trồng bù: <strong className="text-slate-900 dark:text-slate-100">{tree.fellingPermit.compensatoryPlanting.deadlineDate}</strong></div>
+                        <div className="sm:col-span-2">Địa điểm hoàn trả: <strong className="text-slate-900 dark:text-slate-100">{tree.fellingPermit.compensatoryPlanting.targetLocation}</strong></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Quick actions row */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
@@ -363,6 +537,22 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
                         </span>
                       </div>
                       <p className="text-slate-700 dark:text-slate-300">{care.notes}</p>
+                      {(care.equipmentUsed || care.chemicalsUsed) && (
+                        <div className="p-2 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/40 text-[11px] space-y-0.5">
+                          {care.equipmentUsed && (
+                            <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                              <Truck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                              <span>Cơ giới: <strong>{care.equipmentUsed}</strong></span>
+                            </div>
+                          )}
+                          {care.chemicalsUsed && (
+                            <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                              <Wrench className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                              <span>Vật tư: <strong>{care.chemicalsUsed}</strong></span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       <div className="flex items-center justify-between pt-1 text-[10px] text-slate-500 dark:text-slate-400">
                         <span>Nhân viên: {care.staffName || 'Đội kỹ thuật'}</span>
                         <span className="text-emerald-700 dark:text-emerald-400 font-mono">

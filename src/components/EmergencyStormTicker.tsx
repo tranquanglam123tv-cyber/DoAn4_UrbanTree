@@ -34,15 +34,15 @@ export const EmergencyStormTicker: React.FC<EmergencyStormTickerProps> = ({
 
   return (
     <div className="w-full max-w-[1440px] mx-auto transition-all duration-300">
-      <div className="relative overflow-hidden rounded-xl sm:rounded-full bg-amber-50/95 dark:bg-slate-900/95 border border-amber-300/90 dark:border-amber-600/70 shadow-md shadow-amber-950/5 dark:shadow-amber-950/25 backdrop-blur-xl px-2.5 sm:px-4 py-1.5 flex items-center justify-between gap-2.5 marquee-container">
+      <div className="relative overflow-hidden rounded-full bg-gradient-to-r from-amber-50/95 via-orange-50/90 to-amber-50/95 dark:from-slate-900/95 dark:via-amber-950/50 dark:to-slate-900/95 border border-amber-400/60 dark:border-amber-600/50 shadow-sm shadow-amber-950/5 dark:shadow-amber-950/20 backdrop-blur-xl px-3 sm:px-4 py-1.5 flex items-center justify-between gap-2.5 marquee-container">
         {/* Left: Pulsing Status Badge */}
-        <div className="flex items-center gap-1.5 shrink-0 z-10 bg-amber-500/20 dark:bg-amber-900/70 px-2 sm:px-3 py-1 rounded-full border border-amber-400/60 dark:border-amber-500/50">
+        <div className="flex items-center gap-1.5 shrink-0 z-10 bg-amber-500/20 dark:bg-amber-900/60 px-2.5 py-0.5 rounded-full border border-amber-400/60 dark:border-amber-500/50">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
           </span>
           <div className="flex items-center gap-1.5">
-            <CloudRain className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-700 dark:text-amber-400 shrink-0" />
+            <CloudRain className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 shrink-0" />
             <span className="text-[10px] sm:text-[11px] font-black tracking-wide text-amber-950 dark:text-amber-200 uppercase whitespace-nowrap">
               Báo Động Mùa Bão
             </span>

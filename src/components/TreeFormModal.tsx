@@ -68,6 +68,9 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, initialCoord
   const [healthStatus, setHealthStatus] = useState<TreeHealthStatus>(tree?.healthStatus || 'GOOD');
   const [diameterCm, setDiameterCm] = useState(tree?.diameterCm || 30);
   const [heightM, setHeightM] = useState(tree?.heightM || 8);
+  const [tiltAngleDeg, setTiltAngleDeg] = useState<number>(tree?.tiltAngleDeg ?? 2);
+  const [hollowRatioPercent, setHollowRatioPercent] = useState<number>(tree?.hollowRatioPercent ?? 0);
+  const [rootDamageRisk, setRootDamageRisk] = useState<'NONE' | 'MODERATE' | 'SEVERE'>(tree?.rootDamageRisk || 'NONE');
   const [imageUrl, setImageUrl] = useState(tree?.imageUrl || '');
   const [imagePreview, setImagePreview] = useState<string | null>(tree?.imageUrl || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -259,6 +262,9 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, initialCoord
           healthStatus,
           diameterCm: Number(diameterCm),
           heightM: Number(heightM),
+          tiltAngleDeg: Number(tiltAngleDeg),
+          hollowRatioPercent: Number(hollowRatioPercent),
+          rootDamageRisk,
           imageUrl,
           streetCode: streetCode || publicCode,
           houseNumberMilestone: houseMilestone || address.split(',')[0],
@@ -280,6 +286,9 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, initialCoord
           healthStatus,
           diameterCm: Number(diameterCm),
           heightM: Number(heightM),
+          tiltAngleDeg: Number(tiltAngleDeg),
+          hollowRatioPercent: Number(hollowRatioPercent),
+          rootDamageRisk,
           imageUrl:
             imageUrl ||
             'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=800&q=80',
@@ -1133,6 +1142,67 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, initialCoord
                   'Cây con đang trong giai đoạn ươm dưỡng, yêu cầu cắm cọc chống đỡ và tưới ẩm giữ rễ thường xuyên.'
                 )}
               </p>
+            </div>
+
+            {/* 🌲 THÔNG SỐ LÂM SINH THỰC ĐỊA & RỦI RO ĐỔ NGÃ MÙA BÃO (ISA TRAQ) */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-700 dark:text-slate-300 text-xs flex items-center gap-1.5">
+                  <Compass className="w-4 h-4 text-emerald-600" />
+                  <span>Khảo Sát Thực Địa & Dự Báo Rủi Ro Gãy Đổ (ISA TRAQ):</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">Đo đạc hiện trường</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Độ nghiêng thân cây (°)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="60"
+                    value={tiltAngleDeg}
+                    onChange={(e) => setTiltAngleDeg(parseInt(e.target.value) || 0)}
+                    placeholder="VD: 15"
+                    className="w-full px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg font-mono bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs"
+                  />
+                  <span className="text-[10px] text-slate-400 block mt-0.5">&ge; 15°: Cảnh báo bão</span>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Rỗng thân Arbotom (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={hollowRatioPercent}
+                    onChange={(e) => setHollowRatioPercent(parseInt(e.target.value) || 0)}
+                    placeholder="VD: 40"
+                    className="w-full px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg font-mono bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs"
+                  />
+                  <span className="text-[10px] text-slate-400 block mt-0.5">&ge; 40%: Rỗng ruột nặng</span>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Tổn thương bộ rễ
+                  </label>
+                  <select
+                    value={rootDamageRisk}
+                    onChange={(e) => setRootDamageRisk(e.target.value as any)}
+                    className="w-full px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs"
+                  >
+                    <option value="NONE">Bình thường (Vững chắc)</option>
+                    <option value="MODERATE">Tổn thương vừa (Nổi vỉa hè)</option>
+                    <option value="SEVERE">Nghiêm trọng (Đứt rễ cọc/cáp)</option>
+                  </select>
+                  <span className="text-[10px] text-slate-400 block mt-0.5">Do đào vỉa hè, cáp ngầm</span>
+                </div>
+              </div>
             </div>
 
             {/* Chụp ảnh thực tế bắt buộc */}

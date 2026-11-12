@@ -44,6 +44,14 @@ export interface TreeType {
   woodDensity?: number; // Tỷ trọng gỗ khô (g/cm3), dùng tính toán hấp thụ CO2 Allometric i-Tree
 }
 
+export interface CompensatoryPlanting {
+  treeSpecies: string; // Tên loài cây trồng bù (e.g. "Cây Giáng Hương")
+  targetLocation: string; // Vị trí / Địa chỉ trồng bù hoàn trả
+  deadlineDate: string; // Hạn chót hoàn thành trồng bù (vụ mùa tới)
+  status: 'PENDING' | 'PLANTED' | 'VERIFIED'; // Trạng thái: Chờ trồng / Đã trồng / Đã nghiệm thu
+  verifiedBy?: string; // Cán bộ nghiệm thu
+}
+
 export interface FellingPermit {
   permitNumber: string; // Số quyết định / giấy phép (VD: GP-45/SXD-QLĐT)
   issuedBy: string; // Cơ quan phê duyệt (Sở Xây Dựng TP. Cần Thơ hoặc UBND Quận/TP)
@@ -52,7 +60,12 @@ export interface FellingPermit {
   approvedByOfficer: string; // Cán bộ thẩm định / ký tên
   inspectionTeam: string; // Tổ kiểm định hiện trường (Thanh tra Đô thị & Cty Cây xanh)
   replacementPlantingRequired?: boolean; // Bắt buộc trồng cây bù đắp
+  compensatoryPlanting?: CompensatoryPlanting; // Kế hoạch trồng bù cây xanh hoàn trả
+  trafficControlPlan?: string; // Phương án phân luồng giao thông (giờ cấm đường, thiết bị xe cẩu)
+  councilMembers?: string[]; // Hội đồng 3 bên (Sở Xây Dựng, Cty Cây Xanh, UBND Phường)
 }
+
+export type ISATraqRating = 'LOW' | 'MODERATE' | 'HIGH' | 'EXTREME';
 
 export interface Tree {
   id: string;
@@ -73,6 +86,11 @@ export interface Tree {
   imageUrl?: string;
   diameterCm?: number;
   heightM?: number;
+  // 🌲 Nghiệp vụ Thực Địa & An Toàn Bão Lũ
+  tiltAngleDeg?: number; // Góc nghiêng thân cây (° so với phương đứng: 0 - 45°)
+  hollowRatioPercent?: number; // Tỷ lệ rỗng ruột / mục thân theo siêu âm Arbotom (0 - 100%)
+  rootDamageRisk?: 'NONE' | 'MODERATE' | 'SEVERE'; // Tổn thương bộ rễ do đào vỉa hè
+  traqRating?: ISATraqRating; // Ma trận rủi ro chuẩn ISA TRAQ
   fellingPermit?: FellingPermit; // Biên bản / Giấy phép đốn hạ theo luật khi cây DEAD hoặc giải tỏa
   isActive: boolean;
   createdAt: string;
@@ -103,6 +121,9 @@ export interface CareRecord {
   healthAfter: TreeHealthStatus;
   notes: string;
   imageUrl?: string;
+  // 🚜 Cơ giới hóa & Vật tư Lâm sinh
+  equipmentUsed?: string; // e.g. "Xe thang 18m", "Máy cưa xích Stihl MS-194T", "Xe cẩu 5 tấn"
+  chemicalsUsed?: string; // e.g. "Keo liền sẹo Tree Seal", "Sơn vôi quét gốc Bordeaux", "Phân vi sinh NPK"
   performedAt: string; // ISO-8601 UTC
   createdAt: string;
   // Blockchain metadata

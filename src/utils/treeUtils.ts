@@ -497,4 +497,93 @@ export function isStormSeasonPruningNeeded(
   };
 }
 
+// ==========================================
+// 🌲 MA TRẬN ĐÁNH GIÁ RỦI RO CÂY XANH CHUẨN QUỐC TẾ (ISA TRAQ)
+// International Society of Arboriculture - Tree Risk Assessment Qualification
+// ==========================================
+
+export interface ISATraqResult {
+  rating: 'LOW' | 'MODERATE' | 'HIGH' | 'EXTREME';
+  score: number; // 3 - 12
+  color: string;
+  badgeClass: string;
+  likelihood: 'Thấp' | 'Trung bình' | 'Cao' | 'Sắp xảy ra (Imminent)';
+  consequences: 'Nhẹ' | 'Vừa' | 'Nặng' | 'Cực kỳ nghiêm trọng';
+  actionRecommendation: string;
+}
+
+export function calculateISATraqRating(tree: Tree): ISATraqResult {
+  const tilt = tree.tiltAngleDeg ?? 0;
+  const hollow = tree.hollowRatioPercent ?? 0;
+  const health = tree.healthStatus;
+  const isDeadOrCritical = health === 'DEAD' || health === 'CRITICAL';
+
+  let riskPoints = 0;
+
+  // 1. Góc nghiêng (Tilt Angle: 0 - 45°)
+  if (tilt >= 25) riskPoints += 4;
+  else if (tilt >= 15) riskPoints += 3;
+  else if (tilt >= 8) riskPoints += 2;
+  else riskPoints += 1;
+
+  // 2. Độ rỗng thân (Hollow Ratio theo siêu âm Arbotom: 0 - 100%)
+  if (hollow >= 55) riskPoints += 4;
+  else if (hollow >= 35) riskPoints += 3;
+  else if (hollow >= 20) riskPoints += 2;
+  else riskPoints += 1;
+
+  // 3. Sức khỏe lâm sinh
+  if (isDeadOrCritical) riskPoints += 4;
+  else if (health === 'POOR') riskPoints += 3;
+  else if (health === 'FAIR') riskPoints += 2;
+  else riskPoints += 1;
+
+  // Phân hạng ma trận ISA TRAQ
+  if (isDeadOrCritical || riskPoints >= 10 || (tilt >= 20 && hollow >= 45)) {
+    return {
+      rating: 'EXTREME',
+      score: Math.min(riskPoints, 12),
+      color: '#ef4444',
+      badgeClass: 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-200 border-rose-300 dark:border-rose-700',
+      likelihood: 'Sắp xảy ra (Imminent)',
+      consequences: 'Cực kỳ nghiêm trọng',
+      actionRecommendation: 'CẦN XỬ LÝ KHẨN CẤP: Lập biên bản đốn hạ giải tỏa nguy hiểm hoặc giằng néo chịu lực ngay trong 24h đón bão!',
+    };
+  }
+
+  if (riskPoints >= 8 || tilt >= 15 || hollow >= 40) {
+    return {
+      rating: 'HIGH',
+      score: riskPoints,
+      color: '#f97316',
+      badgeClass: 'bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-200 border-orange-300 dark:border-orange-700',
+      likelihood: 'Cao',
+      consequences: 'Nặng',
+      actionRecommendation: 'RỦI RO CAO: Điều động xe thang hạ 30% tán lá đón gió bão, giải tỏa cành sà và siêu âm rễ.',
+    };
+  }
+
+  if (riskPoints >= 6 || tilt >= 10 || hollow >= 20) {
+    return {
+      rating: 'MODERATE',
+      score: riskPoints,
+      color: '#eab308',
+      badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-200 border-amber-300 dark:border-amber-700',
+      likelihood: 'Trung bình',
+      consequences: 'Vừa',
+      actionRecommendation: 'RỦI RO TRUNG BÌNH: Đưa vào danh mục theo dõi định kỳ 3 tháng/lần, gia cố cọc chống nếu cần.',
+    };
+  }
+
+  return {
+    rating: 'LOW',
+    score: riskPoints,
+    color: '#10b981',
+    badgeClass: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700',
+    likelihood: 'Thấp',
+    consequences: 'Nhẹ',
+    actionRecommendation: 'AN TOÀN BÌNH THƯỜNG: Cây sinh trưởng tốt, bộ rễ vững, duy trì chu kỳ cắt tỉa làm cỏ hàng năm.',
+  };
+}
+
 

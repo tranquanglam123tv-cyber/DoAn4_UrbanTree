@@ -20,7 +20,7 @@ import {
 } from '../types';
 import { blockchainService } from '../services/blockchainService';
 import { computeRecordHash } from '../services/hashService';
-import { getTreeCorridor, getTreeMilestone, getTreeStreetCode } from '../utils/treeUtils';
+import { calculateISATraqRating, getTreeCorridor, getTreeMilestone, getTreeStreetCode } from '../utils/treeUtils';
 
 const USERS_STORAGE_KEY = 'urbantree_users';
 const TREE_TYPES_STORAGE_KEY = 'urbantree_tree_types';
@@ -299,6 +299,32 @@ export const INITIAL_TREES: Tree[] = [
     healthStatus: 'CRITICAL',
     diameterCm: 64,
     heightM: 14.2,
+    tiltAngleDeg: 24,
+    hollowRatioPercent: 65,
+    rootDamageRisk: 'SEVERE',
+    traqRating: 'EXTREME',
+    fellingPermit: {
+      permitNumber: 'GP-45/SXD-QLĐT-2026',
+      issuedBy: 'Sở Xây Dựng TP. Cần Thơ - Phòng Quản lý Đô thị',
+      issuedDate: '2026-10-25',
+      reason: 'Cây nghiêng 24° về phía lòng đường, siêu âm Arbotom phát hiện rỗng thân 65%, đứt rễ bạnh chính do đào cống, rủi ro ISA TRAQ EXTREME (Nguy cơ đổ ngã trong giông lốc).',
+      approvedByOfficer: 'KS. Nguyễn Văn Dũng (Phó Trưởng phòng QLĐT)',
+      inspectionTeam: 'Tổ Giám định Liên ngành: Sở Xây Dựng + Cty CP Cây Xanh Cần Thơ + UBND Phường Xuân Khánh',
+      replacementPlantingRequired: true,
+      councilMembers: [
+        'Sở Xây Dựng TP. Cần Thơ (Phòng Quản lý Đô thị)',
+        'Công ty CP Cây Xanh Đô Thị Cần Thơ (Đội Xe thang Cơ giới)',
+        'UBND Phường Xuân Khánh (Cán bộ Địa chính - Môi trường)',
+      ],
+      trafficControlPlan: 'Tạm cấm lưu thông 2 làn đường số 45 Đ. 30/4 từ 21h00 - 23h30; Điều động xe thang 18m, xe cẩu 5 tấn cắt từng phân đoạn tán hạ thấp trước khi đào gốc.',
+      compensatoryPlanting: {
+        treeSpecies: 'Cây Sao Đen (Hopea odorata) - Cây loại 2 quy chuẩn',
+        targetLocation: 'Trước số 48 Đường 30 Tháng 4 (Cách vị trí cũ 6m, đảm bảo tĩnh không)',
+        deadlineDate: '2026-11-30',
+        status: 'PENDING',
+        verifiedBy: 'Cán bộ Lâm sinh TP. Cần Thơ',
+      },
+    },
     imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
     isActive: true,
     createdAt: '2026-01-10T08:00:00.000Z',
@@ -575,7 +601,9 @@ export const INITIAL_CARE_RECORDS: CareRecord[] = [
     actionType: 'PRUNING',
     healthBefore: 'FAIR',
     healthAfter: 'GOOD',
-    notes: 'Đã cắt tỉa cành khô, tạo thông thoáng tán lá trước mùa mưa bão.',
+    notes: 'Đã cắt tỉa cành khô sà thấp, tạo thông thoáng tán lá đón mùa mưa bão.',
+    equipmentUsed: 'Xe thang tự hành 18m & Cưa xích Stihl MS-194T trên cao',
+    chemicalsUsed: 'Keo liền sẹo cây Tree Seal & Sơn vôi sát trùng gốc',
     performedAt: '2026-10-15T08:30:00.000Z',
     createdAt: '2026-10-15T08:30:00.000Z',
   },
@@ -588,6 +616,8 @@ export const INITIAL_CARE_RECORDS: CareRecord[] = [
     healthBefore: 'POOR',
     healthAfter: 'FAIR',
     notes: 'Xử lý mối đất và sâu đục thân bằng chế phẩm sinh học an toàn đô thị.',
+    equipmentUsed: 'Bình xịt áp lực cao Stihl SR-450',
+    chemicalsUsed: 'Chế phẩm sinh học nấm đối kháng Trichoderma & Vôi bột',
     performedAt: '2026-10-22T09:15:00.000Z',
     createdAt: '2026-10-22T09:15:00.000Z',
   },
@@ -600,6 +630,8 @@ export const INITIAL_CARE_RECORDS: CareRecord[] = [
     healthBefore: 'GOOD',
     healthAfter: 'GOOD',
     notes: 'Bón phân hữu cơ vi sinh cung cấp dinh dưỡng kích rễ vùng ven sông.',
+    equipmentUsed: 'Xe bồn tưới chuyên dụng 5m3 & Dụng cụ xới rễ RPZ',
+    chemicalsUsed: 'Phân bón hữu cơ vi sinh NPK sinh học kích rễ',
     performedAt: '2026-10-28T07:45:00.000Z',
     createdAt: '2026-10-28T07:45:00.000Z',
   },
@@ -843,16 +875,66 @@ class StorageService {
 
         // Tự động bổ sung định danh tuyến đường & mốc số nhà nếu chưa có
         this.trees = this.trees.map((t) => {
-          if (!t.streetCode) {
-            needSave = true;
-            return {
-              ...t,
-              streetCode: getTreeStreetCode(t),
-              streetCorridor: getTreeCorridor(t),
-              houseNumberMilestone: getTreeMilestone(t),
-            };
+          let updated = { ...t };
+          let treeChanged = false;
+
+          if (!updated.streetCode) {
+            updated.streetCode = getTreeStreetCode(updated);
+            updated.streetCorridor = getTreeCorridor(updated);
+            updated.houseNumberMilestone = getTreeMilestone(updated);
+            treeChanged = true;
           }
-          return t;
+
+          // Chuẩn hóa dữ liệu Lâm sinh Thực địa: Độ nghiêng (°), Độ rỗng ruột (%), Rủi ro rễ, ISA TRAQ
+          if (updated.tiltAngleDeg === undefined) {
+            if (updated.healthStatus === 'CRITICAL') {
+              updated.tiltAngleDeg = 20 + (parseInt(updated.id.replace(/\D/g, '') || '5', 10) % 8);
+            } else if (updated.healthStatus === 'POOR') {
+              updated.tiltAngleDeg = 12 + (parseInt(updated.id.replace(/\D/g, '') || '3', 10) % 6);
+            } else if (updated.healthStatus === 'FAIR') {
+              updated.tiltAngleDeg = 4 + (parseInt(updated.id.replace(/\D/g, '') || '2', 10) % 5);
+            } else {
+              updated.tiltAngleDeg = 1 + (parseInt(updated.id.replace(/\D/g, '') || '1', 10) % 4);
+            }
+            treeChanged = true;
+          }
+
+          if (updated.hollowRatioPercent === undefined) {
+            if (updated.healthStatus === 'CRITICAL') {
+              updated.hollowRatioPercent = 55 + (parseInt(updated.id.replace(/\D/g, '') || '5', 10) % 20);
+            } else if (updated.healthStatus === 'POOR') {
+              updated.hollowRatioPercent = 30 + (parseInt(updated.id.replace(/\D/g, '') || '3', 10) % 15);
+            } else if (updated.healthStatus === 'FAIR') {
+              updated.hollowRatioPercent = 10 + (parseInt(updated.id.replace(/\D/g, '') || '2', 10) % 12);
+            } else {
+              updated.hollowRatioPercent = parseInt(updated.id.replace(/\D/g, '') || '0', 10) % 5;
+            }
+            treeChanged = true;
+          }
+
+          if (!updated.rootDamageRisk) {
+            if (updated.healthStatus === 'CRITICAL') updated.rootDamageRisk = 'SEVERE';
+            else if (updated.healthStatus === 'POOR') updated.rootDamageRisk = 'MODERATE';
+            else updated.rootDamageRisk = 'NONE';
+            treeChanged = true;
+          }
+
+          if (!updated.traqRating) {
+            updated.traqRating = calculateISATraqRating(updated).rating;
+            treeChanged = true;
+          }
+
+          // Cập nhật fellingPermit cho cây tree-006 nếu thiếu
+          if (updated.id === 'tree-006' && !updated.fellingPermit) {
+            const init006 = INITIAL_TREES.find((i) => i.id === 'tree-006');
+            if (init006?.fellingPermit) {
+              updated.fellingPermit = init006.fellingPermit;
+              treeChanged = true;
+            }
+          }
+
+          if (treeChanged) needSave = true;
+          return updated;
         });
 
         // Bổ sung các cây tuyến đường mẫu mới nếu danh sách lưu trữ cũ chưa có

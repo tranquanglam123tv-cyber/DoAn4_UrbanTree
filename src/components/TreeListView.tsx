@@ -29,6 +29,7 @@ import {
 import { Tree, TreeHealthStatus } from '../types';
 import { storage } from '../db/storage';
 import {
+  calculateISATraqRating,
   getTreeCorridor,
   getTreeMilestone,
   getTreeStreetCode,
@@ -44,6 +45,7 @@ import {
   getTreeZoneId,
   getZonesByProvince,
 } from '../utils/zoneUtils';
+import { CorridorWorkOrderModal } from './CorridorWorkOrderModal';
 
 interface TreeListViewProps {
   onSelectTree: (tree: Tree) => void;
@@ -77,6 +79,12 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
   const [selectedHeight, setSelectedHeight] = useState<string>('ALL');
   const [selectedDiameter, setSelectedDiameter] = useState<string>('ALL');
   const [selectedPruning, setSelectedPruning] = useState<string>('ALL');
+  // ⚡ Ma trận ISA TRAQ, góc nghiêng & độ rỗng thân
+  const [selectedTraq, setSelectedTraq] = useState<string>('ALL');
+  const [selectedTilt, setSelectedTilt] = useState<string>('ALL');
+  const [selectedHollow, setSelectedHollow] = useState<string>('ALL');
+  const [workOrderCorridor, setWorkOrderCorridor] = useState<string | null>(null);
+  const currentUser = storage.getActiveUser();
   const [viewMode, setViewMode] = useState<'grid' | 'table' | 'corridor'>('corridor');
 
   // Lấy danh sách lịch sử chăm sóc để xác định ngày chưa cắt tỉa
@@ -159,6 +167,9 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
     selectedHeight,
     selectedDiameter,
     selectedPruning,
+    selectedTraq,
+    selectedTilt,
+    selectedHollow,
     viewMode,
   ]);
 
@@ -170,6 +181,28 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
       // 1. Fast checks (Direct property match O(1))
       if (selectedHealth !== 'ALL' && tree.healthStatus !== selectedHealth) return false;
       if (selectedType !== 'ALL' && tree.treeTypeId !== selectedType) return false;
+
+      // 1.1 ISA TRAQ Risk Rating
+      if (selectedTraq !== 'ALL') {
+        const traq = calculateISATraqRating(tree);
+        if (traq.rating !== selectedTraq) return false;
+      }
+
+      // 1.2 Độ nghiêng thân cây (tiltAngleDeg)
+      if (selectedTilt !== 'ALL') {
+        const tilt = tree.tiltAngleDeg ?? 0;
+        if (selectedTilt === 'DANGEROUS' && !(tilt >= 15)) return false;
+        if (selectedTilt === 'WARNING' && !(tilt >= 8 && tilt < 15)) return false;
+        if (selectedTilt === 'SAFE' && !(tilt < 8)) return false;
+      }
+
+      // 1.3 Độ rỗng ruột thân cây Arbotom (hollowRatioPercent)
+      if (selectedHollow !== 'ALL') {
+        const hollow = tree.hollowRatioPercent ?? 0;
+        if (selectedHollow === 'HOLLOW' && !(hollow >= 40)) return false;
+        if (selectedHollow === 'DECAY' && !(hollow >= 20 && hollow < 40)) return false;
+        if (selectedHollow === 'SOLID' && !(hollow < 20)) return false;
+      }
 
       // 2. Chiều cao cây (heightM)
       if (selectedHeight !== 'ALL') {
@@ -234,6 +267,9 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
     selectedHeight,
     selectedDiameter,
     selectedPruning,
+    selectedTraq,
+    selectedTilt,
+    selectedHollow,
     treePruningDaysMap,
   ]);
 
@@ -566,6 +602,55 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
               <option value="CRITICAL">Nguy cấp (CRITICAL)</option>
             </select>
 
+            {/* ⚡ LỌC THEO MA TRẬN RỦI RO QUỐC TẾ ISA TRAQ */}
+            <select
+              value={selectedTraq}
+              onChange={(e) => setSelectedTraq(e.target.value)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer shadow-2xs ${
+                selectedTraq !== 'ALL'
+                  ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 font-bold'
+                  : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+              }`}
+            >
+              <option value="ALL">🛡️ Rủi ro ISA TRAQ (Tất cả)</option>
+              <option value="EXTREME">🛑 EXTREME (Nguy hiểm tột cùng)</option>
+              <option value="HIGH">⚠️ HIGH (Rủi ro cao)</option>
+              <option value="MODERATE">🟡 MODERATE (Trung bình)</option>
+              <option value="LOW">🟢 LOW (An toàn)</option>
+            </select>
+
+            {/* 📐 LỌC THEO GÓC NGHIÊNG THÂN CÂY */}
+            <select
+              value={selectedTilt}
+              onChange={(e) => setSelectedTilt(e.target.value)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer shadow-2xs ${
+                selectedTilt !== 'ALL'
+                  ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold'
+                  : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+              }`}
+            >
+              <option value="ALL">📐 Góc nghiêng (Tất cả)</option>
+              <option value="DANGEROUS">⚠️ Nghiêng &ge; 15° (Nguy cơ bão)</option>
+              <option value="WARNING">Nghiêng 8° - 14° (Cần chú ý)</option>
+              <option value="SAFE">Thẳng đứng (&lt; 8°)</option>
+            </select>
+
+            {/* 🪵 LỌC THEO ĐỘ RỖNG THÂN SIÊU ÂM ARBOTOM */}
+            <select
+              value={selectedHollow}
+              onChange={(e) => setSelectedHollow(e.target.value)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer shadow-2xs ${
+                selectedHollow !== 'ALL'
+                  ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 font-bold'
+                  : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+              }`}
+            >
+              <option value="ALL">🪵 Rỗng ruột Arbotom (Tất cả)</option>
+              <option value="HOLLOW">⚠️ Rỗng ruột &ge; 40% (Mục rỗng)</option>
+              <option value="DECAY">Chớm thoái hóa (20% - 39%)</option>
+              <option value="SOLID">Thân đặc (&lt; 20%)</option>
+            </select>
+
             {/* Nút Xóa bộ lọc nếu có điều kiện đang active */}
             {(searchInput ||
               selectedProvince !== 'all' ||
@@ -575,7 +660,10 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
               selectedHealth !== 'ALL' ||
               selectedHeight !== 'ALL' ||
               selectedDiameter !== 'ALL' ||
-              selectedPruning !== 'ALL') && (
+              selectedPruning !== 'ALL' ||
+              selectedTraq !== 'ALL' ||
+              selectedTilt !== 'ALL' ||
+              selectedHollow !== 'ALL') && (
               <button
                 type="button"
                 onClick={() => {
@@ -588,6 +676,9 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                   setSelectedHeight('ALL');
                   setSelectedDiameter('ALL');
                   setSelectedPruning('ALL');
+                  setSelectedTraq('ALL');
+                  setSelectedTilt('ALL');
+                  setSelectedHollow('ALL');
                 }}
                 className="px-2.5 py-1 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg font-bold flex items-center gap-1 transition-colors cursor-pointer"
                 title="Xóa toàn bộ bộ lọc về mặc định"
@@ -648,8 +739,16 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Corridor Telemetry Badges */}
-                  <div className="flex items-center gap-2">
+                  {/* Corridor Telemetry Badges & Action Buttons */}
+                  <div className="flex items-center flex-wrap gap-2">
+                    <button
+                      onClick={() => setWorkOrderCorridor(corridorName)}
+                      className="px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-transform active:scale-95 cursor-pointer"
+                      title="Xuất Lệnh Điều Động Công Tác Ca Trực Khổ A4 Cho Toàn Dãy Tuyến Này"
+                    >
+                      <ClipboardList className="w-3.5 h-3.5" />
+                      <span>Phiếu Lệnh Ca Trực (A4)</span>
+                    </button>
                     <span className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold">
                       {corridorTrees.length} Cây Trên Dãy
                     </span>
@@ -765,6 +864,29 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                                   {daysSincePruned !== undefined
                                     ? `${daysSincePruned} ngày trước`
                                     : 'Chưa có hồ sơ tỉa'}
+                                </span>
+                              </div>
+                            );
+                          })()}
+
+                          {/* Lâm sinh thực địa & ISA TRAQ Telemetry */}
+                          {(() => {
+                            const traq = calculateISATraqRating(tree);
+                            return (
+                              <div className="flex items-center justify-between text-[10px] font-mono pt-1 border-t border-slate-200/50 dark:border-slate-800/60">
+                                <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
+                                  <span>Nghiêng: <strong className={tree.tiltAngleDeg && tree.tiltAngleDeg >= 15 ? 'text-rose-600 font-bold' : 'text-slate-700 dark:text-slate-300'}>{tree.tiltAngleDeg ?? 0}°</strong></span>
+                                  <span>·</span>
+                                  <span>Rỗng: <strong className={tree.hollowRatioPercent && tree.hollowRatioPercent >= 40 ? 'text-rose-600 font-bold' : 'text-slate-700 dark:text-slate-300'}>{tree.hollowRatioPercent ?? 0}%</strong></span>
+                                </span>
+                                <span className={`px-1.5 py-0.2 rounded font-bold uppercase ${
+                                  traq.rating === 'EXTREME'
+                                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300'
+                                    : traq.rating === 'HIGH'
+                                    ? 'bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300'
+                                    : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                                }`}>
+                                  ISA: {traq.rating}
                                 </span>
                               </div>
                             );
@@ -1191,6 +1313,16 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
             </select>
           </div>
         </div>
+      )}
+
+      {/* Modal Lệnh Công Tác Ca Trực Khổ A4 Tuyến Đường Liên Hoàn */}
+      {workOrderCorridor && (
+        <CorridorWorkOrderModal
+          corridorName={workOrderCorridor}
+          trees={groupedCorridors[workOrderCorridor] || []}
+          currentUser={currentUser}
+          onClose={() => setWorkOrderCorridor(null)}
+        />
       )}
     </div>
   );
