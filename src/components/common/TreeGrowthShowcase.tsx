@@ -64,6 +64,11 @@ export const TreeGrowthShowcase: React.FC = () => {
   // 5. Mature extras (QR identification badge, glowing eco-spores) appear in Cổ Thụ stage (>0.75)
   const matureFactor = Math.max(0, (progress - 0.75) / 0.25);
 
+  // 🌟 Dynamic Ethereal Aura / Halo (Hào quang to dần và vươn cao đồng bộ với ngọn cây)
+  const canopyCenterPercent = 85 - progress * 55; // từ 85% (sát mặt đất khi mới nảy mầm) lên 30% (trung tâm tán cây khi thành cổ thụ)
+  const haloScale = 0.28 + progress * 1.35; // hào quang phóng to từ 0.28 (mầm nhỏ) đến 1.63 (cổ thụ tráng lệ)
+  const haloOpacity = 0.45 + progress * 0.55; // độ rực rỡ và phát quang tăng dần theo sức sống cây
+
   // 4 Equal Stages across the 0 -> 1 timeline (25% each):
   // 0% -> 25%: Mầm | 25% -> 50%: Chồi | 50% -> 75%: Cây | 75% -> 100%: Cổ Thụ
   const stageIndex = progress < 0.25 ? 0 : progress < 0.5 ? 1 : progress < 0.75 ? 2 : 3;
@@ -125,10 +130,46 @@ export const TreeGrowthShowcase: React.FC = () => {
 
       {/* 🌿 Main Botanical Canvas: Beautiful Living Tree */}
       <div className="relative w-72 h-64 sm:w-80 sm:h-72 flex items-end justify-center overflow-visible">
-        {/* Ambient Halo behind foliage */}
+        {/* 🌟 HÀO QUANG MÀU XANH TO DẦN ĐỒNG BỘ THEO CÂY LỚN (DYNAMIC LIVING HALO) */}
+        {/* Layer 1: Hào quang trọng tâm (Core Aura) bám sát ngọn cây vươn cao */}
         <div
-          className="absolute inset-0 rounded-full bg-radial from-emerald-400/25 via-teal-300/10 to-transparent dark:from-emerald-500/35 dark:via-teal-400/20 blur-2xl pointer-events-none transition-transform duration-700"
-          style={{ transform: `scale(${0.3 + foliageScale * 0.9})` }}
+          className="absolute w-64 h-64 sm:w-72 sm:h-72 rounded-full pointer-events-none transition-all duration-300 ease-out"
+          style={{
+            top: `${canopyCenterPercent}%`,
+            left: '50%',
+            transform: `translate(-50%, -50%) scale(${haloScale})`,
+            background:
+              'radial-gradient(circle, rgba(52,211,153,0.6) 0%, rgba(16,185,129,0.4) 35%, rgba(13,148,136,0.2) 58%, transparent 75%)',
+            filter: 'blur(26px)',
+            opacity: haloOpacity,
+          }}
+        />
+
+        {/* Layer 2: Hào quang khuếch tán diện rộng (Outer Atmospheric Glow) */}
+        <div
+          className="absolute w-80 h-80 sm:w-96 sm:h-96 rounded-full pointer-events-none transition-all duration-500 ease-out"
+          style={{
+            top: `${canopyCenterPercent}%`,
+            left: '50%',
+            transform: `translate(-50%, -50%) scale(${haloScale * 1.2})`,
+            background:
+              'radial-gradient(circle, rgba(16,185,129,0.32) 0%, rgba(5,150,105,0.18) 45%, transparent 72%)',
+            filter: 'blur(42px)',
+            opacity: Math.min(1.0, 0.35 + progress * 0.65),
+          }}
+        />
+
+        {/* Layer 3: Hào quang năng lượng đất mẹ dưới gốc cây (Soil Base Aura) */}
+        <div
+          className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full pointer-events-none transition-all duration-300 ease-out"
+          style={{
+            width: `${110 + progress * 130}px`,
+            height: `${20 + progress * 26}px`,
+            background:
+              'radial-gradient(ellipse, rgba(16,185,129,0.55) 0%, rgba(4,120,87,0.25) 50%, transparent 80%)',
+            filter: 'blur(10px)',
+            opacity: 0.5 + progress * 0.5,
+          }}
         />
 
         {/* Floating eco-spores (active when tree is lush) */}
@@ -180,7 +221,26 @@ export const TreeGrowthShowcase: React.FC = () => {
               <feGaussianBlur stdDeviation="3" result="blur" />
               <feComposite in="SourceGraphic" in2="blur" operator="over" />
             </filter>
+
+            {/* Dynamic Canopy Background Halo Gradient inside SVG */}
+            <radialGradient id="canopyAuraGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#34d399" stopOpacity={0.55 + progress * 0.35} />
+              <stop offset="50%" stopColor="#10b981" stopOpacity={0.3 + progress * 0.25} />
+              <stop offset="80%" stopColor="#059669" stopOpacity={0.1} />
+              <stop offset="100%" stopColor="#047857" stopOpacity={0} />
+            </radialGradient>
           </defs>
+
+          {/* 🌟 Dynamic SVG Living Halo Circle behind Tree: rises & expands with the canopy */}
+          <circle
+            cx="160"
+            cy={245 - trunkScaleY * 150}
+            r={24 + progress * 95}
+            fill="url(#canopyAuraGrad)"
+            filter="url(#glowEffect)"
+            opacity={0.65 + progress * 0.35}
+            className="pointer-events-none transition-all duration-300"
+          />
 
           {/* 1. GROUND MOUND & SOIL BASE */}
           <ellipse cx="160" cy="242" rx="90" ry="14" className="fill-emerald-100 dark:fill-emerald-950/80 transition-colors" />
