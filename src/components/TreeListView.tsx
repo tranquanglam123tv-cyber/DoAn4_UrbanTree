@@ -109,32 +109,38 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
     setCurrentPage(1);
   }, [debouncedSearch, selectedArea, selectedCorridorFilter, selectedType, selectedHealth, viewMode]);
 
-  // Filtered Trees
+  // Filtered Trees (Tối ưu Fast-Path Short Circuit: kiểm tra thuộc tính trực tiếp trước khi tính toán chuỗi)
   const filteredTrees = useMemo(() => {
-    return trees.filter((tree) => {
-      const streetCode = getTreeStreetCode(tree).toLowerCase();
-      const corridor = getTreeCorridor(tree).toLowerCase();
-      const milestone = getTreeMilestone(tree).toLowerCase();
-      const area = getTreeGeneralArea(tree);
-      const searchLower = debouncedSearch.toLowerCase();
+    const searchLower = debouncedSearch.toLowerCase().trim();
 
-      const matchesSearch =
-        !searchLower ||
+    return trees.filter((tree) => {
+      // 1. Fast checks (Direct property match O(1))
+      if (selectedHealth !== 'ALL' && tree.healthStatus !== selectedHealth) return false;
+      if (selectedType !== 'ALL' && tree.treeTypeId !== selectedType) return false;
+
+      // 2. Area & Corridor checks
+      if (selectedArea !== 'ALL' && getTreeGeneralArea(tree) !== selectedArea) return false;
+      if (selectedCorridorFilter !== 'ALL' && getTreeCorridor(tree) !== selectedCorridorFilter) return false;
+
+      // 3. Search query check (chỉ tính toán chuỗi khi người dùng gõ tìm kiếm)
+      if (!searchLower) return true;
+
+      if (
         tree.publicCode.toLowerCase().includes(searchLower) ||
         tree.displayName.toLowerCase().includes(searchLower) ||
-        tree.address.toLowerCase().includes(searchLower) ||
-        streetCode.includes(searchLower) ||
-        corridor.includes(searchLower) ||
-        milestone.includes(searchLower);
+        tree.address.toLowerCase().includes(searchLower)
+      ) {
+        return true;
+      }
 
-      const matchesArea = selectedArea === 'ALL' || area === selectedArea;
-      const matchesType = selectedType === 'ALL' || tree.treeTypeId === selectedType;
-      const matchesHealth = selectedHealth === 'ALL' || tree.healthStatus === selectedHealth;
-      const matchesCorridor =
-        selectedCorridorFilter === 'ALL' ||
-        getTreeCorridor(tree) === selectedCorridorFilter;
+      const streetCode = getTreeStreetCode(tree).toLowerCase();
+      if (streetCode.includes(searchLower)) return true;
 
-      return matchesSearch && matchesArea && matchesType && matchesHealth && matchesCorridor;
+      const corridor = getTreeCorridor(tree).toLowerCase();
+      if (corridor.includes(searchLower)) return true;
+
+      const milestone = getTreeMilestone(tree).toLowerCase();
+      return milestone.includes(searchLower);
     });
   }, [trees, debouncedSearch, selectedArea, selectedType, selectedHealth, selectedCorridorFilter]);
 

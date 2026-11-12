@@ -712,6 +712,7 @@ class StorageService {
   private incidents: Incident[] = [];
   private incidentUpdates: IncidentUpdate[] = [];
   private activeUser: User = INITIAL_USERS[0]; // Admin by default
+  private cachedDashboardStats: any = null;
 
   constructor() {
     this.init();
@@ -839,6 +840,7 @@ class StorageService {
   }
 
   private saveAll() {
+    this.cachedDashboardStats = null;
     if (!this.isBrowser()) return;
     try {
       localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(this.users));
@@ -872,7 +874,7 @@ class StorageService {
   }
 
   public getUsers(): User[] {
-    return [...this.users];
+    return this.users;
   }
 
   public createUser(userData: Omit<User, 'id'>): User {
@@ -918,7 +920,7 @@ class StorageService {
 
   // Tree Types
   public getTreeTypes(): TreeType[] {
-    return [...this.treeTypes];
+    return this.treeTypes;
   }
 
   public getTreeTypeById(id: string): TreeType | undefined {
@@ -927,7 +929,7 @@ class StorageService {
 
   // Trees
   public getTrees(): Tree[] {
-    return [...this.trees];
+    return this.trees;
   }
 
   public getTreeById(id: string): Tree | undefined {
@@ -1056,7 +1058,7 @@ class StorageService {
     if (treeId) {
       return this.careRecords.filter((c) => c.treeId === treeId);
     }
-    return [...this.careRecords];
+    return this.careRecords;
   }
 
   public async createCareRecord(data: Omit<CareRecord, 'id' | 'createdAt'>): Promise<CareRecord> {
@@ -1157,7 +1159,7 @@ class StorageService {
 
   // Incidents
   public getIncidents(): Incident[] {
-    return [...this.incidents];
+    return this.incidents;
   }
 
   public getIncidentById(id: string): Incident | undefined {
@@ -1395,32 +1397,64 @@ class StorageService {
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   }
 
-  // Dashboard Aggregates
+  // Dashboard Aggregates (O(N) single-pass with caching for ultra-smooth 60fps performance)
   public getDashboardStats() {
+    if (this.cachedDashboardStats) {
+      return this.cachedDashboardStats;
+    }
+
     const totalTrees = this.trees.length;
-    const healthyTrees = this.trees.filter((t) => t.healthStatus === 'GOOD').length;
-    const atRiskTrees = this.trees.filter((t) => ['POOR', 'CRITICAL'].includes(t.healthStatus)).length;
-    const activeIncidents = this.incidents.filter((i) => ['RECEIVED', 'ASSIGNED', 'IN_PROGRESS'].includes(i.status)).length;
+    let healthyTrees = 0;
+    let atRiskTrees = 0;
+    const healthBreakdown = {
+      GOOD: 0,
+      FAIR: 0,
+      POOR: 0,
+      CRITICAL: 0,
+      DEAD: 0,
+    };
+
+    for (const t of this.trees) {
+      const s = t.healthStatus;
+      if (s === 'GOOD') {
+        healthyTrees++;
+        healthBreakdown.GOOD++;
+      } else if (s === 'FAIR') {
+        healthBreakdown.FAIR++;
+      } else if (s === 'POOR') {
+        atRiskTrees++;
+        healthBreakdown.POOR++;
+      } else if (s === 'CRITICAL') {
+        atRiskTrees++;
+        healthBreakdown.CRITICAL++;
+      } else if (s === 'DEAD') {
+        healthBreakdown.DEAD++;
+      }
+    }
+
+    let activeIncidents = 0;
+    const incidentBreakdown = {
+      RECEIVED: 0,
+      ASSIGNED: 0,
+      IN_PROGRESS: 0,
+      RESOLVED: 0,
+      REJECTED: 0,
+    };
+
+    for (const inc of this.incidents) {
+      const st = inc.status;
+      if (st === 'RECEIVED' || st === 'ASSIGNED' || st === 'IN_PROGRESS' || st === 'REOPENED') {
+        activeIncidents++;
+      }
+      if (incidentBreakdown[st as keyof typeof incidentBreakdown] !== undefined) {
+        incidentBreakdown[st as keyof typeof incidentBreakdown]++;
+      }
+    }
+
     const totalCareRecords = this.careRecords.length;
     const totalAnchors = blockchainService.getAllAnchors().length;
 
-    const healthBreakdown = {
-      GOOD: this.trees.filter((t) => t.healthStatus === 'GOOD').length,
-      FAIR: this.trees.filter((t) => t.healthStatus === 'FAIR').length,
-      POOR: this.trees.filter((t) => t.healthStatus === 'POOR').length,
-      CRITICAL: this.trees.filter((t) => t.healthStatus === 'CRITICAL').length,
-      DEAD: this.trees.filter((t) => t.healthStatus === 'DEAD').length,
-    };
-
-    const incidentBreakdown = {
-      RECEIVED: this.incidents.filter((i) => i.status === 'RECEIVED').length,
-      ASSIGNED: this.incidents.filter((i) => i.status === 'ASSIGNED').length,
-      IN_PROGRESS: this.incidents.filter((i) => i.status === 'IN_PROGRESS').length,
-      RESOLVED: this.incidents.filter((i) => i.status === 'RESOLVED').length,
-      REJECTED: this.incidents.filter((i) => i.status === 'REJECTED').length,
-    };
-
-    return {
+    this.cachedDashboardStats = {
       totalTrees,
       healthyTrees,
       atRiskTrees,
@@ -1430,6 +1464,8 @@ class StorageService {
       healthBreakdown,
       incidentBreakdown,
     };
+
+    return this.cachedDashboardStats;
   }
 
   // 🛡️ CITIZEN AUTHENTICATION & GOOGLE OAUTH 2.0

@@ -337,8 +337,8 @@ export const MapView: React.FC<MapViewProps> = ({
   const [treeToDelete, setTreeToDelete] = useState<Tree | null>(null);
   const [deleteReason, setDeleteReason] = useState<string>('Chặt hạ giải tỏa quy hoạch');
 
-  // 🔍 Cursor Live Coordinates
-  const [cursorCoords, setCursorCoords] = useState<{ lat: number; lng: number } | null>(null);
+  // 🔍 Cursor Live Coordinates (Direct DOM Ref to eliminate 60fps React re-renders)
+  const cursorCoordsRef = useRef<HTMLDivElement>(null);
 
   // Notification Toast state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -422,12 +422,11 @@ export const MapView: React.FC<MapViewProps> = ({
       userLocationLayerRef.current = userLocGroup;
       mapInstanceRef.current = map;
 
-      // Mousemove coordinates
+      // Mousemove coordinates (Direct DOM update: 0 React re-renders for ultra-smooth 60-120fps panning)
       map.on('mousemove', (e: L.LeafletMouseEvent) => {
-        setCursorCoords({
-          lat: Number(e.latlng.lat.toFixed(6)),
-          lng: Number(e.latlng.lng.toFixed(6)),
-        });
+        if (cursorCoordsRef.current) {
+          cursorCoordsRef.current.textContent = `📍 ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+        }
       });
 
       // Viewport culling on move / zoom (Debounce 100ms)
@@ -928,8 +927,14 @@ export const MapView: React.FC<MapViewProps> = ({
     return true;
   });
 
-  const goodTreesCount = currentZoneTrees.filter((t) => t.healthStatus === 'GOOD').length;
-  const goodRate = currentZoneTrees.length > 0 ? Math.round((goodTreesCount / currentZoneTrees.length) * 100) : 100;
+  const goodRate = React.useMemo(() => {
+    if (currentZoneTrees.length === 0) return 100;
+    let good = 0;
+    for (let i = 0; i < currentZoneTrees.length; i++) {
+      if (currentZoneTrees[i].healthStatus === 'GOOD') good++;
+    }
+    return Math.round((good / currentZoneTrees.length) * 100);
+  }, [currentZoneTrees]);
 
   // Available corridors dynamic based on current province trees
   const availableCorridors = React.useMemo(() => {
@@ -1226,17 +1231,18 @@ export const MapView: React.FC<MapViewProps> = ({
             </div>
           </div>
 
-          {/* Current Live Cursor GPS Coordinates */}
-          {cursorCoords && (
-            <div className="font-mono text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800">
-              📍 {cursorCoords.lat.toFixed(5)}, {cursorCoords.lng.toFixed(5)}
-            </div>
-          )}
+          {/* Current Live Cursor GPS Coordinates (Direct DOM update - 0 React overhead) */}
+          <div
+            ref={cursorCoordsRef}
+            className="font-mono text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 shrink-0"
+          >
+            📍 Di chuột trên bản đồ...
+          </div>
         </div>
       </div>
 
-      {/* 🗺️ MAP CONTAINER */}
-      <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 dark:border-emerald-500/20 shadow-lg shadow-slate-900/5 h-[620px] bg-slate-100 dark:bg-slate-950">
+      {/* 🗺️ MAP CONTAINER (GPU Hardware Accelerated) */}
+      <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 dark:border-emerald-500/20 shadow-lg shadow-slate-900/5 h-[620px] bg-slate-100 dark:bg-slate-950 transform-gpu will-change-transform">
         {/* ⚡ GIS High-Performance LOD Badge (Tầm nhìn toàn cảnh) */}
         {currentZoom < 14 && trees.length > 300 && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-slate-900/90 backdrop-blur-md text-white px-4 py-2 rounded-2xl border border-emerald-500/40 shadow-xl flex items-center gap-2.5 text-xs pointer-events-auto">

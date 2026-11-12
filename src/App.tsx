@@ -108,7 +108,9 @@ export default function App() {
           node.hasAttribute('data-lenis-prevent') ||
           node.closest('[data-lenis-prevent]') ||
           node.closest('.overflow-y-auto') ||
-          node.closest('.overflow-auto')
+          node.closest('.overflow-auto') ||
+          node.closest('.leaflet-container') ||
+          node.closest('.leaflet-pane')
         );
       },
     });

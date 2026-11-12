@@ -59,11 +59,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onSelectTree,
   onOpenStaffManagement,
 }) => {
-  const stats = storage.getDashboardStats();
   const trees = storage.getTrees();
   const incidents = storage.getIncidents();
   const careRecords = storage.getCareRecords();
-  const anchors = blockchainService.getAllAnchors().slice(0, 5);
+  const stats = useMemo(() => storage.getDashboardStats(), [trees, incidents, careRecords]);
+  const anchors = useMemo(() => blockchainService.getAllAnchors().slice(0, 5), []);
 
   const [activeChartTab, setActiveChartTab] = useState<'timeline' | 'category'>('timeline');
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
