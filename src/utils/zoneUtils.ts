@@ -123,3 +123,4 @@ export function getTreeZoneId(tree: Tree): string {
   // Default to central district Ninh Kiều
   return 'ninh-kieu';
 }
+

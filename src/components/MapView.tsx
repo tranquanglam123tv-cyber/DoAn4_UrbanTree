@@ -21,6 +21,7 @@ import {
   Compass,
   Save,
   RotateCcw,
+  Search,
 } from 'lucide-react';
 import { storage } from '../db/storage';
 import { Incident, Tree, User } from '../types';
@@ -31,6 +32,98 @@ import {
   STREET_CORRIDORS_LIST,
 } from '../utils/treeUtils';
 import { CAN_THO_ZONES, getTreeZoneId, UrbanZone } from '../utils/zoneUtils';
+
+export interface LocationLandmark {
+  id: string;
+  name: string;
+  district: string;
+  coords: [number, number];
+  zoom: number;
+  keywords: string[];
+}
+
+export const CAN_THO_LOCATION_LANDMARKS: LocationLandmark[] = [
+  {
+    id: 'luu-huu-phuoc',
+    name: 'Công viên Lưu Hữu Phước',
+    district: 'Quận Ninh Kiều',
+    coords: [10.0368, 105.7825],
+    zoom: 17,
+    keywords: ['lưu hữu phước', 'hòa bình', 'hb-'],
+  },
+  {
+    id: 'ben-ninh-kieu',
+    name: 'Bến Ninh Kiều & Tượng Bác',
+    district: 'Quận Ninh Kiều',
+    coords: [10.0345, 105.7882],
+    zoom: 17,
+    keywords: ['ninh kiều', 'hai bà trưng', 'hbt-'],
+  },
+  {
+    id: 'cau-di-bo',
+    name: 'Cầu Đi Bộ Ninh Kiều (Cầu Tình Yêu)',
+    district: 'Quận Ninh Kiều',
+    coords: [10.0328, 105.7895],
+    zoom: 17,
+    keywords: ['cầu đi bộ', 'tình yêu', 'cdb-'],
+  },
+  {
+    id: 'song-hau',
+    name: 'Công viên Bờ Kè Sông Hậu',
+    district: 'Quận Ninh Kiều',
+    coords: [10.0465, 105.7915],
+    zoom: 17,
+    keywords: ['sông hậu', 'cái khế', 'lê lợi', 'sh-'],
+  },
+  {
+    id: 'dh-can-tho',
+    name: 'ĐH Cần Thơ Khu II (Đường 3/2)',
+    district: 'Quận Ninh Kiều',
+    coords: [10.0312, 105.7691],
+    zoom: 17,
+    keywords: ['đại học cần thơ', '3 tháng 2', '3/2', 'xuân khánh', '3t2-'],
+  },
+  {
+    id: 'vincom-30-4',
+    name: 'Tuyến Vincom Plaza (Đường 30/4)',
+    district: 'Quận Ninh Kiều',
+    coords: [10.0288, 105.7761],
+    zoom: 17,
+    keywords: ['30 tháng 4', '30/4', 'vincom', 'an phú', '30t4-'],
+  },
+  {
+    id: 'cai-rang-bridge',
+    name: 'Cầu Cần Thơ & Đại lộ Võ Nguyên Giáp',
+    district: 'Quận Cái Răng',
+    coords: [10.0125, 105.7982],
+    zoom: 16,
+    keywords: ['cái răng', 'võ nguyên giáp', 'quang trung', 'hưng phú', 'cr-'],
+  },
+  {
+    id: 'san-bay-binh-thuy',
+    name: 'Sân bay Quốc tế Cần Thơ (Võ Văn Kiệt)',
+    district: 'Quận Bình Thủy',
+    coords: [10.0682, 105.7425],
+    zoom: 16,
+    keywords: ['bình thủy', 'võ văn kiệt', 'sân bay', 'an thới', 'bt-'],
+  },
+  {
+    id: 'kcn-tra-noc',
+    name: 'KCN Trà Nóc & Quốc Lộ 91 (Ô Môn)',
+    district: 'Quận Ô Môn',
+    coords: [10.1150, 105.6540],
+    zoom: 16,
+    keywords: ['ô môn', 'trà nóc', 'quốc lộ 91', 'ql91', 'om-'],
+  },
+  {
+    id: 'my-khanh-pd',
+    name: 'KDL Sinh Thái Mỹ Khánh (Phong Điền)',
+    district: 'Huyện Phong Điền',
+    coords: [9.9920, 105.7050],
+    zoom: 16,
+    keywords: ['phong điền', 'mỹ khánh', 'nguyễn văn cừ', 'pd-'],
+  },
+];
 
 interface MapViewProps {
   currentUser: User;
@@ -63,6 +156,8 @@ export const MapView: React.FC<MapViewProps> = ({
   const [showIncidents, setShowIncidents] = useState(true);
   const [selectedHealth, setSelectedHealth] = useState<string>('ALL');
   const [selectedCorridorFilter, setSelectedCorridorFilter] = useState<string>('ALL');
+  const [selectedLocation, setSelectedLocation] = useState<string>('ALL'); // 📍 Bộ lọc Vị trí / Địa điểm
+  const [searchLocationQuery, setSearchLocationQuery] = useState<string>(''); // 🔍 Ô tìm kiếm số nhà, vị trí
 
   // 🏛️ Multi-Zone / District Jurisdiction State
   const [selectedZoneId, setSelectedZoneId] = useState<string>('all');
@@ -228,6 +323,23 @@ export const MapView: React.FC<MapViewProps> = ({
         )
           return;
 
+        // 📍 Bộ lọc Vị trí / Địa điểm (Location Landmark Filter)
+        if (selectedLocation !== 'ALL') {
+          const loc = CAN_THO_LOCATION_LANDMARKS.find((l) => l.id === selectedLocation);
+          if (loc) {
+            const treeSearchable = `${tree.address} ${tree.displayName} ${tree.houseNumberMilestone} ${tree.streetCorridor} ${tree.streetCode}`.toLowerCase();
+            const matched = loc.keywords.some((k) => treeSearchable.includes(k.toLowerCase()));
+            if (!matched) return;
+          }
+        }
+
+        // 🔍 Ô tìm kiếm số nhà, vị trí (Search Query Filter)
+        if (searchLocationQuery.trim()) {
+          const q = searchLocationQuery.toLowerCase().trim();
+          const treeSearchable = `${tree.address} ${tree.displayName} ${tree.houseNumberMilestone} ${tree.streetCorridor} ${tree.streetCode} ${tree.publicCode}`.toLowerCase();
+          if (!treeSearchable.includes(q)) return;
+        }
+
         const streetCode = getTreeStreetCode(tree);
         const milestone = getTreeMilestone(tree);
         const corridor = getTreeCorridor(tree);
@@ -362,7 +474,29 @@ export const MapView: React.FC<MapViewProps> = ({
         layer.addLayer(marker);
       });
     }
-  }, [trees, incidents, showTrees, showIncidents, selectedHealth, selectedCorridorFilter, selectedZoneId]);
+  }, [
+    trees,
+    incidents,
+    showTrees,
+    showIncidents,
+    selectedHealth,
+    selectedCorridorFilter,
+    selectedLocation,
+    searchLocationQuery,
+    selectedZoneId,
+  ]);
+
+  // Handle Location Landmark Select & FlyTo
+  const handleSelectLocation = (locId: string) => {
+    setSelectedLocation(locId);
+    if (locId !== 'ALL') {
+      const loc = CAN_THO_LOCATION_LANDMARKS.find((l) => l.id === locId);
+      if (loc && mapInstanceRef.current) {
+        mapInstanceRef.current.flyTo(loc.coords, loc.zoom, { duration: 1.2 });
+        showToast(`📍 Đã bay tới vị trí: ${loc.name}`);
+      }
+    }
+  };
 
   // 4. Handle Repositioning Toggle
   const startRepositioning = (tree: Tree) => {
@@ -502,11 +636,29 @@ export const MapView: React.FC<MapViewProps> = ({
     );
   };
 
-  // Filtered stats for current view
+  // Filtered trees for current zone and active filters
   const currentZoneTrees =
     selectedZoneId === 'all'
       ? trees
       : trees.filter((t) => getTreeZoneId(t) === selectedZoneId);
+
+  const filteredTrees = currentZoneTrees.filter((tree) => {
+    if (selectedHealth !== 'ALL' && tree.healthStatus !== selectedHealth) return false;
+    if (selectedCorridorFilter !== 'ALL' && getTreeCorridor(tree) !== selectedCorridorFilter) return false;
+    if (selectedLocation !== 'ALL') {
+      const loc = CAN_THO_LOCATION_LANDMARKS.find((l) => l.id === selectedLocation);
+      if (loc) {
+        const text = `${tree.address} ${tree.displayName} ${tree.houseNumberMilestone} ${tree.streetCorridor} ${tree.streetCode}`.toLowerCase();
+        if (!loc.keywords.some((k) => text.includes(k.toLowerCase()))) return false;
+      }
+    }
+    if (searchLocationQuery.trim()) {
+      const q = searchLocationQuery.toLowerCase().trim();
+      const text = `${tree.address} ${tree.displayName} ${tree.houseNumberMilestone} ${tree.streetCorridor} ${tree.streetCode} ${tree.publicCode}`.toLowerCase();
+      if (!text.includes(q)) return false;
+    }
+    return true;
+  });
 
   const goodTreesCount = currentZoneTrees.filter((t) => t.healthStatus === 'GOOD').length;
   const goodRate = currentZoneTrees.length > 0 ? Math.round((goodTreesCount / currentZoneTrees.length) * 100) : 100;
@@ -624,8 +776,8 @@ export const MapView: React.FC<MapViewProps> = ({
           </div>
         </div>
 
-        {/* Row 3: Sub-filters (Trees checkbox, Corridor dropdown, Health status) */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
+        {/* Row 3: Sub-filters (Trees checkbox, Location dropdown, Corridor dropdown, Search input, Health status) */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-emerald-950/30 px-3 py-1 rounded-full border border-slate-200 dark:border-emerald-800/60">
               <input
@@ -634,8 +786,38 @@ export const MapView: React.FC<MapViewProps> = ({
                 onChange={(e) => setShowTrees(e.target.checked)}
                 className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
               />
-              <span className="font-semibold text-emerald-800 dark:text-emerald-300">Cây xanh ({currentZoneTrees.length})</span>
+              <span className="font-semibold text-emerald-800 dark:text-emerald-300">Cây xanh ({filteredTrees.length})</span>
             </label>
+
+            {/* 📍 BỘ LỌC VỊ TRÍ / ĐỊA ĐIỂM (THEO YÊU CẦU CỦA USER) */}
+            <select
+              value={selectedLocation}
+              onChange={(e) => handleSelectLocation(e.target.value)}
+              className="px-3 py-1 text-xs font-bold border border-emerald-300 dark:border-emerald-600/70 rounded-full bg-emerald-50/80 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-2xs"
+              title="Chọn vị trí hoặc địa điểm nổi tiếng để bản đồ tự động bay tới và lọc cây"
+            >
+              <option value="ALL">📍 Tất cả vị trí / địa điểm</option>
+              <optgroup label="🏛️ Quận Ninh Kiều (Trung tâm)">
+                <option value="luu-huu-phuoc">Công viên Lưu Hữu Phước</option>
+                <option value="ben-ninh-kieu">Bến Ninh Kiều &amp; Tượng Bác</option>
+                <option value="cau-di-bo">Cầu Đi Bộ (Cầu Tình Yêu)</option>
+                <option value="song-hau">Công viên Bờ Kè Sông Hậu</option>
+                <option value="dh-can-tho">Đại học Cần Thơ (Khu II)</option>
+                <option value="vincom-30-4">Khu vực Vincom Plaza (Đường 30/4)</option>
+              </optgroup>
+              <optgroup label="🌉 Quận Cái Răng">
+                <option value="cai-rang-bridge">Cầu Cần Thơ &amp; Đại lộ Võ Nguyên Giáp</option>
+              </optgroup>
+              <optgroup label="✈️ Quận Bình Thủy">
+                <option value="san-bay-binh-thuy">Sân bay Quốc tế Cần Thơ (Võ Văn Kiệt)</option>
+              </optgroup>
+              <optgroup label="🏭 Quận Ô Môn">
+                <option value="kcn-tra-noc">KCN Trà Nóc &amp; Quốc Lộ 91</option>
+              </optgroup>
+              <optgroup label="🍃 Huyện Phong Điền">
+                <option value="my-khanh-pd">KDL Sinh Thái Mỹ Khánh</option>
+              </optgroup>
+            </select>
 
             {/* Lọc Tuyến Phố */}
             <select
@@ -643,13 +825,35 @@ export const MapView: React.FC<MapViewProps> = ({
               onChange={(e) => setSelectedCorridorFilter(e.target.value)}
               className="px-3 py-1 text-xs font-semibold border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 cursor-pointer"
             >
-              <option value="ALL">📍 Tất cả tuyến đường</option>
+              <option value="ALL">🛣️ Tất cả tuyến đường</option>
               {STREET_CORRIDORS_LIST.map((c) => (
                 <option key={c.id} value={c.name}>
                   {c.name} ({c.prefix})
                 </option>
               ))}
             </select>
+
+            {/* 🔍 Ô TÌM KIẾM NHANH VỊ TRÍ, SỐ NHÀ, ĐỊA CHỈ */}
+            <div className="relative flex items-center">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Tìm số nhà, vị trí..."
+                value={searchLocationQuery}
+                onChange={(e) => setSearchLocationQuery(e.target.value)}
+                className="pl-7 pr-6 py-1 text-xs border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 w-36 sm:w-44 focus:ring-1 focus:ring-emerald-500 transition-all"
+              />
+              {searchLocationQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchLocationQuery('')}
+                  className="absolute right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs cursor-pointer"
+                  title="Xóa tìm kiếm"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
 
             <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-200 bg-rose-50 dark:bg-rose-950/30 px-3 py-1 rounded-full border border-rose-200 dark:border-rose-800/60">
               <input
