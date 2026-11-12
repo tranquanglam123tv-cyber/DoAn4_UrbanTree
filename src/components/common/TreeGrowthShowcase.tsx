@@ -3,13 +3,13 @@ import { Sparkles, Play, Pause, RotateCcw } from 'lucide-react';
 
 export const TreeGrowthShowcase: React.FC = () => {
   // Continuous growth progress from 0 (seed) to 1 (full canopy tree)
-  const [progress, setProgress] = useState<number>(0.2); // bắt đầu nhẹ từ mầm
+  const [progress, setProgress] = useState<number>(0.05);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const animRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(performance.now());
   const holdTimerRef = useRef<number>(0);
 
-  // Smooth biological growth loop
+  // Smooth biological growth loop (7.5 seconds per cycle, perfectly synchronized)
   useEffect(() => {
     if (!isPlaying) return;
 
@@ -18,18 +18,18 @@ export const TreeGrowthShowcase: React.FC = () => {
       lastTimeRef.current = now;
 
       setProgress((prev) => {
-        // If reached full tree (1.0), hold for 3.2 seconds before gently restarting
+        // When reaching 100% (grand canopy), hold for 2.5s for citizen observation, then restart
         if (prev >= 1.0) {
           holdTimerRef.current += dt;
-          if (holdTimerRef.current > 3.2) {
+          if (holdTimerRef.current > 2.5) {
             holdTimerRef.current = 0;
-            return 0; // restart cycle
+            return 0.02; // restart cycle seamlessly
           }
           return 1.0;
         }
 
-        // Smooth growth speed: complete in ~8.0 seconds for super smooth observation
-        const next = prev + dt / 8.0;
+        // Linear continuous growth: complete in 7.5 seconds
+        const next = prev + dt / 7.5;
         return Math.min(next, 1.0);
       });
 
@@ -44,34 +44,29 @@ export const TreeGrowthShowcase: React.FC = () => {
     };
   }, [isPlaying]);
 
-  // Cubic easing function for natural acceleration/deceleration
-  const easeOutCubic = (x: number): number => 1 - Math.pow(1 - x, 3);
-  const easeInOutQuad = (x: number): number => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
+  // Perfectly synchronized biological scaling factors matching progress 1:1:
+  // 1. Underground roots grow as tree matures
+  const rootGrowth = Math.min(progress / 0.75, 1.0);
+  const seedFade = Math.max(0, 1.0 - progress / 0.25);
 
-  // Growth factors calculated smoothly across the entire 0 -> 1 timeline (NO sudden disappearing!)
-  // 1. Seed & root factor: active at start
-  const rootGrowth = Math.min(progress / 0.35, 1.0);
-  const seedFade = Math.max(0, 1.0 - progress / 0.3);
+  // 2. Trunk growth: scales smoothly and steadily from 0.12 (tiny sprout) to 1.0 (majestic tree)
+  const trunkScaleY = 0.12 + progress * 0.88; // 1:1 synchronized with progress bar
+  const trunkScaleX = 0.28 + progress * 0.72; // trunk thickens steadily
 
-  // 2. Trunk growth: continuous from 0.05 to 1.0
-  const trunkProgress = Math.max(0, (progress - 0.05) / 0.95);
-  const trunkScaleY = easeOutCubic(trunkProgress); // 0 to 1
-  const trunkScaleX = 0.35 + trunkProgress * 0.65; // thickness increases
+  // 3. Branches: sprout after 20% progress and branch out proportionally
+  const branchProgress = Math.max(0, (progress - 0.2) / 0.8);
+  const branchScale = branchProgress;
 
-  // 3. Branches growth: smoothly extend from 0.25 to 1.0
-  const branchProgress = Math.max(0, (progress - 0.22) / 0.78);
-  const branchScale = easeOutCubic(branchProgress);
+  // 4. Foliage: ALWAYS lush and green, scales 1:1 in lockstep with the progress bar
+  const foliageScale = 0.15 + progress * 0.85; // 0.15 at seed, 1.0 at full tree
+  const foliageOpacity = Math.min(1.0, 0.4 + progress * 0.6);
 
-  // 4. Foliage ALWAYS present once stem emerges (>0.08), growing continuously!
-  const foliageProgress = Math.max(0, (progress - 0.08) / 0.92);
-  const foliageScale = easeOutCubic(foliageProgress); // 0 to 1
-  const foliageOpacity = Math.min(1.0, foliageProgress * 3); // fades in quickly and stays lush
+  // 5. Mature extras (QR identification badge, glowing eco-spores) appear in Cổ Thụ stage (>0.75)
+  const matureFactor = Math.max(0, (progress - 0.75) / 0.25);
 
-  // 5. Mature extras (QR badge, glowing eco spores)
-  const matureFactor = Math.max(0, (progress - 0.7) / 0.3);
-
-  // Stage classification for labels
-  const stageIndex = progress < 0.22 ? 0 : progress < 0.52 ? 1 : progress < 0.82 ? 2 : 3;
+  // 4 Equal Stages across the 0 -> 1 timeline (25% each):
+  // 0% -> 25%: Mầm | 25% -> 50%: Chồi | 50% -> 75%: Cây | 75% -> 100%: Cổ Thụ
+  const stageIndex = progress < 0.25 ? 0 : progress < 0.5 ? 1 : progress < 0.75 ? 2 : 3;
 
   const STAGE_META = [
     {
@@ -102,8 +97,8 @@ export const TreeGrowthShowcase: React.FC = () => {
 
   const currentMeta = STAGE_META[stageIndex];
 
-  // Interpolated metrics
-  const currentHeight = (0.15 + progress * 11.65).toFixed(1);
+  // Interpolated metrics (strictly proportional to progress)
+  const currentHeight = (0.2 + progress * 11.6).toFixed(1);
   const currentCanopy = (0.1 + progress * 8.4).toFixed(1);
   const currentCo2 = (0.1 + progress * 48.1).toFixed(1);
 
@@ -360,17 +355,19 @@ export const TreeGrowthShowcase: React.FC = () => {
 
       {/* 🎛️ Continuous Progress Scrubber Bar */}
       <div className="w-full max-w-xs mt-3 space-y-2">
-        <div className="relative w-full h-2 bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden border border-slate-200 dark:border-emerald-500/30 shadow-inner">
+        <div className="relative w-full h-2.5 bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden border border-slate-200 dark:border-emerald-500/30 shadow-inner">
           <div
-            className="h-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 rounded-full transition-all duration-100 ease-linear shadow-[0_0_12px_rgba(16,185,129,0.7)]"
-            style={{ width: `${progress * 100}%` }}
+            className={`h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 rounded-full shadow-[0_0_12px_rgba(16,185,129,0.8)] ${
+              isPlaying ? 'transition-none' : 'transition-all duration-300 ease-out'
+            }`}
+            style={{ width: `${Math.min(100, Math.max(0, progress * 100))}%` }}
           />
         </div>
 
         {/* 4 Clickable Quick Stage Buttons */}
         <div className="flex items-center justify-between gap-1">
           <button
-            onClick={() => handleSeek(0.1)}
+            onClick={() => handleSeek(0.12)}
             className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
               stageIndex === 0
                 ? 'bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 shadow-xs dark:shadow-[0_0_12px_rgba(16,185,129,0.5)]'
@@ -380,7 +377,7 @@ export const TreeGrowthShowcase: React.FC = () => {
             🌱 Mầm
           </button>
           <button
-            onClick={() => handleSeek(0.38)}
+            onClick={() => handleSeek(0.37)}
             className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
               stageIndex === 1
                 ? 'bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 shadow-xs dark:shadow-[0_0_12px_rgba(16,185,129,0.5)]'
@@ -390,7 +387,7 @@ export const TreeGrowthShowcase: React.FC = () => {
             🌿 Chồi
           </button>
           <button
-            onClick={() => handleSeek(0.68)}
+            onClick={() => handleSeek(0.62)}
             className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
               stageIndex === 2
                 ? 'bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 shadow-xs dark:shadow-[0_0_12px_rgba(16,185,129,0.5)]'
@@ -400,7 +397,7 @@ export const TreeGrowthShowcase: React.FC = () => {
             🌳 Cây
           </button>
           <button
-            onClick={() => handleSeek(1.0)}
+            onClick={() => handleSeek(0.95)}
             className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
               stageIndex === 3
                 ? 'bg-emerald-700 dark:bg-emerald-500 text-white dark:text-slate-950 shadow-xs dark:shadow-[0_0_12px_rgba(16,185,129,0.5)]'
