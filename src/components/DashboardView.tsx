@@ -59,6 +59,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onSelectTree,
   onOpenStaffManagement,
 }) => {
+  const currentUser = storage.getActiveUser();
   const trees = storage.getTrees();
   const incidents = storage.getIncidents();
   const careRecords = storage.getCareRecords();

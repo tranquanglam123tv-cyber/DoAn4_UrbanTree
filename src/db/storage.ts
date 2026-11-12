@@ -4,6 +4,7 @@
  */
 
 import {
+  CareActionType,
   CareRecord,
   Incident,
   IncidentSeverity,

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, Check, X, Trees, MapPin } from 'lucide-react';
-import { Tree } from '../types';
+import { Tree } from '../../types';
 
 interface TreeSearchSelectProps {
   trees: Tree[];
