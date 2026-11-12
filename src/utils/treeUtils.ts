@@ -33,6 +33,27 @@ export const STREET_CORRIDORS_LIST: StreetCorridorDef[] = [
     district: 'Q. Ninh Kiều',
     description: 'Lá phổi xanh trung tâm · Sao Đen đại mộc & Giáng Hương bản địa',
   },
+  {
+    id: 'corridor-hai-ba-trung',
+    name: 'Bến Ninh Kiều (Hai Bà Trưng)',
+    prefix: 'HBT',
+    district: 'Q. Ninh Kiều',
+    description: 'Dải công viên ven sông Hậu · Cây Lộc Vừng & Dầu Rái xanh mát',
+  },
+  {
+    id: 'corridor-3-thang-2',
+    name: 'Đại Lộ 3 Tháng 2',
+    prefix: '3T2',
+    district: 'Q. Ninh Kiều',
+    description: 'Trục đường giáo dục kết nối ĐH Cần Thơ · Hàng Cây Bàng & Bọ Cạp Vàng',
+  },
+  {
+    id: 'corridor-nguyen-trai',
+    name: 'Đường Nguyễn Trãi',
+    prefix: 'NT',
+    district: 'Q. Ninh Kiều',
+    description: 'Tuyến phố mua sắm lâu đời · Cây Lim Xẹt & Kèn Hồng rực rỡ',
+  },
 ];
 
 /**

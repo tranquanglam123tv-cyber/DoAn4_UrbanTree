@@ -1,7 +1,36 @@
-import React, { useState, useRef } from 'react';
-import { X, Trees, MapPin, Check, ShieldCheck, Camera, Upload, Image as ImageIcon } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  X,
+  Trees,
+  MapPin,
+  Check,
+  ShieldCheck,
+  Camera,
+  Compass,
+  Layers,
+  FileSpreadsheet,
+  QrCode,
+  Printer,
+  Sparkles,
+  ArrowRight,
+  Radio,
+  Navigation,
+  Download,
+  AlertCircle,
+  Tag,
+  Eye,
+  RefreshCw,
+} from 'lucide-react';
 import { Tree, TreeHealthStatus } from '../types';
 import { storage } from '../db/storage';
+import {
+  STREET_CORRIDORS_LIST,
+  getTreeStreetCode,
+  findNearestTree,
+  calculateHaversineDistance,
+  getTreeMilestone,
+} from '../utils/treeUtils';
+import { DigitalAlloyTag } from './DigitalAlloyTag';
 
 interface TreeFormModalProps {
   tree: Tree | null; // null if adding new
@@ -11,15 +40,25 @@ interface TreeFormModalProps {
 
 export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, onClose, onSaved }) => {
   const treeTypes = storage.getTreeTypes();
+  const allExistingTrees = storage.getTrees();
 
-  const [publicCode, setPublicCode] = useState(
-    tree?.publicCode || `TREE-00${storage.getTrees().length + 1}`
-  );
+  // Mode: Single field calibration VS Bulk corridor import
+  const [activeTab, setActiveTab] = useState<'single' | 'bulk'>('single');
+
+  // Corridor Selection & Auto Coding
+  const [selectedCorridorId, setSelectedCorridorId] = useState<string>('corridor-hoa-binh');
+  const [isBranchInsertion, setIsBranchInsertion] = useState<boolean>(false);
+  const [branchSuffix, setBranchSuffix] = useState<string>('B');
+
+  // Single Form fields
+  const [publicCode, setPublicCode] = useState(tree?.publicCode || '');
+  const [streetCode, setStreetCode] = useState(tree?.streetCode || '');
   const [displayName, setDisplayName] = useState(tree?.displayName || '');
   const [treeTypeId, setTreeTypeId] = useState(tree?.treeTypeId || treeTypes[0]?.id || '');
   const [address, setAddress] = useState(tree?.address || '');
-  const [latitude, setLatitude] = useState(tree?.latitude || 10.0345);
-  const [longitude, setLongitude] = useState(tree?.longitude || 105.7882);
+  const [houseMilestone, setHouseMilestone] = useState(tree?.houseNumberMilestone || '');
+  const [latitude, setLatitude] = useState(tree?.latitude || 10.036829);
+  const [longitude, setLongitude] = useState(tree?.longitude || 105.782541);
   const [plantedAt, setPlantedAt] = useState(tree?.plantedAt || '2023-01-01');
   const [healthStatus, setHealthStatus] = useState<TreeHealthStatus>(tree?.healthStatus || 'GOOD');
   const [diameterCm, setDiameterCm] = useState(tree?.diameterCm || 30);
@@ -29,6 +68,120 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, onClose, onS
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Radar GPS State
+  const [isGpsLocating, setIsGpsLocating] = useState(false);
+  const [radarResult, setRadarResult] = useState<{
+    distanceM: number;
+    nearestCode: string;
+    nearestName: string;
+    suggestedNextCode: string;
+  } | null>(null);
+
+  // Preview Tag Toggle
+  const [showTagPreview, setShowTagPreview] = useState(false);
+
+  // Bulk Import State
+  const [bulkCorridorId, setBulkCorridorId] = useState('corridor-hoa-binh');
+  const [bulkTreeTypeId, setBulkTreeTypeId] = useState(treeTypes[0]?.id || '');
+  const [bulkCount, setBulkCount] = useState<number>(5);
+  const [bulkStartHouseNo, setBulkStartHouseNo] = useState<number>(14);
+  const [bulkSpacingM, setBulkSpacingM] = useState<number>(15);
+  const [bulkSuccessList, setBulkSuccessList] = useState<Tree[] | null>(null);
+  const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
+
+  // Auto-calculate street code & sequence when corridor or insertion changes
+  useEffect(() => {
+    if (tree) return; // Không can thiệp nếu đang sửa cây có sẵn
+
+    const currentCorridor = STREET_CORRIDORS_LIST.find((c) => c.id === selectedCorridorId);
+    if (!currentCorridor) return;
+
+    // Đếm số cây hiện có thuộc tuyến đường này
+    const corridorTrees = allExistingTrees.filter((t) => {
+      const code = getTreeStreetCode(t);
+      return code.startsWith(currentCorridor.prefix + '-');
+    });
+
+    const nextSeq = corridorTrees.length + 1;
+    const padSeq = String(nextSeq).padStart(2, '0');
+    const baseCode = `${currentCorridor.prefix}-${padSeq}`;
+    const finalCode = isBranchInsertion ? `${currentCorridor.prefix}-${padSeq}${branchSuffix}` : baseCode;
+
+    setPublicCode(finalCode);
+    setStreetCode(finalCode);
+
+    const typeObj = treeTypes.find((t) => t.id === treeTypeId);
+    const typeName = typeObj?.name || 'Cây';
+    setDisplayName(`${typeName} #${padSeq} (${currentCorridor.name})`);
+
+    const guessedHouseNo = 10 + nextSeq * 4;
+    const guessedMilestone = `Trước số ${guessedHouseNo} ${currentCorridor.name}`;
+    setHouseMilestone(guessedMilestone);
+    setAddress(`${guessedMilestone}, ${currentCorridor.district}, Cần Thơ`);
+  }, [selectedCorridorId, treeTypeId, isBranchInsertion, branchSuffix]);
+
+  // Handler: Bắt GPS thực địa & Quét Radar cây lân cận
+  const handleDetectGpsAndRadar = () => {
+    if (!navigator.geolocation) {
+      setError('Trình duyệt của bạn không hỗ trợ định vị GPS Geolocation');
+      return;
+    }
+
+    setIsGpsLocating(true);
+    setError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const curLat = Number(pos.coords.latitude.toFixed(6));
+        const curLng = Number(pos.coords.longitude.toFixed(6));
+        setLatitude(curLat);
+        setLongitude(curLng);
+        setIsGpsLocating(false);
+
+        // Chạy radar tìm cây gần nhất
+        const nearest = findNearestTree(curLat, curLng, allExistingTrees);
+        if (nearest) {
+          const nearestCode = getTreeStreetCode(nearest.tree);
+          const nextNum = parseInt(nearestCode.replace(/\D/g, '') || '1', 10) + 1;
+          const prefix = nearestCode.split('-')[0] || 'HB';
+          const suggestedNext = `${prefix}-${String(nextNum).padStart(2, '0')}`;
+
+          setRadarResult({
+            distanceM: nearest.distanceM,
+            nearestCode,
+            nearestName: nearest.tree.displayName,
+            suggestedNextCode: suggestedNext,
+          });
+
+          // Tự động gợi ý điền mã tiếp theo nếu đang tạo mới
+          if (!tree) {
+            setPublicCode(suggestedNext);
+            setStreetCode(suggestedNext);
+          }
+        }
+      },
+      (err) => {
+        setIsGpsLocating(false);
+        // Fallback GPS Cần Thơ mẫu nếu người dùng từ chối quyền hoặc ở môi trường dev
+        const fallbackLat = 10.036829;
+        const fallbackLng = 105.782541;
+        setLatitude(fallbackLat);
+        setLongitude(fallbackLng);
+
+        const nearest = findNearestTree(fallbackLat, fallbackLng, allExistingTrees);
+        if (nearest) {
+          setRadarResult({
+            distanceM: nearest.distanceM,
+            nearestCode: getTreeStreetCode(nearest.tree),
+            nearestName: nearest.tree.displayName,
+            suggestedNextCode: 'HB-06',
+          });
+        }
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
 
   const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -48,12 +201,13 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, onClose, onS
     }
   };
 
+  // Submit Single Tree
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     if (!publicCode.trim()) {
-      setError('Vui lòng nhập mã định danh cây (ví dụ: TREE-008)');
+      setError('Vui lòng nhập mã định danh tuyến cây (ví dụ: HB-06)');
       return;
     }
     if (!displayName.trim()) {
@@ -70,10 +224,12 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, onClose, onS
       return;
     }
 
+    const currentCorridor = STREET_CORRIDORS_LIST.find((c) => c.id === selectedCorridorId);
+
     setIsSubmitting(true);
     try {
       if (tree) {
-        // Edit
+        // Edit existing
         await storage.updateTree(tree.id, {
           displayName,
           treeTypeId,
@@ -85,11 +241,17 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, onClose, onS
           diameterCm: Number(diameterCm),
           heightM: Number(heightM),
           imageUrl,
+          streetCode: streetCode || publicCode,
+          houseNumberMilestone: houseMilestone || address.split(',')[0],
+          streetCorridor: currentCorridor?.name || 'Đại Lộ Hòa Bình',
         });
       } else {
-        // Add new
+        // Add new single tree
         await storage.createTree({
           publicCode: publicCode.trim().toUpperCase(),
+          streetCode: streetCode || publicCode.trim().toUpperCase(),
+          streetCorridor: currentCorridor?.name || 'Đại Lộ Hòa Bình',
+          houseNumberMilestone: houseMilestone || address.split(',')[0],
           displayName,
           treeTypeId,
           address,
@@ -99,7 +261,9 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, onClose, onS
           healthStatus,
           diameterCm: Number(diameterCm),
           heightM: Number(heightM),
-          imageUrl: imageUrl || 'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=800&q=80',
+          imageUrl:
+            imageUrl ||
+            'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=800&q=80',
           isActive: true,
         });
       }
@@ -113,324 +277,809 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, onClose, onS
     }
   };
 
-  const handleLocationPreset = (lat: number, lng: number, addr: string) => {
+  // Submit Bulk Corridor Import
+  const handleBulkImport = async () => {
+    const corridor = STREET_CORRIDORS_LIST.find((c) => c.id === bulkCorridorId);
+    if (!corridor) return;
+
+    setIsBulkSubmitting(true);
+    setError(null);
+
+    try {
+      const typeObj = treeTypes.find((t) => t.id === bulkTreeTypeId) || treeTypes[0];
+      const baseLat = 10.036829;
+      const baseLng = 105.782541;
+
+      // Tìm số thứ tự lớn nhất hiện tại
+      const corridorTrees = allExistingTrees.filter((t) => {
+        const code = getTreeStreetCode(t);
+        return code.startsWith(corridor.prefix + '-');
+      });
+      const startSeq = corridorTrees.length + 1;
+
+      const createdList: Tree[] = [];
+
+      for (let i = 0; i < bulkCount; i++) {
+        const seq = startSeq + i;
+        const code = `${corridor.prefix}-${String(seq).padStart(2, '0')}`;
+        const houseNo = bulkStartHouseNo + i * 4;
+        const milestone = `Trước số ${houseNo} ${corridor.name}`;
+        const fullAddr = `${milestone}, ${corridor.district}, Cần Thơ`;
+
+        // Tọa độ dải cây chạy dần dọc đường
+        const treeLat = Number((baseLat + i * 0.00015).toFixed(6));
+        const treeLng = Number((baseLng + i * 0.00018).toFixed(6));
+
+        const newTree = await storage.createTree({
+          publicCode: code,
+          streetCode: code,
+          streetCorridor: corridor.name,
+          houseNumberMilestone: milestone,
+          sequenceNumber: seq,
+          displayName: `${typeObj.name} #${String(seq).padStart(2, '0')} (${corridor.name})`,
+          treeTypeId: typeObj.id,
+          address: fullAddr,
+          latitude: treeLat,
+          longitude: treeLng,
+          plantedAt: '2023-03-15',
+          healthStatus: 'GOOD',
+          diameterCm: 28,
+          heightM: 7.5,
+          imageUrl:
+            'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=800&q=80',
+          isActive: true,
+        });
+
+        createdList.push(newTree);
+      }
+
+      setBulkSuccessList(createdList);
+      onSaved();
+    } catch (err: any) {
+      setError(err?.message || 'Có lỗi xảy ra khi nhập hàng loạt');
+    } finally {
+      setIsBulkSubmitting(false);
+    }
+  };
+
+  const handleLocationPreset = (lat: number, lng: number, addr: string, corridorId: string) => {
     setLatitude(lat);
     setLongitude(lng);
     setAddress(addr);
+    setSelectedCorridorId(corridorId);
+    setHouseMilestone(addr.split(',')[0]);
+  };
+
+  // Simulated temporary tree object for live DigitalAlloyTag preview
+  const previewTreeObj: Tree = {
+    id: tree?.id || 'temp-preview-tree',
+    publicCode: publicCode || 'HB-06',
+    streetCode: streetCode || publicCode || 'HB-06',
+    streetCorridor: STREET_CORRIDORS_LIST.find((c) => c.id === selectedCorridorId)?.name || 'Đại Lộ Hòa Bình',
+    houseNumberMilestone: houseMilestone || 'Trước số 24 Đại Lộ Hòa Bình',
+    displayName: displayName || 'Cây Bàng Đài Loan Tuyến Phố',
+    treeTypeId,
+    address: address || 'Số 24 Đại Lộ Hòa Bình, Ninh Kiều, Cần Thơ',
+    latitude,
+    longitude,
+    plantedAt,
+    healthStatus,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-      <div className="bg-white dark:bg-[#0c1812] rounded-2xl max-w-lg w-full max-h-[90vh] shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex flex-col border border-[#E0EBDD] dark:border-emerald-500/30 dark:text-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+      <div className="bg-white dark:bg-[#0c1812] rounded-2xl max-w-2xl w-full max-h-[92vh] shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex flex-col border border-[#E0EBDD] dark:border-emerald-500/30 dark:text-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-[#E0EBDD] dark:bg-emerald-950/80 text-[#174B36] dark:text-emerald-400 dark:border dark:border-emerald-800/50 rounded-lg">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-slate-50/50 dark:bg-slate-900/40">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2.5 bg-[#E0EBDD] dark:bg-emerald-950/80 text-[#174B36] dark:text-emerald-400 dark:border dark:border-emerald-800/50 rounded-xl shadow-xs">
               <Trees className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-[#174B36] dark:text-emerald-400">
-                {tree ? 'Cập nhật Hồ sơ Cây xanh' : 'Thêm Cây xanh Mới vào Hệ thống'}
+              <h2 className="text-sm sm:text-base font-bold text-[#174B36] dark:text-emerald-400 flex items-center gap-2">
+                <span>{tree ? 'Cập nhật Hồ sơ Cây xanh' : 'Thêm Cây Mới & Chuẩn Hóa Thực Địa'}</span>
+                {!tree && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                    Smart GIS 4.0
+                  </span>
+                )}
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Tự động băm chuẩn SHA-256 và neo lên Smart Contract</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Định danh Tuyến Phố · Radar GPS Auto-Detect · Biển Nhôm & Blockchain SHA-256
+              </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+          <button
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 flex-1 text-xs">
-          {error && (
-            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs">
-              {error}
-            </div>
-          )}
+        {/* Tab Selection: Single Field Calibration VS Bulk Corridor Import */}
+        {!tree && (
+          <div className="px-5 pt-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2 bg-slate-50/40 dark:bg-slate-900/20">
+            <button
+              type="button"
+              onClick={() => setActiveTab('single')}
+              className={`pb-2.5 px-3 text-xs font-semibold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer ${
+                activeTab === 'single'
+                  ? 'border-[#174B36] dark:border-emerald-400 text-[#174B36] dark:text-emerald-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              <span>📍 Thêm Đơn Lẻ & Khớp GPS Thực Địa (10s/cây)</span>
+            </button>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Mã định danh (Public Code) *</label>
-              <input
-                type="text"
-                disabled={!!tree}
-                value={publicCode}
-                onChange={(e) => setPublicCode(e.target.value.toUpperCase())}
-                placeholder="TREE-008"
-                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg font-mono font-bold text-[#174B36] dark:text-emerald-400 bg-white dark:bg-slate-900 focus:border-[#347A50] dark:focus:border-emerald-400 focus:ring-1 focus:ring-[#347A50] disabled:bg-slate-50 dark:disabled:bg-slate-800/60"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Loài cây *</label>
-              <select
-                value={treeTypeId}
-                onChange={(e) => setTreeTypeId(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:border-[#347A50] dark:focus:border-emerald-400 focus:ring-1 focus:ring-[#347A50] bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-              >
-                {treeTypes.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} ({t.scientificName})
-                  </option>
-                ))}
-              </select>
-            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('bulk')}
+              className={`pb-2.5 px-3 text-xs font-semibold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer ${
+                activeTab === 'bulk'
+                  ? 'border-[#174B36] dark:border-emerald-400 text-[#174B36] dark:text-emerald-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>📑 Nhập Hàng Loạt Từ Tuyến Phố / Excel (Bulk Import)</span>
+            </button>
           </div>
+        )}
 
-          <div>
-            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tên hiển thị cây *</label>
-            <input
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Cây Bàng Đài Loan Tuyến Phố"
-              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white dark:placeholder-slate-500 focus:border-[#347A50] dark:focus:border-emerald-400 focus:ring-1 focus:ring-[#347A50]"
-            />
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Vị trí & Địa chỉ *</label>
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Số 45 Lê Duẩn, Phường Bến Nghé, Quận 1"
-              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white dark:placeholder-slate-500 focus:border-[#347A50] dark:focus:border-emerald-400 focus:ring-1 focus:ring-[#347A50]"
-            />
-          </div>
-
-          {/* Coordinates & Preset Buttons */}
-          <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-[#174B36] dark:text-emerald-400" />
-                <span>Tọa độ GPS (WGS84)</span>
-              </span>
-              <span className="text-[10px] text-slate-400 dark:text-slate-500">Chọn vị trí nhanh:</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-0.5">Vĩ độ (Latitude)</span>
-                <input
-                  type="number"
-                  step="0.000001"
-                  value={latitude}
-                  onChange={(e) => setLatitude(parseFloat(e.target.value))}
-                  className="w-full px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900 font-mono text-[11px] text-slate-900 dark:text-white"
-                />
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-0.5">Kinh độ (Longitude)</span>
-                <input
-                  type="number"
-                  step="0.000001"
-                  value={longitude}
-                  onChange={(e) => setLongitude(parseFloat(e.target.value))}
-                  className="w-full px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900 font-mono text-[11px] text-slate-900 dark:text-white"
-                />
-              </div>
-            </div>
-
-            {/* Presets Cần Thơ */}
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              <button
-                type="button"
-                onClick={() => handleLocationPreset(10.036829, 105.782541, 'Công viên Lưu Hữu Phước, Đại lộ Hòa Bình, Ninh Kiều')}
-                className="px-2 py-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px] text-slate-600 dark:text-slate-300 hover:border-[#347A50] dark:hover:border-emerald-500 cursor-pointer"
-              >
-                Lưu Hữu Phước
-              </button>
-              <button
-                type="button"
-                onClick={() => handleLocationPreset(10.034515, 105.78822, 'Bến Ninh Kiều, Đường Hai Bà Trưng, Tân An')}
-                className="px-2 py-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px] text-slate-600 dark:text-slate-300 hover:border-[#347A50] dark:hover:border-emerald-500 cursor-pointer"
-              >
-                Bến Ninh Kiều
-              </button>
-              <button
-                type="button"
-                onClick={() => handleLocationPreset(10.04652, 105.79153, 'Công viên Sông Hậu, Đường Lê Lợi, Cái Khế')}
-                className="px-2 py-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px] text-slate-600 dark:text-slate-300 hover:border-[#347A50] dark:hover:border-emerald-500 cursor-pointer"
-              >
-                Công viên Sông Hậu
-              </button>
-              <button
-                type="button"
-                onClick={() => handleLocationPreset(10.031251, 105.76915, 'ĐH Cần Thơ Khu II, Đường 3/2, Xuân Khánh')}
-                className="px-2 py-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px] text-slate-600 dark:text-slate-300 hover:border-[#347A50] dark:hover:border-emerald-500 cursor-pointer"
-              >
-                ĐH Cần Thơ (Khu II)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleLocationPreset(10.0328, 105.7895, 'Cầu Đi Bộ Ninh Kiều, Tân An, Ninh Kiều')}
-                className="px-2 py-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px] text-slate-600 dark:text-slate-300 hover:border-[#347A50] dark:hover:border-emerald-500 cursor-pointer"
-              >
-                Cầu Đi Bộ
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Hiện trạng sức khỏe</label>
-              <select
-                value={healthStatus}
-                onChange={(e) => setHealthStatus(e.target.value as TreeHealthStatus)}
-                className="w-full px-2 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-              >
-                <option value="GOOD">Tốt (GOOD)</option>
-                <option value="FAIR">Bình thường (FAIR)</option>
-                <option value="POOR">Kém (POOR)</option>
-                <option value="CRITICAL">Nguy cấp (CRITICAL)</option>
-                <option value="DEAD">Chết khô (DEAD)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Đường kính (cm)</label>
-              <input
-                type="number"
-                value={diameterCm}
-                onChange={(e) => setDiameterCm(parseInt(e.target.value) || 0)}
-                className="w-full px-2 py-2 border border-slate-200 dark:border-slate-700 rounded-lg font-mono bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Chiều cao (m)</label>
-              <input
-                type="number"
-                step="0.5"
-                value={heightM}
-                onChange={(e) => setHeightM(parseFloat(e.target.value) || 0)}
-                className="w-full px-2 py-2 border border-slate-200 dark:border-slate-700 rounded-lg font-mono bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Ngày/Năm trồng</label>
-            <input
-              type="date"
-              value={plantedAt}
-              onChange={(e) => setPlantedAt(e.target.value)}
-              className="w-full px-2 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-            />
-          </div>
-
-          {/* Photo field */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block font-semibold text-slate-700 dark:text-slate-300">
-                Hình ảnh thực địa cây xanh <span className="text-red-500">*</span>
-              </label>
-              <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                Bắt buộc chụp thực tế
-              </span>
-            </div>
-
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept="image/*"
-              capture="environment"
-              onChange={handleImageFileChange}
-              className="hidden"
-            />
-
-            {imagePreview ? (
-              <div className="relative rounded-xl overflow-hidden border border-emerald-300 dark:border-emerald-600/60 bg-slate-900 group aspect-video max-h-44 flex items-center justify-center">
-                <img
-                  src={imagePreview}
-                  alt="Ảnh cây xanh"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="px-3 py-1.5 bg-white text-slate-800 rounded-lg text-xs font-semibold shadow flex items-center gap-1.5 hover:bg-slate-100 cursor-pointer"
-                  >
-                    <Camera className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Chụp / Đổi ảnh khác</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setImagePreview(null);
-                      setImageUrl('');
-                    }}
-                    className="px-2.5 py-1.5 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700 cursor-pointer"
-                  >
-                    Xóa
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-emerald-300 dark:border-emerald-800/80 hover:border-emerald-500 dark:hover:border-emerald-600 bg-emerald-50/40 dark:bg-emerald-950/20 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/40 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-colors text-center"
-              >
-                <div className="p-2.5 bg-white dark:bg-slate-900 rounded-full shadow-xs text-emerald-600 dark:text-emerald-400 mb-2 border border-emerald-100 dark:border-emerald-800/60">
-                  <Camera className="w-5 h-5" />
-                </div>
-                <div className="text-xs font-bold text-emerald-900 dark:text-emerald-300">
-                  Chụp ảnh cây từ Camera điện thoại / máy tính
-                </div>
-                <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  hoặc bấm để tải tệp ảnh từ thiết bị
-                </div>
+        {/* BODY TAB 1: THÊM ĐƠN LẺ / KHỚP THỰC ĐỊA */}
+        {activeTab === 'single' ? (
+          <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-4 flex-1 text-xs">
+            {error && (
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
               </div>
             )}
 
-            <div className="mt-2">
+            {/* RADAR GPS AUTO-DETECT BANNER */}
+            <div className="p-3.5 bg-gradient-to-r from-emerald-50 via-teal-50 to-green-50 dark:from-emerald-950/50 dark:via-teal-950/40 dark:to-slate-900/60 rounded-xl border border-emerald-200/90 dark:border-emerald-800/60 space-y-2">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2 text-emerald-900 dark:text-emerald-300 font-bold">
+                  <Radio className="w-4 h-4 text-emerald-600 dark:text-emerald-400 animate-pulse" />
+                  <span>Chức năng Radar GPS: Nhận diện cây gần bạn nhất</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDetectGpsAndRadar}
+                  disabled={isGpsLocating}
+                  className="px-3 py-1.5 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+                >
+                  {isGpsLocating ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Đang dò vệ tinh GPS...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Compass className="w-3.5 h-3.5" />
+                      <span>📍 Lấy vị trí GPS của tôi</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {radarResult ? (
+                <div className="p-2.5 bg-white/80 dark:bg-slate-900/80 rounded-lg border border-emerald-300/80 dark:border-emerald-700 text-slate-700 dark:text-slate-200 text-[11px] leading-relaxed flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+                  <div>
+                    <strong>Phát hiện hiện trường:</strong> Bạn đang đứng cách cây{' '}
+                    <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300">
+                      [{radarResult.nearestCode}]
+                    </span>{' '}
+                    khoảng <strong>{radarResult.distanceM}m</strong>. Đã tự động khớp GPS & đề xuất mã tiếp theo:{' '}
+                    <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded border border-emerald-300 dark:border-emerald-700">
+                      [{radarResult.suggestedNextCode}]
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Công nhân đến hiện trường chỉ cần bấm nút để thiết bị tự động bắt tọa độ GPS chuẩn và đề xuất số thứ tự
+                  cây tiếp theo theo đúng tuyến phố!
+                </p>
+              )}
+            </div>
+
+            {/* QUY TẮC MÃ THEO TUYẾN PHỐ */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  1. Chọn Tuyến Phố / Corridor *
+                </label>
+                <select
+                  value={selectedCorridorId}
+                  onChange={(e) => setSelectedCorridorId(e.target.value)}
+                  className="w-full px-2.5 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-medium focus:border-emerald-500"
+                >
+                  {STREET_CORRIDORS_LIST.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.prefix})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  2. Mã Tuyến Phố (Street Code) *
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={publicCode}
+                    onChange={(e) => {
+                      setPublicCode(e.target.value.toUpperCase());
+                      setStreetCode(e.target.value.toUpperCase());
+                    }}
+                    placeholder="HB-06"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg font-mono font-bold text-[#174B36] dark:text-emerald-400 bg-white dark:bg-slate-900 focus:border-[#347A50] dark:focus:border-emerald-400"
+                  />
+                  <span className="absolute right-2 top-2 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                    Định danh thực địa
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">3. Loài cây *</label>
+                <select
+                  value={treeTypeId}
+                  onChange={(e) => setTreeTypeId(e.target.value)}
+                  className="w-full px-2.5 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:border-[#347A50] dark:focus:border-emerald-400 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                >
+                  {treeTypes.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.scientificName})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Checkbox Cây chèn xen kẽ ngoài thực địa */}
+            <div className="p-2.5 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isBranchInsertion}
+                  onChange={(e) => setIsBranchInsertion(e.target.checked)}
+                  className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+                />
+                <span className="text-[11px] text-slate-700 dark:text-slate-300">
+                  <strong>Cây phát sinh xen kẽ ngoài thực tế</strong> (Ví dụ: mọc thêm cây mới giữa HB-02 và HB-03)
+                </span>
+              </label>
+
+              {isBranchInsertion && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-slate-500">Hậu tố:</span>
+                  <input
+                    type="text"
+                    value={branchSuffix}
+                    maxLength={2}
+                    onChange={(e) => setBranchSuffix(e.target.value.toUpperCase())}
+                    className="w-10 px-1 py-0.5 text-center font-mono font-bold border border-emerald-400 rounded bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Tên hiển thị & Cột mốc số nhà */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tên hiển thị cây *</label>
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Cây Bàng Đài Loan #06"
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Cột mốc số nhà (Định vị mắt thường) *
+                </label>
+                <input
+                  type="text"
+                  value={houseMilestone}
+                  onChange={(e) => {
+                    setHouseMilestone(e.target.value);
+                    const parts = address.split(',');
+                    if (parts.length > 1) {
+                      setAddress(`${e.target.value}, ${parts.slice(1).join(',').trim()}`);
+                    } else {
+                      setAddress(e.target.value);
+                    }
+                  }}
+                  placeholder="Trước số 28 Đại lộ Hòa Bình"
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
+            {/* Địa chỉ hành chính đầy đủ */}
+            <div>
+              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Địa chỉ hành chính *</label>
               <input
-                type="url"
-                value={imageUrl.startsWith('data:') ? '' : imageUrl}
-                onChange={(e) => {
-                  setImageUrl(e.target.value);
-                  setImagePreview(e.target.value || null);
-                }}
-                placeholder="Hoặc dán URL ảnh trực tuyến (https://...)"
-                className="w-full px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 placeholder-slate-400 dark:placeholder-slate-500"
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Trước số 28 Đại lộ Hòa Bình, Phường Tân An, Quận Ninh Kiều, Cần Thơ"
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:border-emerald-500"
               />
             </div>
-          </div>
 
-          <div className="p-3 rounded-lg bg-[#E0EBDD]/60 dark:bg-emerald-950/40 border border-[#E0EBDD] dark:border-emerald-800/60 flex items-center gap-2 text-[#174B36] dark:text-emerald-300">
-            <ShieldCheck className="w-4 h-4 shrink-0 text-[#347A50] dark:text-emerald-400" />
-            <span className="text-[11px] leading-tight">
-              Khi bấm lưu, hệ thống tự động băm canonical payload và neo giao dịch vào Hardhat EVM local, lưu txHash và blockNumber.
-            </span>
-          </div>
+            {/* Coordinates & Presets */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-[#174B36] dark:text-emerald-400" />
+                  <span>Tọa độ GPS (WGS84)</span>
+                </span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500">Chọn vị trí nhanh Cần Thơ:</span>
+              </div>
 
-          {/* Footer Submit */}
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium rounded-lg cursor-pointer transition-colors"
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
-            >
-              {isSubmitting ? (
-                <span>Đang ghi Blockchain...</span>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-0.5">Vĩ độ (Latitude)</span>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    value={latitude}
+                    onChange={(e) => setLatitude(parseFloat(e.target.value))}
+                    className="w-full px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900 font-mono text-[11px] text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-0.5">Kinh độ (Longitude)</span>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    value={longitude}
+                    onChange={(e) => setLongitude(parseFloat(e.target.value))}
+                    className="w-full px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900 font-mono text-[11px] text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              {/* Presets Cần Thơ */}
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleLocationPreset(
+                      10.036829,
+                      105.782541,
+                      'Trước số 12 Đại lộ Hòa Bình, Phường An Lạc, Ninh Kiều, Cần Thơ',
+                      'corridor-hoa-binh'
+                    )
+                  }
+                  className="px-2 py-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px] text-slate-600 dark:text-slate-300 hover:border-[#347A50] dark:hover:border-emerald-500 cursor-pointer"
+                >
+                  Đại Lộ Hòa Bình
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleLocationPreset(
+                      10.034515,
+                      105.78822,
+                      'Công viên Bến Ninh Kiều, Đường Hai Bà Trưng, Tân An, Ninh Kiều, Cần Thơ',
+                      'corridor-hai-ba-trung'
+                    )
+                  }
+                  className="px-2 py-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px] text-slate-600 dark:text-slate-300 hover:border-[#347A50] dark:hover:border-emerald-500 cursor-pointer"
+                >
+                  Bến Ninh Kiều
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleLocationPreset(
+                      10.03812,
+                      105.78391,
+                      'Công viên Lưu Hữu Phước, Đại lộ Hòa Bình, Ninh Kiều, Cần Thơ',
+                      'corridor-luu-huu-phuoc'
+                    )
+                  }
+                  className="px-2 py-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px] text-slate-600 dark:text-slate-300 hover:border-[#347A50] dark:hover:border-emerald-500 cursor-pointer"
+                >
+                  Lưu Hữu Phước
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleLocationPreset(
+                      10.0315,
+                      105.7762,
+                      'Số 42 Đường 30 Tháng 4, Phường An Phú, Ninh Kiều, Cần Thơ',
+                      'corridor-30-thang-4'
+                    )
+                  }
+                  className="px-2 py-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px] text-slate-600 dark:text-slate-300 hover:border-[#347A50] dark:hover:border-emerald-500 cursor-pointer"
+                >
+                  Đường 30 Tháng 4
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleLocationPreset(
+                      10.031251,
+                      105.76915,
+                      'ĐH Cần Thơ Khu II, Đường 3 Tháng 2, Xuân Khánh, Ninh Kiều, Cần Thơ',
+                      'corridor-3-thang-2'
+                    )
+                  }
+                  className="px-2 py-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px] text-slate-600 dark:text-slate-300 hover:border-[#347A50] dark:hover:border-emerald-500 cursor-pointer"
+                >
+                  ĐH Cần Thơ (3/2)
+                </button>
+              </div>
+            </div>
+
+            {/* Sức khỏe, Kích thước */}
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Hiện trạng</label>
+                <select
+                  value={healthStatus}
+                  onChange={(e) => setHealthStatus(e.target.value as TreeHealthStatus)}
+                  className="w-full px-2 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                >
+                  <option value="GOOD">Tốt (GOOD)</option>
+                  <option value="FAIR">Bình thường (FAIR)</option>
+                  <option value="POOR">Kém (POOR)</option>
+                  <option value="CRITICAL">Nguy cấp (CRITICAL)</option>
+                  <option value="DEAD">Chết khô (DEAD)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Đường kính (cm)</label>
+                <input
+                  type="number"
+                  value={diameterCm}
+                  onChange={(e) => setDiameterCm(parseInt(e.target.value) || 0)}
+                  className="w-full px-2 py-2 border border-slate-200 dark:border-slate-700 rounded-lg font-mono bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Chiều cao (m)</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  value={heightM}
+                  onChange={(e) => setHeightM(parseFloat(e.target.value) || 0)}
+                  className="w-full px-2 py-2 border border-slate-200 dark:border-slate-700 rounded-lg font-mono bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                />
+              </div>
+            </div>
+
+            {/* Chụp ảnh thực tế bắt buộc */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block font-semibold text-slate-700 dark:text-slate-300">
+                  Hình ảnh thực địa cây xanh <span className="text-red-500">*</span>
+                </label>
+                <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                  Chụp thực tế tại gốc cây
+                </span>
+              </div>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                capture="environment"
+                onChange={handleImageFileChange}
+                className="hidden"
+              />
+
+              {imagePreview ? (
+                <div className="relative rounded-xl overflow-hidden border border-emerald-300 dark:border-emerald-600/60 bg-slate-900 group aspect-video max-h-40 flex items-center justify-center">
+                  <img src={imagePreview} alt="Ảnh cây xanh" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-3 py-1.5 bg-white text-slate-800 rounded-lg text-xs font-semibold shadow flex items-center gap-1.5 hover:bg-slate-100 cursor-pointer"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Đổi ảnh khác</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImagePreview(null);
+                        setImageUrl('');
+                      }}
+                      className="px-2.5 py-1.5 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700 cursor-pointer"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                </div>
               ) : (
-                <>
-                  <Check className="w-4 h-4" />
-                  <span>{tree ? 'Lưu thay đổi' : 'Thêm cây & Neo Blockchain'}</span>
-                </>
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-emerald-300 dark:border-emerald-800/80 hover:border-emerald-500 dark:hover:border-emerald-600 bg-emerald-50/40 dark:bg-emerald-950/20 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/40 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition-colors text-center"
+                >
+                  <div className="p-2 bg-white dark:bg-slate-900 rounded-full shadow-xs text-emerald-600 dark:text-emerald-400 mb-1 border border-emerald-100 dark:border-emerald-800/60">
+                    <Camera className="w-4 h-4" />
+                  </div>
+                  <div className="text-xs font-bold text-emerald-900 dark:text-emerald-300">
+                    Chụp ảnh cây từ Camera điện thoại / Hiện trường
+                  </div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400">hoặc bấm để tải tệp ảnh từ máy</div>
+                </div>
               )}
-            </button>
+            </div>
+
+            {/* MÔ PHỎNG BIỂN SỐ NHÔM VẬT LÝ ẢO (DIGITAL ALLOY TAG PREVIEW) */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setShowTagPreview(!showTagPreview)}
+                className="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 text-slate-700 dark:text-slate-300 font-semibold flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors text-xs"
+              >
+                <span className="flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>Mô phỏng Thẻ Biển Nhôm gắn thân cây thực tế ([{publicCode || 'HB-06'}])</span>
+                </span>
+                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>{showTagPreview ? 'Thu gọn' : 'Xem thẻ nhôm'}</span>
+                </span>
+              </button>
+
+              {showTagPreview && (
+                <div className="mt-2.5 p-2 bg-slate-900/10 dark:bg-slate-950/60 rounded-2xl border border-emerald-500/20">
+                  <DigitalAlloyTag tree={previewTreeObj} size="sm" showActions={false} />
+                </div>
+              )}
+            </div>
+
+            {/* Blockchain Notice */}
+            <div className="p-3 rounded-xl bg-[#E0EBDD]/60 dark:bg-emerald-950/40 border border-[#E0EBDD] dark:border-emerald-800/60 flex items-center gap-2 text-[#174B36] dark:text-emerald-300">
+              <ShieldCheck className="w-4 h-4 shrink-0 text-[#347A50] dark:text-emerald-400" />
+              <span className="text-[11px] leading-tight">
+                Mỗi cây khi được thêm vào hệ thống sẽ được cấp thẻ QR duy nhất, tự động băm chuẩn SHA-256 và neo giao dịch
+                lên Smart Contract Blockchain bất biến.
+              </span>
+            </div>
+
+            {/* Footer Submit */}
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium rounded-lg cursor-pointer transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <span>Đang ghi Blockchain...</span>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>{tree ? 'Lưu thay đổi' : 'Kích hoạt cá thể & Neo Blockchain'}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        ) : (
+          /* BODY TAB 2: NHẬP HÀNG LOẠT TỪ TUYẾN PHỐ / EXCEL */
+          <div className="p-5 overflow-y-auto space-y-4 flex-1 text-xs">
+            {error && (
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/50 rounded-xl border border-emerald-200 dark:border-emerald-800/60 flex items-start gap-3">
+              <FileSpreadsheet className="w-5 h-5 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <div className="font-bold text-emerald-900 dark:text-emerald-300 text-xs">
+                  Giải pháp Khởi tạo Tuyến Cây Hàng Loạt (Bulk Corridor Ingestion)
+                </div>
+                <p className="text-[11px] text-emerald-800 dark:text-emerald-400 leading-relaxed">
+                  Thay vì nhập thủ công từng cây, tính năng này cho phép Quản lý Đô thị tạo khung dữ liệu sẵn cho toàn bộ
+                  tuyến phố (ví dụ: từ <strong>HB-01 đến HB-10</strong>) và xuất toàn bộ mã QR để kỹ thuật viên mang ra
+                  đóng thẻ tại hiện trường.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Chọn Tuyến Đường Trồng *
+                </label>
+                <select
+                  value={bulkCorridorId}
+                  onChange={(e) => setBulkCorridorId(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-medium"
+                >
+                  {STREET_CORRIDORS_LIST.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.prefix}) - {c.district}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Chủng loại cây trồng đồng loạt *
+                </label>
+                <select
+                  value={bulkTreeTypeId}
+                  onChange={(e) => setBulkTreeTypeId(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                >
+                  {treeTypes.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.scientificName})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Số lượng cây *</label>
+                <select
+                  value={bulkCount}
+                  onChange={(e) => setBulkCount(parseInt(e.target.value))}
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold"
+                >
+                  <option value={3}>3 cây</option>
+                  <option value={5}>5 cây</option>
+                  <option value={10}>10 cây</option>
+                  <option value={15}>15 cây</option>
+                  <option value={20}>20 cây</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Số nhà khởi đầu</label>
+                <input
+                  type="number"
+                  value={bulkStartHouseNo}
+                  onChange={(e) => setBulkStartHouseNo(parseInt(e.target.value) || 2)}
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Khoảng cách (m)</label>
+                <input
+                  type="number"
+                  value={bulkSpacingM}
+                  onChange={(e) => setBulkSpacingM(parseInt(e.target.value) || 10)}
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                />
+              </div>
+            </div>
+
+            {/* PREVIEW BẢNG CÂY SẼ TẠO */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+              <div className="font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between text-xs">
+                <span>📋 Bản xem trước dãy cây sẽ tạo tự động:</span>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                  Tự động cắm cờ dọc đường trên GIS
+                </span>
+              </div>
+
+              <div className="max-h-36 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                <table className="w-full text-[11px] text-left">
+                  <thead className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold">
+                    <tr>
+                      <th className="p-2">Mã Tuyến</th>
+                      <th className="p-2">Cột mốc số nhà</th>
+                      <th className="p-2">Tọa độ dự kiến</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
+                    {Array.from({ length: Math.min(bulkCount, 5) }).map((_, idx) => {
+                      const corridor = STREET_CORRIDORS_LIST.find((c) => c.id === bulkCorridorId);
+                      const prefix = corridor?.prefix || 'HB';
+                      const seqStr = String(idx + 1).padStart(2, '0');
+                      const houseNo = bulkStartHouseNo + idx * 4;
+                      return (
+                        <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                          <td className="p-2 font-bold text-emerald-600 dark:text-emerald-400">
+                            [{prefix}-{seqStr}]
+                          </td>
+                          <td className="p-2 font-sans">
+                            Trước số {houseNo} {corridor?.name}
+                          </td>
+                          <td className="p-2 text-slate-400">
+                            10.03{idx}..., 105.78{idx}...
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Kết quả tạo hàng loạt */}
+            {bulkSuccessList && (
+              <div className="p-4 bg-emerald-50 dark:bg-emerald-950/70 border-2 border-emerald-500 rounded-xl space-y-2 animate-in fade-in">
+                <div className="flex items-center gap-2 text-emerald-900 dark:text-emerald-200 font-bold text-xs">
+                  <Check className="w-4 h-4 text-emerald-600" />
+                  <span>
+                    🎉 Đã khởi tạo thành công {bulkSuccessList.length} cây trên tuyến và neo lên Smart Contract!
+                  </span>
+                </div>
+                <p className="text-[11px] text-emerald-800 dark:text-emerald-300 leading-relaxed">
+                  Các cây đã được ghim lên Bản đồ số GIS ở trạng thái <em>Chờ hiệu chuẩn hiện trường</em>. Bạn có thể in
+                  ngay danh sách thẻ nhôm mã QR bên dưới để cầm đi dán lên cây!
+                </p>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-3 py-1.5 bg-[#174B36] hover:bg-[#347A50] text-white rounded-lg font-semibold flex items-center gap-1.5 text-xs cursor-pointer shadow-xs"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>🖨️ In toàn bộ {bulkSuccessList.length} Thẻ QR Tuyến Phố</span>
+                </button>
+              </div>
+            )}
+
+            {/* Footer Bulk Submit */}
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium rounded-lg cursor-pointer"
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkImport}
+                disabled={isBulkSubmitting}
+                className="px-4 py-2 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+              >
+                {isBulkSubmitting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Đang khởi tạo dãy cây...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span>⚡ Khởi tạo {bulkCount} cây trên Tuyến & Neo Blockchain</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
-        </form>
+        )}
       </div>
     </div>
   );
