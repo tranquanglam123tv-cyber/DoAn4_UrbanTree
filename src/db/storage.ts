@@ -1392,6 +1392,115 @@ class StorageService {
     return createdRecords;
   }
 
+  /**
+   * ⚡ NEO HÀNG LOẠT: Đóng dấu băm và neo toàn bộ cây, chăm sóc, sự cố chưa neo lên Smart Contract
+   */
+  public async batchAnchorAllUnanchored(onProgress?: (current: number, total: number, label: string) => void): Promise<{
+    treesCount: number;
+    careCount: number;
+    incidentsCount: number;
+    totalCount: number;
+  }> {
+    const unanchoredTrees = this.trees.filter(
+      (t) => !t.anchorStatus || t.anchorStatus === 'NOT_ANCHORED' || !blockchainService.getAnchor('TREE_PROFILE', t.id)
+    );
+    const unanchoredCare = this.careRecords.filter(
+      (c) => !c.anchorStatus || c.anchorStatus === 'NOT_ANCHORED' || !blockchainService.getAnchor('CARE_RECORD', c.id)
+    );
+    const unanchoredIncidents = this.incidents.filter(
+      (i) => !blockchainService.getAnchor('INCIDENT_REPORT', i.id)
+    );
+
+    const total = unanchoredTrees.length + unanchoredCare.length + unanchoredIncidents.length;
+    if (total === 0) {
+      return { treesCount: 0, careCount: 0, incidentsCount: 0, totalCount: 0 };
+    }
+
+    const itemsToAnchor: Array<{
+      recordType: RecordType;
+      recordId: string;
+      hash: string;
+      canonicalJson: string;
+    }> = [];
+
+    let processed = 0;
+
+    // 1. Chuẩn bị cây
+    for (const tree of unanchoredTrees) {
+      const { hash, canonicalJson } = computeRecordHash('TREE_PROFILE', tree);
+      itemsToAnchor.push({
+        recordType: 'TREE_PROFILE',
+        recordId: tree.id,
+        hash,
+        canonicalJson,
+      });
+      processed++;
+      if (onProgress) onProgress(processed, total, `Chuẩn hóa mã băm: ${tree.displayName}`);
+    }
+
+    // 2. Chuẩn bị chăm sóc
+    for (const care of unanchoredCare) {
+      const { hash, canonicalJson } = computeRecordHash('CARE_RECORD', care);
+      itemsToAnchor.push({
+        recordType: 'CARE_RECORD',
+        recordId: care.id,
+        hash,
+        canonicalJson,
+      });
+      processed++;
+      if (onProgress) onProgress(processed, total, `Chuẩn hóa nhật ký chăm sóc: ${care.actionType}`);
+    }
+
+    // 3. Chuẩn bị sự cố
+    for (const inc of unanchoredIncidents) {
+      const { hash, canonicalJson } = computeRecordHash('INCIDENT_REPORT', inc);
+      itemsToAnchor.push({
+        recordType: 'INCIDENT_REPORT',
+        recordId: inc.id,
+        hash,
+        canonicalJson,
+      });
+      processed++;
+      if (onProgress) onProgress(processed, total, `Chuẩn hóa sự cố: ${inc.publicCode}`);
+    }
+
+    // Thực hiện neo hàng loạt qua blockchain service
+    const batchResult = await blockchainService.batchAnchorRecords(itemsToAnchor);
+
+    // Cập nhật lại trạng thái cho các cây
+    const receiptMap = new Map(batchResult.receipts.map((r) => [r.recordId, r]));
+    for (const tree of unanchoredTrees) {
+      const receipt = receiptMap.get(tree.id);
+      if (receipt) {
+        const item = itemsToAnchor.find((i) => i.recordId === tree.id);
+        tree.payloadVersion = 1;
+        tree.payloadHash = item?.hash || tree.payloadHash;
+        tree.anchorStatus = 'CONFIRMED';
+        tree.txHash = receipt.txHash;
+      }
+    }
+
+    for (const care of unanchoredCare) {
+      const receipt = receiptMap.get(care.id);
+      if (receipt) {
+        const item = itemsToAnchor.find((i) => i.recordId === care.id);
+        care.payloadVersion = 1;
+        care.payloadHash = item?.hash || care.payloadHash;
+        care.anchorStatus = 'CONFIRMED';
+        care.txHash = receipt.txHash;
+      }
+    }
+
+    this.saveAll();
+
+    return {
+      treesCount: unanchoredTrees.length,
+      careCount: unanchoredCare.length,
+      incidentsCount: unanchoredIncidents.length,
+      totalCount: itemsToAnchor.length,
+    };
+  }
+
   // Incidents
   public getIncidents(): Incident[] {
     return this.incidents;

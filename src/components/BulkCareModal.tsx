@@ -513,3 +513,4 @@ export const BulkCareModal: React.FC<BulkCareModalProps> = ({
     </div>
   );
 };
+

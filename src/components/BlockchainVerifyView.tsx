@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -14,12 +14,21 @@ import {
   FileCode,
   ArrowRight,
   Terminal,
+  Zap,
+  Sparkles,
+  CheckSquare,
+  Activity,
+  FileCheck,
+  Radio,
+  Search,
+  Link2,
 } from 'lucide-react';
 import { blockchainService } from '../services/blockchainService';
 import { storage } from '../db/storage';
 import { RecordType, Tree, TreeHealthStatus, VerificationResult } from '../types';
 import { computeRecordHash } from '../services/hashService';
 import { TreeSearchSelect } from './common/TreeSearchSelect';
+import { getTreeCorridor, getTreeMilestone, getTreeStreetCode } from '../utils/treeUtils';
 
 export const BlockchainVerifyView: React.FC = () => {
   const [nodeOnline, setNodeOnline] = useState(true);
@@ -30,11 +39,57 @@ export const BlockchainVerifyView: React.FC = () => {
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
   const [tamperNotice, setTamperNotice] = useState<string | null>(null);
 
-  const trees = storage.getTrees();
-  const careRecords = storage.getCareRecords();
-  const incidents = storage.getIncidents();
-  const anchors = blockchainService.getAllAnchors();
+  // ⚡ Batch Anchoring & Live Verification States
+  const [dataVersion, setDataVersion] = useState(0);
+  const [isBatchAnchoring, setIsBatchAnchoring] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; label: string } | null>(null);
+  const [batchResultNotice, setBatchResultNotice] = useState<string | null>(null);
+  const [isBatchVerifying, setIsBatchVerifying] = useState(false);
+  const [batchAuditResult, setBatchAuditResult] = useState<{
+    totalChecked: number;
+    validCount: number;
+    mismatchCount: number;
+    mismatchList: Array<{ code: string; name: string }>;
+  } | null>(null);
+
+  // Filter tree selector by anchor status
+  const [treeAnchorFilter, setTreeAnchorFilter] = useState<'ALL' | 'UNANCHORED' | 'ANCHORED'>('ALL');
+  const [tableSearch, setTableSearch] = useState('');
+  const [tablePage, setTablePage] = useState(1);
+  const [ledgerRecordFilter, setLedgerRecordFilter] = useState<string>('ALL');
+
+  const trees = useMemo(() => storage.getTrees(), [dataVersion]);
+  const careRecords = useMemo(() => storage.getCareRecords(), [dataVersion]);
+  const incidents = useMemo(() => storage.getIncidents(), [dataVersion]);
+  const anchors = useMemo(() => blockchainService.getAllAnchors(), [dataVersion]);
   const nodeStatus = blockchainService.getNodeStatus();
+
+  // 📊 THỐNG KÊ BAO PHỦ BLOCKCHAIN (ANCHOR COVERAGE METRICS)
+  const totalTrees = trees.length;
+  const anchoredTreesCount = useMemo(() => {
+    return trees.filter((t) => !!blockchainService.getAnchor('TREE_PROFILE', t.id)).length;
+  }, [trees, anchors]);
+  const unanchoredTreesCount = Math.max(0, totalTrees - anchoredTreesCount);
+  const treeCoveragePercent = totalTrees > 0 ? Math.round((anchoredTreesCount / totalTrees) * 100) : 0;
+
+  const totalCare = careRecords.length;
+  const anchoredCareCount = useMemo(() => {
+    return careRecords.filter((c) => !!blockchainService.getAnchor('CARE_RECORD', c.id)).length;
+  }, [careRecords, anchors]);
+
+  const totalIncidents = incidents.length;
+  const anchoredIncidentsCount = useMemo(() => {
+    return incidents.filter((i) => !!blockchainService.getAnchor('INCIDENT_REPORT', i.id)).length;
+  }, [incidents, anchors]);
+
+  // Cây lọc theo trạng thái neo cho TreeSearchSelect
+  const displayTreesForSelector = useMemo(() => {
+    if (treeAnchorFilter === 'ALL') return trees;
+    return trees.filter((t) => {
+      const isAnchored = !!blockchainService.getAnchor('TREE_PROFILE', t.id);
+      return treeAnchorFilter === 'ANCHORED' ? isAnchored : !isAnchored;
+    });
+  }, [trees, treeAnchorFilter, anchors]);
 
   const handleToggleNode = () => {
     const next = !nodeOnline;
@@ -148,6 +203,173 @@ export const BlockchainVerifyView: React.FC = () => {
     setVerifyResult(null);
   };
 
+  // ⚡ Neo hàng loạt tất cả cây chưa neo lên Blockchain
+  const handleBatchAnchorUnanchoredTrees = async () => {
+    if (!nodeOnline) {
+      alert('Node EVM đang ngoại tuyến, vui lòng bật lại kết nối Node trước khi neo!');
+      return;
+    }
+
+    const unanchored = trees.filter((t) => !blockchainService.getAnchor('TREE_PROFILE', t.id));
+    if (unanchored.length === 0) {
+      setBatchResultNotice('Tất cả cá thể cây xanh đã được neo đầy đủ và an toàn trên Smart Contract on-chain!');
+      return;
+    }
+
+    setIsBatchAnchoring(true);
+    setBatchResultNotice(null);
+
+    try {
+      const items = unanchored.map((t) => {
+        const { hash, canonicalJson } = computeRecordHash('TREE_PROFILE', t);
+        return {
+          recordType: 'TREE_PROFILE' as RecordType,
+          recordId: t.id,
+          hash,
+          canonicalJson,
+        };
+      });
+
+      const res = await blockchainService.batchAnchorRecords(items);
+
+      // Cập nhật lại thuộc tính cho các cây trong DB
+      res.receipts.forEach((r) => {
+        storage.updateTree(r.recordId, {
+          payloadVersion: 1,
+          payloadHash: r.txHash,
+          anchorStatus: 'CONFIRMED',
+          txHash: r.txHash,
+        });
+      });
+
+      setDataVersion((v) => v + 1);
+      setBatchResultNotice(
+        `✅ Đã neo thành công ${res.count} cây xanh lên Smart Contract on-chain (từ Block #${res.startBlock} đến #${res.endBlock})! Tính toàn vẹn đạt 100%.`
+      );
+    } catch (err: any) {
+      setBatchResultNotice(`❌ Lỗi khi neo hàng loạt: ${err?.message || err}`);
+    } finally {
+      setIsBatchAnchoring(false);
+    }
+  };
+
+  // ⚡ Neo hàng loạt nhật ký chăm sóc chưa neo
+  const handleBatchAnchorCareRecords = async () => {
+    if (!nodeOnline) {
+      alert('Node EVM đang ngoại tuyến, vui lòng bật lại kết nối Node!');
+      return;
+    }
+
+    const unanchoredCare = careRecords.filter((c) => !blockchainService.getAnchor('CARE_RECORD', c.id));
+    if (unanchoredCare.length === 0) {
+      setBatchResultNotice('Toàn bộ nhật ký chăm sóc đã được neo on-chain!');
+      return;
+    }
+
+    setIsBatchAnchoring(true);
+    setBatchResultNotice(null);
+
+    try {
+      const items = unanchoredCare.map((c) => {
+        const { hash, canonicalJson } = computeRecordHash('CARE_RECORD', c);
+        return {
+          recordType: 'CARE_RECORD' as RecordType,
+          recordId: c.id,
+          hash,
+          canonicalJson,
+        };
+      });
+
+      const res = await blockchainService.batchAnchorRecords(items);
+      setDataVersion((v) => v + 1);
+      setBatchResultNotice(`✅ Đã neo thành công ${res.count} nhật ký chăm sóc lên Smart Contract!`);
+    } catch (err: any) {
+      setBatchResultNotice(`❌ Lỗi: ${err?.message || err}`);
+    } finally {
+      setIsBatchAnchoring(false);
+    }
+  };
+
+  // 🛡️ Kiểm toán đối soát toàn bộ cây on-chain
+  const handleBatchAuditAllTrees = async () => {
+    setIsBatchVerifying(true);
+    setBatchAuditResult(null);
+
+    await new Promise((r) => setTimeout(r, 800));
+
+    let valid = 0;
+    let mismatch = 0;
+    const mismatchList: Array<{ code: string; name: string }> = [];
+
+    for (const tree of trees) {
+      const res = await blockchainService.verifyRecord('TREE_PROFILE', tree);
+      if (res.status === 'VALID') {
+        valid++;
+      } else if (res.status === 'MISMATCH') {
+        mismatch++;
+        mismatchList.push({ code: tree.publicCode, name: tree.displayName });
+      }
+    }
+
+    setBatchAuditResult({
+      totalChecked: trees.length,
+      validCount: valid,
+      mismatchCount: mismatch,
+      mismatchList,
+    });
+    setIsBatchVerifying(false);
+  };
+
+  // Neo lẻ một cây trực tiếp từ bảng kiểm tra
+  const handleAnchorSpecificTree = async (treeId: string) => {
+    const tree = storage.getTreeById(treeId);
+    if (!tree) return;
+
+    const { hash, canonicalJson } = computeRecordHash('TREE_PROFILE', tree);
+    const receipt = await blockchainService.anchorRecord({
+      recordType: 'TREE_PROFILE',
+      recordId: tree.id,
+      hash,
+      canonicalJson,
+    });
+
+    storage.updateTree(tree.id, {
+      payloadVersion: 1,
+      payloadHash: hash,
+      anchorStatus: receipt.status,
+      txHash: receipt.txHash,
+    });
+
+    setDataVersion((v) => v + 1);
+  };
+
+  // Lọc cây cho Bảng Đối Soát & Kiểm Tra Tình Trạng Neo
+  const tableFilteredTrees = useMemo(() => {
+    const s = tableSearch.toLowerCase().trim();
+    return trees.filter((t) => {
+      const isAnchored = !!blockchainService.getAnchor('TREE_PROFILE', t.id);
+      if (treeAnchorFilter === 'ANCHORED' && !isAnchored) return false;
+      if (treeAnchorFilter === 'UNANCHORED' && isAnchored) return false;
+
+      if (!s) return true;
+      const streetCode = getTreeStreetCode(t).toLowerCase();
+      const milestone = getTreeMilestone(t).toLowerCase();
+      return (
+        t.publicCode.toLowerCase().includes(s) ||
+        streetCode.includes(s) ||
+        t.displayName.toLowerCase().includes(s) ||
+        milestone.includes(s)
+      );
+    });
+  }, [trees, treeAnchorFilter, tableSearch, anchors]);
+
+  const tablePageSize = 15;
+  const tableTotalPages = Math.max(1, Math.ceil(tableFilteredTrees.length / tablePageSize));
+  const tablePaginatedTrees = useMemo(() => {
+    const start = (tablePage - 1) * tablePageSize;
+    return tableFilteredTrees.slice(start, start + tablePageSize);
+  }, [tableFilteredTrees, tablePage, tablePageSize]);
+
   return (
     <div className="space-y-6">
       {/* Top Banner / EVM Node Telemetry */}
@@ -195,6 +417,218 @@ export const BlockchainVerifyView: React.FC = () => {
         </div>
       </div>
 
+      {/* BLOCKCHAIN COVERAGE DASHBOARD & BATCH ACTION HUB */}
+      <div className="bg-white dark:bg-[#0c1812] p-5 rounded-2xl border border-[#E0EBDD] dark:border-slate-800 shadow-2xs space-y-4">
+        {/* KPI Mini-Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">
+            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px] mb-1">
+              <span>Bao phủ Cây xanh</span>
+              <Database className="w-3.5 h-3.5 text-emerald-600 dark:text-[#00FF9D]" />
+            </div>
+            <div className="text-xl font-bold font-mono text-[#174B36] dark:text-[#00FF9D]">
+              {treeCoveragePercent}%
+            </div>
+            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+              {anchoredTreesCount}/{trees.length} cây đã neo
+            </div>
+            <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+              <div
+                className="bg-[#174B36] dark:bg-[#00FF9D] h-full rounded-full transition-all duration-500"
+                style={{ width: `${treeCoveragePercent}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">
+            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px] mb-1">
+              <span>Cây chưa neo on-chain</span>
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+            </div>
+            <div className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400">
+              {unanchoredTreesCount}
+            </div>
+            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Cần neo để bảo vệ toàn vẹn
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">
+            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px] mb-1">
+              <span>Nhật ký chăm sóc</span>
+              <FileCheck className="w-3.5 h-3.5 text-blue-500" />
+            </div>
+            <div className="text-xl font-bold font-mono text-blue-700 dark:text-blue-400">
+              {anchoredCareCount}/{careRecords.length}
+            </div>
+            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Đã bảo chứng SHA-256
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">
+            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px] mb-1">
+              <span>Sự cố &amp; Nghiệm thu</span>
+              <ShieldCheck className="w-3.5 h-3.5 text-purple-500" />
+            </div>
+            <div className="text-xl font-bold font-mono text-purple-700 dark:text-purple-400">
+              {anchoredIncidentsCount}/{incidents.length}
+            </div>
+            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Chống gian lận đền bù
+            </div>
+          </div>
+        </div>
+
+        {/* Action Hub: Batch Anchor & Batch Audit */}
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+          <div className="space-y-0.5">
+            <h3 className="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+              <Zap className="w-4 h-4 text-emerald-600 dark:text-[#00FF9D]" />
+              Trung tâm Điều hành Neo Hàng loạt &amp; Kiểm toán On-Chain (Batch Engine)
+            </h3>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Tự động gom nhóm tất cả hồ sơ hợp lệ, tính Canonical SHA-256 song song và neo đồng loạt lên Smart Contract.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleBatchAnchorUnanchoredTrees}
+              disabled={isBatchAnchoring || unanchoredTreesCount === 0}
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-xs ${
+                unanchoredTreesCount === 0
+                  ? 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600 cursor-not-allowed'
+                  : 'bg-[#174B36] hover:bg-[#123829] text-white dark:bg-[#00FF9D] dark:hover:bg-[#00e68d] dark:text-[#022c1b]'
+              }`}
+            >
+              {isBatchAnchoring ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  Đang neo {unanchoredTreesCount} cây...
+                </>
+              ) : (
+                <>
+                  <Link2 className="w-3.5 h-3.5" />
+                  Neo hàng loạt {unanchoredTreesCount} cây chưa neo
+                </>
+              )}
+            </button>
+
+            {careRecords.length > anchoredCareCount && (
+              <button
+                type="button"
+                onClick={handleBatchAnchorCareRecords}
+                disabled={isBatchAnchoring}
+                className="px-3 py-2 rounded-xl text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800 transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <FileCheck className="w-3.5 h-3.5" />
+                Neo {careRecords.length - anchoredCareCount} nhật ký chăm sóc
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleBatchAuditAllTrees}
+              disabled={isBatchVerifying}
+              className="px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              {isBatchVerifying ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-500" />
+                  Đang đối soát toàn bộ...
+                </>
+              ) : (
+                <>
+                  <CheckSquare className="w-3.5 h-3.5 text-emerald-600 dark:text-[#00FF9D]" />
+                  Kiểm toán toàn bộ {trees.length} cây (Audit All)
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Batch Operation Result Feedback Banner */}
+        {batchResultNotice && (
+          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 dark:bg-emerald-950/60 dark:border-emerald-800 dark:text-emerald-200 flex items-center justify-between animate-fadeIn">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-[#00FF9D] shrink-0" />
+              <span>{batchResultNotice}</span>
+            </div>
+            <button
+              onClick={() => setBatchResultNotice(null)}
+              className="text-xs text-emerald-600 hover:underline cursor-pointer"
+            >
+              Đóng
+            </button>
+          </div>
+        )}
+
+        {/* Batch Audit Report Alert */}
+        {batchAuditResult && (
+          <div className={`p-4 rounded-xl border text-xs space-y-2 animate-fadeIn ${
+            batchAuditResult.mismatchCount > 0
+              ? 'bg-rose-50 border-rose-200 text-rose-900 dark:bg-rose-950/50 dark:border-rose-900 dark:text-rose-200'
+              : 'bg-emerald-50 border-emerald-200 text-emerald-900 dark:bg-emerald-950/50 dark:border-emerald-900 dark:text-emerald-200'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="font-bold text-sm flex items-center gap-2">
+                {batchAuditResult.mismatchCount > 0 ? (
+                  <>
+                    <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                    BÁO CÁO KIỂM TOÁN: PHÁT HIỆN DỮ LIỆU BỊ SAI LỆCH ({batchAuditResult.mismatchCount} CÂY)
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-[#00FF9D]" />
+                    KẾT QUẢ KIỂM TOÁN HOÀN HẢO: 100% DỮ LIỆU ĐÃ NEO KHỚP VỚI BLOCKCHAIN
+                  </>
+                )}
+              </div>
+              <button
+                onClick={() => setBatchAuditResult(null)}
+                className="text-xs hover:underline cursor-pointer opacity-70"
+              >
+                Đóng
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 py-1 text-center font-mono">
+              <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded">
+                Tổng đã quét: <strong>{batchAuditResult.totalChecked}</strong>
+              </div>
+              <div className="p-2 bg-emerald-100/60 dark:bg-emerald-900/40 text-emerald-700 dark:text-[#00FF9D] rounded">
+                Hợp lệ: <strong>{batchAuditResult.validCount}</strong>
+              </div>
+              <div className={`p-2 rounded ${
+                batchAuditResult.mismatchCount > 0
+                  ? 'bg-rose-200/80 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300 font-bold'
+                  : 'bg-slate-100 dark:bg-slate-900 text-slate-500'
+              }`}>
+                Sai lệch (Mismatch): <strong>{batchAuditResult.mismatchCount}</strong>
+              </div>
+            </div>
+
+            {batchAuditResult.mismatchList.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-rose-200 dark:border-rose-900">
+                <span className="font-semibold">Danh sách cây bị sai lệch mã băm:</span>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {batchAuditResult.mismatchList.map((m) => (
+                    <span
+                      key={m.code}
+                      className="px-2 py-0.5 rounded bg-rose-200/90 text-rose-800 dark:bg-rose-900 dark:text-rose-200 font-mono text-[11px]"
+                    >
+                      {m.code} ({m.name})
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Main Grid: Section A19 (Verification Tool) + Tamper Lab */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left: Verification Console (Section A19) */}
@@ -215,7 +649,54 @@ export const BlockchainVerifyView: React.FC = () => {
             </div>
           </div>
 
-          {/* Selector */}
+        {/* Selector */}
+        <div className="space-y-3">
+          {selectedRecordType === 'TREE_PROFILE' && (
+            <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/80 dark:border-slate-800">
+              <span className="font-semibold text-slate-700 dark:text-slate-300 text-[11px] flex items-center gap-1.5">
+                <Database className="w-3.5 h-3.5 text-emerald-600 dark:text-[#00FF9D]" />
+                Lọc cây hiển thị theo tình trạng neo:
+              </span>
+              <div className="flex items-center gap-1 bg-white dark:bg-slate-950 p-1 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setTreeAnchorFilter('ALL')}
+                  className={`px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer ${
+                    treeAnchorFilter === 'ALL'
+                      ? 'bg-[#174B36] text-white dark:bg-[#00FF9D] dark:text-[#022c1b] shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Tất cả ({trees.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTreeAnchorFilter('UNANCHORED')}
+                  className={`px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                    treeAnchorFilter === 'UNANCHORED'
+                      ? 'bg-amber-600 text-white dark:bg-amber-500 dark:text-slate-950 shadow-xs'
+                      : 'text-amber-700 dark:text-amber-400 hover:text-amber-800'
+                  }`}
+                >
+                  <AlertTriangle className="w-3 h-3" />
+                  Chưa neo ({unanchoredTreesCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTreeAnchorFilter('ANCHORED')}
+                  className={`px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                    treeAnchorFilter === 'ANCHORED'
+                      ? 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-slate-950 shadow-xs'
+                      : 'text-emerald-700 dark:text-[#00FF9D] hover:text-emerald-800'
+                  }`}
+                >
+                  <CheckCircle2 className="w-3 h-3" />
+                  Đã neo ({anchoredTreesCount})
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Loại bản ghi:</label>
@@ -224,7 +705,7 @@ export const BlockchainVerifyView: React.FC = () => {
                 onChange={(e) => {
                   const type = e.target.value as RecordType;
                   setSelectedRecordType(type);
-                  if (type === 'TREE_PROFILE') setSelectedRecordId(trees[0]?.id || '');
+                  if (type === 'TREE_PROFILE') setSelectedRecordId(displayTreesForSelector[0]?.id || trees[0]?.id || '');
                   else if (type === 'CARE_RECORD') setSelectedRecordId(careRecords[0]?.id || '');
                   else setSelectedRecordId(incidents[0]?.id || '');
                   setVerifyResult(null);
@@ -241,13 +722,13 @@ export const BlockchainVerifyView: React.FC = () => {
             <div>
               {selectedRecordType === 'TREE_PROFILE' ? (
                 <TreeSearchSelect
-                  trees={trees}
+                  trees={displayTreesForSelector}
                   value={selectedRecordId}
                   onChange={(treeId) => {
                     setSelectedRecordId(treeId);
                     setVerifyResult(null);
                   }}
-                  label="Chọn cá thể cây xanh cần kiểm tra đối soát"
+                  label={`Chọn cá thể cây xanh (${displayTreesForSelector.length} cây theo bộ lọc):`}
                   placeholder="Gõ mã cây (HB-01), tên cây hoặc vị trí để tìm nhanh..."
                   required
                 />
@@ -279,9 +760,10 @@ export const BlockchainVerifyView: React.FC = () => {
               )}
             </div>
           </div>
+        </div>
 
-          <button
-            onClick={handleVerify}
+        <button
+          onClick={handleVerify}
             disabled={isVerifying}
             className="w-full py-2.5 bg-[#174B36] hover:bg-[#347A50] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-2xs dark:bg-emerald-600 dark:hover:bg-emerald-500 dark:shadow-[0_0_20px_rgba(16,185,129,0.3)] cursor-pointer"
           >
@@ -567,6 +1049,221 @@ export const BlockchainVerifyView: React.FC = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* LIVE ANCHOR CHECKLIST: BẢNG KIỂM TRA TÌNH TRẠNG NEO CỦA TỪNG CÂY */}
+      <div className="bg-white dark:bg-[#0c1812] p-5 rounded-2xl border border-[#E0EBDD] dark:border-slate-800 shadow-2xs space-y-4 text-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-bold text-[#174B36] dark:text-[#00FF9D] flex items-center gap-2">
+              <CheckSquare className="w-4 h-4 text-emerald-600 dark:text-[#00FF9D]" />
+              <span>Bảng Đối Soát &amp; Kiểm Tra Tình Trạng Neo (Live Anchor Checklist)</span>
+            </h2>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Kiểm tra trực quan cây nào đã neo, cây nào chưa neo và bấm neo lẻ hoặc chọn kiểm tra ngay tức thì.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={tableSearch}
+                onChange={(e) => {
+                  setTableSearch(e.target.value);
+                  setTablePage(1);
+                }}
+                placeholder="Tìm mã cây, tên loài, vị trí..."
+                className="pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-xl focus:border-emerald-500 text-slate-800 dark:text-slate-200 w-56"
+              />
+            </div>
+
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px]">
+              <button
+                type="button"
+                onClick={() => {
+                  setTreeAnchorFilter('ALL');
+                  setTablePage(1);
+                }}
+                className={`px-2 py-1 rounded-md font-semibold transition-all cursor-pointer ${
+                  treeAnchorFilter === 'ALL'
+                    ? 'bg-[#174B36] text-white dark:bg-[#00FF9D] dark:text-[#022c1b]'
+                    : 'text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                Tất cả ({trees.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTreeAnchorFilter('UNANCHORED');
+                  setTablePage(1);
+                }}
+                className={`px-2 py-1 rounded-md font-semibold transition-all cursor-pointer ${
+                  treeAnchorFilter === 'UNANCHORED'
+                    ? 'bg-amber-600 text-white dark:bg-amber-500 dark:text-slate-950'
+                    : 'text-amber-700 dark:text-amber-400'
+                }`}
+              >
+                Chưa neo ({unanchoredTreesCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTreeAnchorFilter('ANCHORED');
+                  setTablePage(1);
+                }}
+                className={`px-2 py-1 rounded-md font-semibold transition-all cursor-pointer ${
+                  treeAnchorFilter === 'ANCHORED'
+                    ? 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-slate-950'
+                    : 'text-emerald-700 dark:text-[#00FF9D]'
+                }`}
+              >
+                Đã neo ({anchoredTreesCount})
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 dark:bg-[#08120c] border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
+              <tr>
+                <th className="py-2.5 px-3">Mã cây / Tuyến</th>
+                <th className="py-2.5 px-3">Tên cá thể cây</th>
+                <th className="py-2.5 px-3">Vị trí / Địa bàn</th>
+                <th className="py-2.5 px-3">Tình trạng Smart Contract</th>
+                <th className="py-2.5 px-3">Transaction Hash</th>
+                <th className="py-2.5 px-3 text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-[11px]">
+              {tablePaginatedTrees.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-slate-400">
+                    Không tìm thấy cây nào phù hợp với bộ lọc.
+                  </td>
+                </tr>
+              ) : (
+                tablePaginatedTrees.map((tree) => {
+                  const anc = blockchainService.getAnchor('TREE_PROFILE', tree.id);
+                  const isAnchored = !!anc;
+                  const streetCode = getTreeStreetCode(tree);
+                  const milestone = getTreeMilestone(tree);
+
+                  return (
+                    <tr
+                      key={tree.id}
+                      className="hover:bg-slate-50/80 dark:hover:bg-[#102017]/70 transition-colors"
+                    >
+                      <td className="py-2.5 px-3 font-mono font-bold text-[#174B36] dark:text-[#00FF9D]">
+                        <div>{tree.publicCode}</div>
+                        {streetCode && (
+                          <span className="text-[10px] font-sans px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                            {streetCode}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 font-semibold text-slate-800 dark:text-slate-100">
+                        {tree.displayName}
+                        <div className="text-[10px] text-slate-400 font-normal">
+                          {tree.healthStatus} · {tree.classification || 'TYPE_1'}
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300">
+                        {milestone ? `${milestone}, ` : ''}{tree.address || 'TP. Cần Thơ'}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        {isAnchored ? (
+                          <span className="inline-flex items-center gap-1 font-bold text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-[#00FF9D] dark:border dark:border-emerald-500/40">
+                            <CheckCircle2 className="w-3 h-3" />
+                            ĐÃ NEO (Block #{anc.blockNumber})
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 font-bold text-[10px] px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 dark:border dark:border-amber-500/40">
+                            <AlertTriangle className="w-3 h-3" />
+                            CHƯA NEO (NOT_ANCHORED)
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                        {anc?.txHash ? (
+                          <span title={anc.txHash}>
+                            {anc.txHash.slice(0, 10)}...{anc.txHash.slice(-6)}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 italic">Chưa phát hành Tx</span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {!isAnchored ? (
+                            <button
+                              type="button"
+                              onClick={() => handleAnchorSpecificTree(tree.id)}
+                              className="px-2.5 py-1 rounded-lg bg-[#174B36] hover:bg-[#123829] text-white dark:bg-[#00FF9D] dark:hover:bg-[#00e68d] dark:text-[#022c1b] font-semibold text-[10px] transition-colors cursor-pointer flex items-center gap-1"
+                            >
+                              <Link2 className="w-3 h-3" />
+                              Neo ngay
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedRecordType('TREE_PROFILE');
+                                setSelectedRecordId(tree.id);
+                                handleVerify();
+                                window.scrollTo({ top: 400, behavior: 'smooth' });
+                              }}
+                              className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 text-[10px] transition-colors cursor-pointer flex items-center gap-1"
+                            >
+                              <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-[#00FF9D]" />
+                              Kiểm tra
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {tableTotalPages > 1 && (
+          <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              Hiển thị {(tablePage - 1) * tablePageSize + 1} -{' '}
+              {Math.min(tablePage * tablePageSize, tableFilteredTrees.length)} trên tổng số{' '}
+              <strong>{tableFilteredTrees.length}</strong> cây
+            </span>
+
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setTablePage((p) => Math.max(1, p - 1))}
+                disabled={tablePage === 1}
+                className="px-2.5 py-1 rounded border border-slate-200 dark:border-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-[11px] cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900"
+              >
+                Trước
+              </button>
+              <span className="px-2 font-mono text-[11px] text-slate-700 dark:text-slate-300">
+                {tablePage} / {tableTotalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setTablePage((p) => Math.min(tableTotalPages, p + 1))}
+                disabled={tablePage === tableTotalPages}
+                className="px-2.5 py-1 rounded border border-slate-200 dark:border-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-[11px] cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900"
+              >
+                Sau
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

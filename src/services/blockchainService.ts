@@ -148,6 +148,63 @@ class BlockchainService {
   }
 
   /**
+   * ⚡ BATCH ANCHOR: Neo hàng loạt nhiều bản ghi trong cùng một block / transaction
+   */
+  public async batchAnchorRecords(
+    items: Array<{
+      recordType: RecordType;
+      recordId: string;
+      payloadVersion?: number;
+      hash: string;
+      canonicalJson?: string;
+    }>
+  ): Promise<{
+    count: number;
+    startBlock: number;
+    endBlock: number;
+    receipts: Array<{ recordId: string; txHash: string; blockNumber: number }>;
+  }> {
+    if (!this.isNodeOnline) {
+      throw new Error('EVM Local Node đang ngoại tuyến (Offline)');
+    }
+
+    const startBlock = this.currentBlockNumber + 1;
+    const receipts: Array<{ recordId: string; txHash: string; blockNumber: number }> = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      this.currentBlockNumber += 1;
+      const blockNumber = this.currentBlockNumber;
+      const txHash = this.generateTxHash(item.recordType, item.recordId, blockNumber);
+      const key = this.getKey(item.recordType, item.recordId);
+
+      const onChainRecord: OnChainRecord = {
+        recordType: item.recordType,
+        recordId: item.recordId,
+        payloadVersion: item.payloadVersion || 1,
+        payloadHash: item.hash.toLowerCase(),
+        canonicalJson: item.canonicalJson || '',
+        txHash,
+        blockNumber,
+        contractAddress: CONTRACT_ADDRESS,
+        anchoredAt: new Date().toISOString(),
+      };
+
+      this.anchors.set(key, onChainRecord);
+      receipts.push({ recordId: item.recordId, txHash, blockNumber });
+    }
+
+    this.saveToStorage();
+
+    return {
+      count: items.length,
+      startBlock,
+      endBlock: this.currentBlockNumber,
+      receipts,
+    };
+  }
+
+  /**
    * Verifies an on-chain record against current database record state.
    */
   public async verifyRecord(
