@@ -164,22 +164,22 @@ export const NotificationsView: React.FC<NotificationsViewProps> = ({
   return (
     <div className="space-y-5 animate-fade-in pb-16">
       {/* 🌟 HEADER BANNER */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c2419] via-[#091811] to-[#040e08] border border-emerald-500/25 p-5 sm:p-7 text-white shadow-2xl">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-50 via-teal-50/40 to-slate-50 dark:from-[#0c2419] dark:via-[#091811] dark:to-[#040e08] border border-emerald-200/80 dark:border-emerald-500/25 p-5 sm:p-7 text-slate-800 dark:text-white shadow-xl dark:shadow-2xl transition-colors">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-400/10 dark:bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-xs font-semibold">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100/90 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-400/30 text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600 dark:bg-emerald-500" />
               </span>
               <span>Trung Tâm Chỉ Huy Giám Sát Đô Thị 4.0</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-2.5">
-              <Bell className="w-7 h-7 text-amber-400" />
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
+              <Bell className="w-7 h-7 text-amber-500 dark:text-amber-400" />
               <span>Trung Tâm Thông Báo &amp; Cảnh Báo</span>
             </h1>
-            <p className="text-xs sm:text-sm text-slate-300/90 max-w-2xl leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300/90 max-w-2xl leading-relaxed">
               Kênh thông tin tích hợp đa vai trò: Cập nhật các cảnh báo giông bão, hạn SLA khẩn cấp, phân công kỹ thuật viên thực địa và tiến độ xử lý phản ánh dân sinh.
             </p>
           </div>
@@ -187,16 +187,16 @@ export const NotificationsView: React.FC<NotificationsViewProps> = ({
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
               onClick={handleMarkAllAsRead}
-              className="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs transition-all flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white font-bold text-xs transition-all flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
             >
-              <CheckCheck className="w-4 h-4 text-emerald-200" />
+              <CheckCheck className="w-4 h-4 text-emerald-100" />
               <span>Đánh dấu đã đọc</span>
             </button>
             <button
               onClick={handleDeleteAllRead}
-              className="px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-rose-900/60 text-slate-200 hover:text-white border border-slate-700/80 hover:border-rose-600/80 font-bold text-xs transition-all flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200 hover:border-rose-300 dark:bg-slate-800/80 dark:hover:bg-rose-900/60 dark:text-slate-200 dark:hover:text-white dark:border-slate-700/80 dark:hover:border-rose-600/80 font-bold text-xs transition-all flex items-center gap-1.5 shadow-xs active:scale-95 cursor-pointer"
             >
-              <Trash2 className="w-4 h-4 text-slate-400 group-hover:text-rose-300" />
+              <Trash2 className="w-4 h-4 text-slate-400 group-hover:text-rose-500" />
               <span>Dọn dẹp đã đọc</span>
             </button>
           </div>

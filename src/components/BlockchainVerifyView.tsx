@@ -373,36 +373,36 @@ export const BlockchainVerifyView: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Banner / EVM Node Telemetry */}
-      <div className="bg-[#174B36] rounded-2xl p-6 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 dark:bg-gradient-to-r dark:from-[#05130b] dark:via-[#091f13] dark:to-[#06140c] dark:border dark:border-emerald-500/30 dark:shadow-[0_0_30px_rgba(0,255,157,0.08)]">
+      <div className="rounded-2xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-br from-emerald-50 via-teal-50/40 to-slate-50 border border-emerald-200/80 text-slate-800 dark:bg-gradient-to-r dark:from-[#05130b] dark:via-[#091f13] dark:to-[#06140c] dark:border-emerald-500/30 dark:text-white dark:shadow-[0_0_30px_rgba(0,255,157,0.08)] transition-colors">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 dark:bg-[#00FF9D] animate-pulse dark:shadow-[0_0_10px_#00FF9D]" />
-            <span className="text-xs font-mono font-bold text-[#F3E8B2] dark:text-[#00FF9D] uppercase tracking-wider">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 dark:bg-[#00FF9D] animate-pulse dark:shadow-[0_0_10px_#00FF9D]" />
+            <span className="text-xs font-mono font-bold text-emerald-800 dark:text-[#00FF9D] uppercase tracking-wider">
               Smart Contract: UrbanTreeRegistry.sol
             </span>
           </div>
-          <h1 className="text-xl font-bold">Sổ cái Hoạt động &amp; Xác minh Tính toàn vẹn Blockchain</h1>
-          <p className="text-xs text-white/80 dark:text-emerald-100/70 max-w-xl">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white">Sổ cái Hoạt động &amp; Xác minh Tính toàn vẹn Blockchain</h1>
+          <p className="text-xs text-slate-600 dark:text-emerald-100/70 max-w-xl">
             Màn hình A18/A19: Đối chiếu chuỗi băm Canonical SHA-256 hiện tại với chữ ký điện tử đã neo trên mạng EVM để chứng minh tính bất biến.
           </p>
         </div>
 
         {/* Node Status Card & Offline Toggle */}
-        <div className="bg-white/10 dark:bg-[#040e08]/90 backdrop-blur-xs p-3.5 rounded-xl border border-white/20 dark:border-emerald-500/30 text-xs space-y-2 shrink-0">
+        <div className="bg-white/80 dark:bg-[#040e08]/90 backdrop-blur-xs p-3.5 rounded-xl border border-emerald-200/80 dark:border-emerald-500/30 text-xs space-y-2 shrink-0 shadow-2xs">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-white/80 dark:text-slate-300">Trạng thái Node EVM:</span>
+            <span className="text-slate-600 dark:text-slate-300 font-medium">Trạng thái Node EVM:</span>
             <span
               className={`font-mono font-bold px-2 py-0.5 rounded text-[10px] ${
                 nodeOnline
-                  ? 'bg-emerald-500 text-white dark:bg-emerald-500/20 dark:text-[#00FF9D] dark:border dark:border-emerald-500/40 dark:shadow-[0_0_10px_rgba(0,255,157,0.3)]'
-                  : 'bg-red-500 text-white dark:bg-rose-950/80 dark:text-rose-300 dark:border dark:border-rose-500/40'
+                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-500/20 dark:text-[#00FF9D] dark:border-emerald-500/40 dark:shadow-[0_0_10px_rgba(0,255,157,0.3)]'
+                  : 'bg-red-100 text-red-800 border border-red-300 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-500/40'
               }`}
             >
               {nodeOnline ? 'ONLINE (127.0.0.1:8545)' : 'OFFLINE'}
             </span>
           </div>
 
-          <div className="font-mono text-[11px] text-white/90 dark:text-slate-200 space-y-0.5">
+          <div className="font-mono text-[11px] text-slate-700 dark:text-slate-200 space-y-0.5">
             <div>Chain ID: <strong>{nodeStatus.chainId} (Local Hardhat)</strong></div>
             <div className="truncate max-w-[220px]">Contract: {nodeStatus.contractAddress}</div>
             <div>Block mới nhất: <strong>#{nodeStatus.blockNumber}</strong></div>
@@ -410,7 +410,7 @@ export const BlockchainVerifyView: React.FC = () => {
 
           <button
             onClick={handleToggleNode}
-            className="w-full py-1 bg-white/20 hover:bg-white/30 dark:bg-emerald-950/70 dark:hover:bg-emerald-900/70 dark:border dark:border-emerald-500/30 dark:text-[#00FF9D] text-white font-semibold rounded text-[11px] transition-colors cursor-pointer"
+            className="w-full py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 dark:bg-emerald-950/70 dark:hover:bg-emerald-900/70 dark:border-emerald-500/30 dark:text-[#00FF9D] font-semibold rounded text-[11px] transition-colors cursor-pointer"
           >
             {nodeOnline ? 'Mô phỏng ngắt kết nối Node' : 'Bật lại kết nối Node'}
           </button>
