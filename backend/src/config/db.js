@@ -96,6 +96,11 @@ db.serialize(() => {
   addColumnIfNotExists('trees', 'diameter_cm', 'REAL');
   addColumnIfNotExists('trees', 'status', "TEXT DEFAULT 'ACTIVE'");
   addColumnIfNotExists('trees', 'image_url', 'TEXT');
+  // 📜 Quản lý Vòng Đời Cây Đốn Hạ / Giải Tỏa theo Luật (UT-002)
+  addColumnIfNotExists('trees', 'felling_permit_no', 'TEXT');
+  addColumnIfNotExists('trees', 'felling_reason', 'TEXT');
+  addColumnIfNotExists('trees', 'approved_by', 'TEXT');
+  addColumnIfNotExists('trees', 'felled_at', 'DATETIME');
 
   // ==============================================================
   // 4. NHÓM NHẬT KÝ CHĂM SÓC THỰC ĐỊA (care_records)
@@ -132,6 +137,11 @@ db.serialize(() => {
   addColumnIfNotExists('care_records', 'data_hash', 'TEXT');
   addColumnIfNotExists('care_records', 'anchor_status', "TEXT DEFAULT 'PENDING'");
   addColumnIfNotExists('care_records', 'created_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP');
+  // 📝 Chuỗi Đính Chính Bất Biến Append-only Correction Chain (UT-008)
+  addColumnIfNotExists('care_records', 'supersedes_record_id', 'INTEGER');
+  addColumnIfNotExists('care_records', 'correction_reason', 'TEXT');
+  addColumnIfNotExists('care_records', 'is_superseded', 'INTEGER DEFAULT 0');
+  addColumnIfNotExists('care_records', 'tree_code', 'TEXT');
 
   // ==============================================================
   // 5. NHÓM TIẾP NHẬN SỰ CỐ (incidents)
@@ -169,6 +179,9 @@ db.serialize(() => {
   addColumnIfNotExists('incidents', 'assigned_staff_id', 'INTEGER');
   addColumnIfNotExists('incidents', 'resolved_at', 'DATETIME');
   addColumnIfNotExists('incidents', 'updated_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP');
+  // 📍 Lọc Trùng Không Gian & Thời Gian (Spatial-Temporal Deduplication - UT-005)
+  addColumnIfNotExists('incidents', 'duplicate_count', 'INTEGER DEFAULT 0');
+  addColumnIfNotExists('incidents', 'master_incident_id', 'INTEGER');
 
   // ==============================================================
   // 6. NHÓM LỊCH SỬ TIẾN ĐỘ SỰ CỐ (incident_updates)
@@ -250,6 +263,234 @@ db.serialize(() => {
   db.run(`CREATE INDEX IF NOT EXISTS idx_ai_tree ON ai_assessments(tree_id, assessment_type);`);
 
   // ==============================================================
+  // 10. NHÓM VẬN HÀNH ĐÔ THỊ & ĐIỀU ĐỘNG CƠ GIỚI (OPERATIONS UPGRADE)
+  // ==============================================================
+  // 10.1. Ban Chuyên Trách (departments)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS departments (
+      id TEXT PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      status TEXT DEFAULT 'ACTIVE',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // 10.2. Phân Cấp Khu Vực & Tuyến Đường (operational_zones & routes)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS operational_zones (
+      id TEXT PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      district TEXT,
+      description TEXT,
+      boundary_geometry TEXT,
+      status TEXT DEFAULT 'ACTIVE',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS routes (
+      id TEXT PRIMARY KEY,
+      zone_id TEXT,
+      code TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      start_point TEXT,
+      end_point TEXT,
+      total_trees_count INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'ACTIVE',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (zone_id) REFERENCES operational_zones(id) ON DELETE SET NULL
+    )
+  `);
+
+  // 10.3. Xe Cơ Giới & Thiết Bị Chuyên Dụng (equipment)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS equipment (
+      id TEXT PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      plate_number TEXT,
+      status TEXT DEFAULT 'AVAILABLE',
+      capabilities TEXT,
+      assigned_team_id TEXT,
+      current_work_order_id TEXT,
+      maintenance_note TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  addColumnIfNotExists('equipment', 'assigned_team_id', 'TEXT');
+  addColumnIfNotExists('equipment', 'current_work_order_id', 'TEXT');
+
+  // 10.4. Biên Chế Tổ Đội Thực Địa (teams)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS teams (
+      id TEXT PRIMARY KEY,
+      department_id TEXT,
+      code TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      leader_user_id TEXT,
+      leader_name TEXT,
+      leader_phone TEXT,
+      member_user_ids TEXT,
+      capabilities TEXT,
+      assigned_equipment_ids TEXT,
+      status TEXT DEFAULT 'AVAILABLE',
+      current_status TEXT DEFAULT 'AVAILABLE',
+      assigned_zone_id TEXT,
+      active_work_orders_count INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL
+    )
+  `);
+  addColumnIfNotExists('teams', 'department_id', 'TEXT');
+  addColumnIfNotExists('teams', 'assigned_equipment_ids', 'TEXT');
+
+  // 10.5. Lệnh Công Tác Tuyến (work_orders)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS work_orders (
+      id TEXT PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      type TEXT NOT NULL,
+      priority TEXT NOT NULL,
+      scope_type TEXT NOT NULL,
+      zone_id TEXT,
+      route_id TEXT,
+      route_corridor_name TEXT,
+      incident_id TEXT,
+      status TEXT NOT NULL,
+      workflow_status TEXT NOT NULL,
+      sla_status TEXT DEFAULT 'ON_TRACK',
+      scheduled_start DATETIME,
+      scheduled_end DATETIME,
+      deadline DATETIME,
+      actual_start DATETIME,
+      actual_end DATETIME,
+      hold_reason TEXT,
+      held_by_user_id TEXT,
+      held_at DATETIME,
+      required_capabilities TEXT,
+      required_equipment_ids TEXT,
+      assigned_team_id TEXT,
+      assigned_team_name TEXT,
+      assigned_vehicle_name TEXT,
+      assigned_vehicle_plate TEXT,
+      total_items INTEGER DEFAULT 0,
+      completed_items INTEGER DEFAULT 0,
+      skipped_items INTEGER DEFAULT 0,
+      failed_items INTEGER DEFAULT 0,
+      progress_percent INTEGER DEFAULT 0,
+      supervisor_user_id TEXT,
+      supervisor_notes TEXT,
+      sla_target_minutes INTEGER,
+      is_overdue INTEGER DEFAULT 0,
+      created_by_user_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      payload_hash TEXT,
+      anchor_status TEXT DEFAULT 'PENDING',
+      retry_count INTEGER DEFAULT 0,
+      last_error TEXT,
+      last_attempt_at DATETIME,
+      next_retry_at DATETIME,
+      tx_hash TEXT
+    )
+  `);
+  addColumnIfNotExists('work_orders', 'workflow_status', 'TEXT');
+  addColumnIfNotExists('work_orders', 'sla_status', "TEXT DEFAULT 'ON_TRACK'");
+  addColumnIfNotExists('work_orders', 'hold_reason', 'TEXT');
+  addColumnIfNotExists('work_orders', 'held_by_user_id', 'TEXT');
+  addColumnIfNotExists('work_orders', 'held_at', 'DATETIME');
+  addColumnIfNotExists('work_orders', 'retry_count', 'INTEGER DEFAULT 0');
+  addColumnIfNotExists('work_orders', 'last_error', 'TEXT');
+  addColumnIfNotExists('work_orders', 'last_attempt_at', 'DATETIME');
+  addColumnIfNotExists('work_orders', 'next_retry_at', 'DATETIME');
+
+  // 10.6. Chi Tiết Thực Thi Từng Cây (work_order_items)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS work_order_items (
+      id TEXT PRIMARY KEY,
+      work_order_id TEXT NOT NULL,
+      tree_id TEXT NOT NULL,
+      tree_street_code TEXT,
+      tree_display_name TEXT,
+      house_milestone TEXT,
+      sequence INTEGER DEFAULT 1,
+      status TEXT DEFAULT 'PENDING',
+      result TEXT,
+      reason TEXT,
+      skip_or_failure_reason TEXT,
+      completed_at DATETIME,
+      completed_by TEXT,
+      completed_by_user_id TEXT,
+      evidence_before_image_url TEXT,
+      evidence_after_image_url TEXT,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (work_order_id) REFERENCES work_orders(id) ON DELETE CASCADE
+    )
+  `);
+  addColumnIfNotExists('work_order_items', 'reason', 'TEXT');
+  addColumnIfNotExists('work_order_items', 'completed_by', 'TEXT');
+
+  // 10.7. Nhật Ký Lịch Sử & Audit Lệnh Công Tác (work_order_history)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS work_order_history (
+      id TEXT PRIMARY KEY,
+      work_order_id TEXT NOT NULL,
+      actor_user_id TEXT,
+      actor_name TEXT,
+      previous_state TEXT,
+      previous_status TEXT,
+      newState TEXT,
+      new_status TEXT,
+      action TEXT,
+      reason TEXT,
+      previous_team_id TEXT,
+      new_team_id TEXT,
+      held_reason TEXT,
+      performed_by TEXT,
+      performed_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (work_order_id) REFERENCES work_orders(id) ON DELETE CASCADE
+    )
+  `);
+  addColumnIfNotExists('work_order_history', 'action', 'TEXT');
+  addColumnIfNotExists('work_order_history', 'previous_team_id', 'TEXT');
+  addColumnIfNotExists('work_order_history', 'new_team_id', 'TEXT');
+  addColumnIfNotExists('work_order_history', 'held_reason', 'TEXT');
+
+  // 10.8. Hàng Đợi Neo Hash Blockchain với Retry Policy (blockchain_anchor_queue)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS blockchain_anchor_queue (
+      id TEXT PRIMARY KEY,
+      payload_type TEXT NOT NULL,
+      payload_id TEXT NOT NULL,
+      payload_hash TEXT NOT NULL,
+      canonical_json TEXT,
+      status TEXT DEFAULT 'PENDING',
+      retry_count INTEGER DEFAULT 0,
+      max_retries INTEGER DEFAULT 5,
+      last_error TEXT,
+      last_attempt_at DATETIME,
+      next_retry_at DATETIME,
+      tx_hash TEXT,
+      block_number INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_anchor_queue_status ON blockchain_anchor_queue(status, next_retry_at);`);
+
+  // ==============================================================
   // CHÈN DỮ LIỆU MẪU BAN ĐẦU (SEED DATA)
   // ==============================================================
   // 1. Seed Users
@@ -297,6 +538,44 @@ db.serialize(() => {
       stmt.finalize();
     }
   });
+  // ==============================================================
+  // 12. BẢNG BÁO CÁO PHẢN ÁNH SỰ CỐ TRÙNG LẶP (incident_duplicate_reports)
+  // Phục vụ cơ chế Deduplication: Lưu danh sách người dân cùng phản ánh sự cố
+  // ==============================================================
+  db.run(`
+    CREATE TABLE IF NOT EXISTS incident_duplicate_reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      master_incident_id INTEGER NOT NULL,
+      reporter_name TEXT,
+      reporter_phone TEXT,
+      description TEXT,
+      image_url TEXT,
+      distance_meters REAL,
+      submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (master_incident_id) REFERENCES incidents(id) ON DELETE CASCADE
+    )
+  `);
+
+  // ==============================================================
+  // 13. BẢNG HÀNG ĐỢI NEO BLOCKCHAIN BỀN VỮNG (blockchain_anchor_jobs)
+  // Thay thế in-memory queue, bền vững khi restart server (P0 Durability)
+  // ==============================================================
+  db.run(`
+    CREATE TABLE IF NOT EXISTS blockchain_anchor_jobs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      payload_hash TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'PENDING' CHECK(status IN ('PENDING', 'PROCESSING', 'RETRYING', 'CONFIRMED', 'FAILED_FINAL')),
+      retry_count INTEGER DEFAULT 0,
+      last_error TEXT,
+      next_retry_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      tx_hash TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      started_at DATETIME,
+      completed_at DATETIME
+    )
+  `);
 });
 
 module.exports = db;

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import {
   AlertTriangle,
   Plus,
@@ -28,26 +28,71 @@ interface IncidentsViewProps {
   onSelectTree: (tree: any) => void;
   currentUser: User;
   initialTreeId?: string;
+  initialIncidentId?: string;
 }
 
 export const IncidentsView: React.FC<IncidentsViewProps> = ({
   onSelectTree,
   currentUser,
   initialTreeId,
+  initialIncidentId,
 }) => {
   const incidents = storage.getIncidents();
   const trees = storage.getTrees();
   const users = storage.getUsers();
 
+  // ⚡ Tối ưu O(1) tra cứu cây xanh cho danh sách sự cố
+  const treeMap = useMemo(() => {
+    const map = new Map<string, any>();
+    for (let i = 0; i < trees.length; i++) {
+      map.set(trees[i].id, trees[i]);
+    }
+    return map;
+  }, [trees]);
+
   const [activeSubTab, setActiveSubTab] = useState<'admin' | 'public_report' | 'public_lookup'>(
-    initialTreeId ? 'public_report' : currentUser.role === 'CITIZEN' ? 'public_report' : 'admin'
+    initialIncidentId
+      ? 'admin'
+      : initialTreeId
+      ? 'public_report'
+      : currentUser.role === 'CITIZEN'
+      ? 'public_report'
+      : 'admin'
   );
 
   // Admin / Staff filter & search
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [staffScope, setStaffScope] = useState<'MY_ASSIGNED' | 'ALL'>('MY_ASSIGNED');
-  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(() => {
+    if (initialIncidentId) {
+      return (
+        incidents.find(
+          (i) =>
+            i.id === initialIncidentId ||
+            (i.publicCode && i.publicCode.toLowerCase() === initialIncidentId.toLowerCase())
+        ) || null
+      );
+    }
+    return null;
+  });
+
+  // Tự động định vị và chọn chính xác sự cố được điều hướng từ Thông báo
+  useEffect(() => {
+    if (initialIncidentId) {
+      const match = incidents.find(
+        (i) =>
+          i.id === initialIncidentId ||
+          (i.publicCode && i.publicCode.toLowerCase() === initialIncidentId.toLowerCase())
+      );
+      if (match) {
+        setSelectedIncident(match);
+        setActiveSubTab('admin');
+        setStaffScope('ALL');
+        setStatusFilter('ALL');
+      }
+    }
+  }, [initialIncidentId, incidents]);
 
   // Status transition form state
   const [newStatus, setNewStatus] = useState<IncidentStatus>(
@@ -387,7 +432,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                 </div>
               ) : (
                 filteredIncidents.map((inc) => {
-                  const tree = inc.treeId ? trees.find((t) => t.id === inc.treeId) : null;
+                  const tree = inc.treeId ? treeMap.get(inc.treeId) : null;
                   const isSelected = selectedIncident?.id === inc.id;
                   const sla = calculateIncidentSLA(inc);
                   return (
@@ -840,7 +885,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
                     <span>
-                      Đang phản ánh cho cây: <strong>[{trees.find((t) => t.id === reportTreeId)?.publicCode}]</strong> {trees.find((t) => t.id === reportTreeId)?.displayName}
+                      Đang phản ánh cho cây: <strong>[{treeMap.get(reportTreeId)?.publicCode}]</strong> {treeMap.get(reportTreeId)?.displayName}
                     </span>
                   </div>
                   <span className="text-[10px] bg-emerald-200/70 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full">

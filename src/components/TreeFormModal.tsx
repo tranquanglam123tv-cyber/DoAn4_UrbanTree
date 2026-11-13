@@ -624,6 +624,54 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, initialCoord
     setError(null);
   };
 
+  const [isLoadingOsmFull, setIsLoadingOsmFull] = useState(false);
+
+  // ⚡ Tải trực tiếp 5.398 cây thực tế từ file OpenStreetMap Cần Thơ (tailieu/exportDuLieuCayXanh.geojson)
+  const handleLoadCanThoOsmFull = async () => {
+    setIsLoadingOsmFull(true);
+    setError(null);
+    try {
+      const res = await fetch('/cantho_trees_osm.geojson');
+      if (!res.ok) throw new Error('Không thể tải file cantho_trees_osm.geojson từ máy chủ.');
+      const json = await res.json();
+      const features = json.features || [];
+
+      const parsed: any[] = [];
+      for (let i = 0; i < features.length; i++) {
+        const f = features[i];
+        const coords = f.geometry?.coordinates;
+        if (!coords || !Array.isArray(coords) || coords.length < 2) continue;
+        const lng = parseFloat(coords[0]);
+        const lat = parseFloat(coords[1]);
+        if (isNaN(lat) || isNaN(lng)) continue;
+
+        const p = f.properties || {};
+        const code = `CT-OSM-${String(i + 1).padStart(4, '0')}`;
+        const height = parseFloat(p.height || 8) || 8;
+
+        parsed.push({
+          publicCode: code,
+          streetCode: code,
+          displayName: `Cây Xanh Đô Thị #${String(i + 1).padStart(4, '0')}`,
+          treeTypeId: treeTypes[0]?.id || 'type-bang',
+          address: `Tọa độ (${lat.toFixed(5)}, ${lng.toFixed(5)}), Ninh Kiều, Cần Thơ`,
+          latitude: lat,
+          longitude: lng,
+          diameterCm: 30,
+          heightM: Number(height.toFixed(1)),
+          healthStatus: 'GOOD' as TreeHealthStatus,
+        });
+      }
+
+      setParsedTreesFromFile(parsed);
+      setUploadedFileName(`exportDuLieuCayXanh.geojson (${parsed.length.toLocaleString('vi-VN')} cây Cần Thơ)`);
+    } catch (err: any) {
+      setError(err?.message || 'Lỗi nạp dữ liệu OSM Cần Thơ');
+    } finally {
+      setIsLoadingOsmFull(false);
+    }
+  };
+
   // 🚀 Tiến hành nhập dữ liệu từ File vào Database & Blockchain
   const handleSubmitFileImport = async () => {
     if (parsedTreesFromFile.length === 0) {
@@ -1429,6 +1477,17 @@ export const TreeFormModal: React.FC<TreeFormModalProps> = ({ tree, initialCoord
                     >
                       <Sparkles className="w-3.5 h-3.5" />
                       <span>⚡ Nạp 5 cây mẫu Cần Thơ (Thử nghiệm nhanh)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleLoadCanThoOsmFull}
+                      disabled={isLoadingOsmFull}
+                      className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-teal-600 to-emerald-700 hover:from-teal-700 hover:to-emerald-800 text-white font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-md disabled:opacity-50"
+                      title="Nạp toàn bộ 5.398 cây thực tế từ file OpenStreetMap Cần Thơ"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                      <span>{isLoadingOsmFull ? 'Đang trích xuất 5.398 cây...' : '⚡ Nạp trọn bộ 5.398 Cây Cần Thơ (OSM)'}</span>
                     </button>
                   </div>
                 </div>

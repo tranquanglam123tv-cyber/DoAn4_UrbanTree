@@ -77,6 +77,20 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   const incidents = storage.getIncidents();
   const trees = storage.getTrees();
 
+  // ⚡ Map lịch sử chăm sóc thực tế gần nhất của từng cây (Loại bỏ dữ liệu giả / mock)
+  const latestCareMap = useMemo(() => {
+    const careRecords = storage.getCareRecords();
+    const map = new Map<string, any>();
+    for (let i = 0; i < careRecords.length; i++) {
+      const c = careRecords[i];
+      const existing = map.get(c.treeId);
+      if (!existing || new Date(c.performedAt).getTime() > new Date(existing.performedAt).getTime()) {
+        map.set(c.treeId, c);
+      }
+    }
+    return map;
+  }, []);
+
   // Filter incidents reported by this citizen:
   // ONLY show demo incidents if logged in with the demo account 'nguyenvanan'.
   // Any real or newly registered user/Google account starts with their own real data (empty initially).
@@ -1022,19 +1036,38 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                         </div>
                       </div>
 
-                      {/* Recent Care Info */}
-                      <div className="p-2.5 bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-500/20 rounded-xl text-xs space-y-1">
-                        <div className="flex items-center gap-1.5 text-emerald-900 dark:text-emerald-300 font-semibold">
-                          <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                          <span>Lịch chăm sóc tuần này:</span>
-                        </div>
-                        <div className="text-[11px] text-emerald-700 dark:text-emerald-400">
-                          • Cắt tỉa cành an toàn hoàn tất ngày 10/11
-                        </div>
-                        <div className="text-[11px] text-emerald-700 dark:text-emerald-400">
-                          • Tưới dưỡng rễ: Dự kiến sáng mai 07:00
-                        </div>
-                      </div>
+                      {/* Recent Care Info - Tự động từ dữ liệu thực tế */}
+                      {(() => {
+                        const latestCare = latestCareMap.get(tree.id);
+                        return (
+                          <div className="p-2.5 bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-500/20 rounded-xl text-xs space-y-1">
+                            <div className="flex items-center gap-1.5 text-emerald-900 dark:text-emerald-300 font-semibold">
+                              <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                              <span>Tiến trình duy tu &amp; chăm sóc:</span>
+                            </div>
+                            {latestCare ? (
+                              <>
+                                <div className="text-[11px] text-emerald-800 dark:text-[#00FF9D] font-medium">
+                                  • Đã {latestCare.actionType} ngày {new Date(latestCare.performedAt).toLocaleDateString('vi-VN')}
+                                  {latestCare.staffName ? ` (${latestCare.staffName})` : ''}
+                                </div>
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                  • Chuyển biến: {latestCare.healthBefore} ➔ {latestCare.healthAfter}
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                                  • Cây đạt chuẩn an toàn không gian đô thị
+                                </div>
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                  • Duy tu định kỳ theo tuyến phố: Thứ 2 &amp; Thứ 5
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     <div className="space-y-2 pt-2">

@@ -225,6 +225,22 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
 
         {/* Tab Content */}
         <div className="p-6 overflow-y-auto overscroll-contain space-y-5 flex-1" data-lenis-prevent>
+          {/* 🪓 THÔNG BÁO CÂY ĐÃ GIẢI TỎA / HẠ GIẢI (P0 Policy Notice) */}
+          {(tree.status === 'REMOVED' || tree.isActive === false) && (
+            <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200 space-y-2 shadow-sm">
+              <div className="flex items-center gap-2 font-black text-sm text-rose-700 dark:text-rose-300">
+                <AlertTriangle className="w-5 h-5 shrink-0" />
+                <span>CÁ THỂ CÂY ĐÃ ĐƯỢC GIẢI TỎA / ĐỐN HẠ HỢP PHÁP</span>
+              </div>
+              <p className="text-xs text-rose-800 dark:text-rose-300 leading-relaxed">
+                Cây xanh này đã được hạ giải theo phương án chỉnh trang đô thị hoặc giải tỏa nguy hiểm theo Quyết định số <strong>{tree.removalPermit || 'QĐ-19/2026/SXD'}</strong> ngày <strong>{tree.removedAt || '10/2026'}</strong>.
+              </p>
+              <div className="flex items-center gap-2 text-[11px] text-rose-700 dark:text-rose-400 font-semibold pt-1 border-t border-rose-200 dark:border-rose-900/60">
+                <span>🛡️ Hồ sơ cây đã đóng. Lịch sử chăm sóc và chứng thực băm SHA-256 được lưu trữ vĩnh viễn trên Smart Contract.</span>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'info' && (
             <div className="space-y-4">
               {/* Image & Quick specs */}

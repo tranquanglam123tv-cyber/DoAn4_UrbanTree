@@ -76,6 +76,10 @@ export const NotificationsView: React.FC<NotificationsViewProps> = ({
       storage.markNotificationAsRead(notif.id);
       refreshList();
     }
+    if (notif.type === 'STORM_ALERT' || notif.linkId === 'storm-audit') {
+      onNavigate('storm_action', 'storm-audit');
+      return;
+    }
     if (notif.linkTab) {
       onNavigate(notif.linkTab, notif.linkId);
     }

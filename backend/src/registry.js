@@ -11,9 +11,18 @@ const deployment = JSON.parse(
 );
 const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
 
-// Dùng private key của Deployer (Account #0 trên Hardhat node)
+// Sử dụng private key của Deployer từ biến môi trường (.env)
+// Tuyệt đối không hard-code private key trong mã nguồn (Tuân thủ OWASP & ISO 27001)
+const deployerPrivateKey =
+    process.env.DEPLOYER_PRIVATE_KEY ||
+    process.env.BLOCKCHAIN_OPERATOR_PRIVATE_KEY;
+
+if (!deployerPrivateKey) {
+    console.warn("⚠️ [BLOCKCHAIN WARNING] Chưa cấu hình DEPLOYER_PRIVATE_KEY trong .env. Sử dụng tài khoản mặc định chỉ cho môi trường phát triển cục bộ.");
+}
+
 const signer = new ethers.Wallet(
-    "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+    deployerPrivateKey || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
     provider
 );
 

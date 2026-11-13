@@ -9,31 +9,56 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
 }
 
 /**
- * Middleware xác thực JWT Access Token
+ * Middleware xác thực JWT Access Token & Role Credentials
+ * Bảo vệ tất cả API Write/Delete (UT-001)
+ * 🔒 SECURITY ENFORCEMENT:
+ * - Khi NODE_ENV === 'production', x-user-role bị vô hiệu hóa 100%. Bắt buộc phải có Bearer JWT Token hợp lệ.
+ * - Chỉ cho phép fallback x-user-role khi ở Development VÀ có cờ ALLOW_DEV_ROLE_OVERRIDE === 'true'.
  */
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
-  if (!token) {
-    return res.status(401).json({
-      success: false,
-      message: 'Không tìm thấy Access Token. Vui lòng đăng nhập.'
+  if (token) {
+    return jwt.verify(token, JWT_SECRET, (err, userPayload) => {
+      if (err) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access Token không hợp lệ hoặc đã hết hạn',
+          error: err.name
+        });
+      }
+      req.user = userPayload;
+      next();
     });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, userPayload) => {
-    if (err) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access Token không hợp lệ hoặc đã hết hạn (15 phút)',
-        error: err.name
-      });
-    }
+  // 🔒 CHẶN TUYỆT ĐỐI x-user-role VÀ ANONYMOUS TRONG MÔI TRƯỜNG PRODUCTION
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(401).json({
+      success: false,
+      message: 'Không tìm thấy Access Token. Vui lòng đăng nhập với JWT hợp lệ để thực hiện hành động này.'
+    });
+  }
 
-    // Gắn thông tin người dùng vào request
-    req.user = userPayload;
-    next();
+  // Development / Test: Chỉ cho phép override vai trò khi có cấu hình rõ ràng
+  if (process.env.ALLOW_DEV_ROLE_OVERRIDE === 'true') {
+    const headerRole = req.headers['x-user-role'];
+    const headerUserId = req.headers['x-user-id'];
+    if (headerRole) {
+      req.user = {
+        id: headerUserId || 'user-admin',
+        role: String(headerRole).toUpperCase(),
+        username: 'dev_override_user'
+      };
+      return next();
+    }
+  }
+
+  // Nếu không có Token và không bật dev override -> Từ chối 401
+  return res.status(401).json({
+    success: false,
+    message: 'Yêu cầu xác thực: Vui lòng cung cấp Access Token để truy cập tài nguyên.'
   });
 }
 

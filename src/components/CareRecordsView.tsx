@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ClipboardList,
   Plus,
@@ -16,9 +16,17 @@ import {
   MapPin,
   RefreshCw,
   Layers,
+  Route,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  ChevronLeft,
+  ChevronRight,
+  Activity,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { storage } from '../db/storage';
-import { CareActionType, CareRecord, TreeHealthStatus } from '../types';
+import { CareActionType, CareRecord, Tree, TreeHealthStatus } from '../types';
 import {
   getTreeCorridor,
   getTreeMilestone,
@@ -30,7 +38,17 @@ import { BulkCareModal } from './BulkCareModal';
 
 interface CareRecordsViewProps {
   onOpenCareModal: (treeId?: string) => void;
-  onSelectTree: (tree: any) => void;
+  onSelectTree: (tree: Tree) => void;
+}
+
+interface CorridorCareGroup {
+  corridorName: string;
+  records: CareRecord[];
+  uniqueTreeCount: number;
+  latestPerformedAt: string;
+  equipments: string[];
+  actionCounts: Record<string, number>;
+  staffMembers: string[];
 }
 
 export const CareRecordsView: React.FC<CareRecordsViewProps> = ({
@@ -42,8 +60,21 @@ export const CareRecordsView: React.FC<CareRecordsViewProps> = ({
   const trees = useMemo(() => storage.getTrees(), [dataVersion]);
   const treeTypes = useMemo(() => storage.getTreeTypes(), []);
 
-  // Filter States - Đồng bộ chuẩn hóa y như Hồ Sơ Cây (TreeListView)
+  // ⚡ Tối ưu O(1) Hash Map tra cứu cây xanh (Loại bỏ triệt để trees.find làm đơ máy)
+  const treeMap = useMemo(() => {
+    const map = new Map<string, Tree>();
+    for (let i = 0; i < trees.length; i++) {
+      map.set(trees[i].id, trees[i]);
+    }
+    return map;
+  }, [trees]);
+
+  // Chế độ xem: 'corridor' (Theo Tuyến Đường & Ca Máy) hoặc 'timeline' (Theo Dòng Thời Gian)
+  const [viewMode, setViewMode] = useState<'corridor' | 'timeline'>('corridor');
+
+  // Filter States
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedProvince, setSelectedProvince] = useState<string>('all');
   const [selectedArea, setSelectedArea] = useState<string>('ALL');
   const [selectedCorridor, setSelectedCorridor] = useState<string>('ALL');
@@ -51,8 +82,37 @@ export const CareRecordsView: React.FC<CareRecordsViewProps> = ({
   const [selectedType, setSelectedType] = useState<string>('ALL');
   const [selectedHealthAfter, setSelectedHealthAfter] = useState<string>('ALL');
 
+  // Pagination State cho chế độ Timeline (Chống quá tải DOM)
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(25);
+
+  // Accordion quản lý các tuyến đang mở rộng trong chế độ Corridor
+  const [expandedCorridors, setExpandedCorridors] = useState<Set<string>>(new Set());
+
   // Modal State
   const [showBulkModal, setShowBulkModal] = useState(false);
+
+  // ⚡ Debounce 300ms tìm kiếm văn bản chống khựng bàn phím
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Reset trang về 1 khi bất kỳ bộ lọc nào thay đổi
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    debouncedSearch,
+    selectedProvince,
+    selectedArea,
+    selectedCorridor,
+    selectedAction,
+    selectedType,
+    selectedHealthAfter,
+    pageSize,
+  ]);
 
   // Danh sách Địa phương / Khu vực
   const availableAreas = useMemo(() => {
@@ -77,12 +137,12 @@ export const CareRecordsView: React.FC<CareRecordsViewProps> = ({
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
   }, [trees, selectedProvince, selectedArea]);
 
-  // Bộ lọc dữ liệu chăm sóc
+  // Bộ lọc dữ liệu chăm sóc (Duyệt qua O(1) Map)
   const filteredCare = useMemo(() => {
-    const searchLower = search.toLowerCase().trim();
+    const searchLower = debouncedSearch.toLowerCase();
 
     return careRecords.filter((care) => {
-      const tree = trees.find((t) => t.id === care.treeId);
+      const tree = treeMap.get(care.treeId);
 
       // 1. Lọc theo Tỉnh / Toàn quốc
       if (selectedProvince !== 'all') {
@@ -142,8 +202,8 @@ export const CareRecordsView: React.FC<CareRecordsViewProps> = ({
     });
   }, [
     careRecords,
-    trees,
-    search,
+    treeMap,
+    debouncedSearch,
     selectedProvince,
     selectedArea,
     selectedCorridor,
@@ -151,6 +211,68 @@ export const CareRecordsView: React.FC<CareRecordsViewProps> = ({
     selectedType,
     selectedHealthAfter,
   ]);
+
+  // 🧠 GOM NHÓM THEO TUYẾN ĐƯỜNG & CA MÁY (CORRIDOR CARE BATCHES)
+  const corridorGroups = useMemo(() => {
+    const map = new Map<string, CareRecord[]>();
+
+    for (let i = 0; i < filteredCare.length; i++) {
+      const care = filteredCare[i];
+      const tree = treeMap.get(care.treeId);
+      const corr = tree ? getTreeCorridor(tree) : 'Khu Vực Khác';
+      const list = map.get(corr) || [];
+      list.push(care);
+      map.set(corr, list);
+    }
+
+    const groups: CorridorCareGroup[] = [];
+    map.forEach((records, corridorName) => {
+      const treeIdSet = new Set<string>();
+      const equipSet = new Set<string>();
+      const staffSet = new Set<string>();
+      const actionCounts: Record<string, number> = {};
+      let latestDate = '';
+
+      records.forEach((r) => {
+        treeIdSet.add(r.treeId);
+        if (r.equipmentUsed) equipSet.add(r.equipmentUsed);
+        if (r.staffName) staffSet.add(r.staffName);
+        actionCounts[r.actionType] = (actionCounts[r.actionType] || 0) + 1;
+        if (!latestDate || new Date(r.performedAt).getTime() > new Date(latestDate).getTime()) {
+          latestDate = r.performedAt;
+        }
+      });
+
+      groups.push({
+        corridorName,
+        records,
+        uniqueTreeCount: treeIdSet.size,
+        latestPerformedAt: latestDate,
+        equipments: Array.from(equipSet),
+        actionCounts,
+        staffMembers: Array.from(staffSet),
+      });
+    });
+
+    // Tuyến có nhiều lượt chăm sóc nhất lên đầu
+    return groups.sort((a, b) => b.records.length - a.records.length);
+  }, [filteredCare, treeMap]);
+
+  // Phân trang cho chế độ Timeline
+  const totalPages = Math.max(1, Math.ceil(filteredCare.length / pageSize));
+  const paginatedCare = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredCare.slice(start, start + pageSize);
+  }, [filteredCare, currentPage, pageSize]);
+
+  const toggleCorridorExpand = (name: string) => {
+    setExpandedCorridors((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
 
   const handleResetFilters = () => {
     setSearch('');
@@ -178,10 +300,10 @@ export const CareRecordsView: React.FC<CareRecordsViewProps> = ({
         <div>
           <h1 className="text-xl font-bold text-[#174B36] dark:text-[#00FF9D] flex items-center gap-2">
             <ClipboardList className="w-6 h-6 text-[#347A50] dark:text-emerald-400" />
-            <span>Nhật ký Chăm sóc &amp; Bảo dưỡng Cây xanh</span>
+            <span>Nhật ký Chăm sóc &amp; Bảo dưỡng Cơ giới Tuyến Phố</span>
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Quản lý tiến trình cắt tỉa, tưới nước bồn, phun sinh học và cơ giới hóa thực địa. Neo dữ liệu bất biến EVM Blockchain.
+            Quản lý tiến trình cắt tỉa, tưới bồn, cơ giới hóa thực địa gom nhóm thông minh theo Tuyến Phố. Neo dữ liệu bất biến EVM Blockchain.
           </p>
         </div>
 
@@ -218,7 +340,7 @@ export const CareRecordsView: React.FC<CareRecordsViewProps> = ({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm theo mã cây [HB-01], mốc số nhà, KTV, thiết bị, ghi chú..."
+              placeholder="Tìm theo mã cây [HB-01], mốc số nhà, KTV, thiết bị..."
               className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 dark:border-slate-700/80 rounded-xl focus:border-emerald-500 bg-slate-50/50 dark:bg-slate-900/90 text-slate-900 dark:text-white"
             />
           </div>
@@ -279,7 +401,7 @@ export const CareRecordsView: React.FC<CareRecordsViewProps> = ({
           </div>
         </div>
 
-        {/* HÀNG 2: LOẠI HOẠT ĐỘNG, SỨC KHỎE SAU CHĂM SÓC, LOÀI CÂY & ĐẶT LẠI */}
+        {/* HÀNG 2: LOẠI HOẠT ĐỘNG, SỨC KHỎE SAU CHĂM SÓC, LOÀI CÂY & CHUYỂN CHẾ ĐỘ XEM */}
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-800/60">
           <div className="flex flex-wrap items-center gap-2">
             {/* Lọc theo Loại hoạt động */}
@@ -342,121 +464,344 @@ export const CareRecordsView: React.FC<CareRecordsViewProps> = ({
             )}
           </div>
 
-          <span className="text-xs text-emerald-700 dark:text-[#00FF9D] font-mono font-bold whitespace-nowrap pl-2">
-            Hiển thị {filteredCare.length} / {careRecords.length} lượt chăm sóc
-          </span>
+          {/* CHUYỂN ĐỔI CHẾ ĐỘ XEM: GOM NHÓM TUYẾN ĐƯỜNG vs DÒNG THỜI GIAN */}
+          <div className="flex items-center gap-2">
+            <div className="bg-slate-100 dark:bg-slate-900 p-1 rounded-xl flex items-center gap-1 border border-slate-200 dark:border-slate-800">
+              <button
+                onClick={() => setViewMode('corridor')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === 'corridor'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                title="Giao diện gom nhóm thông minh theo Tuyến Phố & Ca Máy cơ giới (Khuyên dùng)"
+              >
+                <Route className="w-3.5 h-3.5" />
+                <span>Theo Tuyến Phố</span>
+              </button>
+              <button
+                onClick={() => setViewMode('timeline')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === 'timeline'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                title="Giao diện dòng thời gian chi tiết từng lượt chăm sóc"
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>Dòng Thời Gian</span>
+              </button>
+            </div>
+
+            <span className="text-xs text-emerald-700 dark:text-[#00FF9D] font-mono font-bold whitespace-nowrap pl-1">
+              {filteredCare.length.toLocaleString('vi-VN')} lượt
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Care Records Feed / Timeline Feed */}
-      {filteredCare.length === 0 ? (
-        <div className="p-12 text-center bg-white dark:bg-[#0c1812] rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 text-xs">
-          Không có bản ghi chăm sóc nào phù hợp với bộ lọc hiện tại.
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filteredCare.map((care) => {
-            const tree = trees.find((t) => t.id === care.treeId);
-            const streetCode = tree ? getTreeStreetCode(tree) : 'CT';
-            const milestone = tree ? getTreeMilestone(tree) : '';
-            const corridor = tree ? getTreeCorridor(tree) : '';
+      {/* ========================================================
+          CHẾ ĐỘ 1: GOM NHÓM THEO TUYẾN ĐƯỜNG & CA MÁY (CORRIDOR BATCHES)
+         ======================================================== */}
+      {viewMode === 'corridor' && (
+        <div className="space-y-4">
+          {corridorGroups.length === 0 ? (
+            <div className="p-12 text-center bg-white dark:bg-[#0c1812] rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 text-xs">
+              Không có nhật ký chăm sóc nào phù hợp với bộ lọc.
+            </div>
+          ) : (
+            corridorGroups.map((group) => {
+              const isExpanded = expandedCorridors.has(group.corridorName);
+              const previewRecords = isExpanded ? group.records : group.records.slice(0, 3);
 
-            return (
-              <div
-                key={care.id}
-                className="bg-white dark:bg-[#0c1812] p-4 sm:p-5 rounded-2xl border border-[#E0EBDD] dark:border-slate-800 hover:border-[#347A50] dark:hover:border-emerald-500/40 dark:hover:shadow-[0_0_20px_rgba(16,185,129,0.12)] transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-2xs"
-              >
-                <div className="space-y-2.5 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {tree && (
+              return (
+                <div
+                  key={group.corridorName}
+                  className="bg-white dark:bg-[#0c1812] rounded-2xl border border-[#E0EBDD] dark:border-slate-800 hover:border-emerald-500/50 transition-all shadow-sm overflow-hidden"
+                >
+                  {/* Header Tuyến Phố */}
+                  <div className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                        <Route className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-base font-black text-slate-900 dark:text-white">
+                            {group.corridorName}
+                          </h3>
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-[#00FF9D] border border-emerald-300 dark:border-emerald-800">
+                            {group.records.length} lượt chăm sóc ({group.uniqueTreeCount} cây)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mt-1 flex-wrap">
+                          {group.latestPerformedAt && (
+                            <span className="flex items-center gap-1 font-mono">
+                              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                              Lần duy tu gần nhất: {new Date(group.latestPerformedAt).toLocaleDateString('vi-VN')}
+                            </span>
+                          )}
+                          {group.equipments.length > 0 && (
+                            <span className="flex items-center gap-1 text-slate-700 dark:text-slate-300 font-semibold">
+                              <Truck className="w-3.5 h-3.5 text-blue-500" />
+                              {group.equipments.slice(0, 2).join(', ')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Breakdown hoạt động & nút mở rộng */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {Object.entries(group.actionCounts).map(([act, count]) => (
+                          <span
+                            key={act}
+                            className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                          >
+                            {act}: {count}
+                          </span>
+                        ))}
+                      </div>
+
                       <button
-                        onClick={() => onSelectTree(tree)}
-                        className="font-mono text-xs font-bold text-amber-300 bg-slate-900 px-2.5 py-0.5 rounded-lg border border-slate-700 shadow-2xs hover:bg-slate-800 transition-colors cursor-pointer"
-                        title="Bấm để mở hồ sơ chi tiết cây"
+                        onClick={() => toggleCorridorExpand(group.corridorName)}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
                       >
-                        [{streetCode}] {tree.publicCode}
+                        <span>{isExpanded ? 'Thu gọn' : `Xem tất cả (${group.records.length})`}</span>
+                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                       </button>
-                    )}
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
-                      {tree?.displayName || 'Cây xanh đô thị'}
-                    </span>
-                    <span className="text-slate-300 dark:text-slate-700">·</span>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#174B36] text-white dark:bg-emerald-500/20 dark:text-[#00FF9D] dark:border dark:border-emerald-500/40 font-mono">
-                      {care.actionType}
-                    </span>
-                    <span className="text-slate-300 dark:text-slate-700">·</span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                      {new Date(care.performedAt).toLocaleDateString('vi-VN')} {new Date(care.performedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                    </div>
                   </div>
 
-                  {/* Cột mốc số nhà & tuyến đường */}
-                  {milestone && (
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                      <span><strong>{milestone}</strong> · <span>{corridor}</span></span>
-                    </div>
-                  )}
+                  {/* Danh Sách Các Lượt Chăm Sóc Bên Trong Tuyến */}
+                  <div className="p-4 space-y-2.5">
+                    {previewRecords.map((care) => {
+                      const tree = treeMap.get(care.treeId);
+                      const streetCode = tree ? getTreeStreetCode(tree) : 'CT';
+                      const milestone = tree ? getTreeMilestone(tree) : '';
 
-                  <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-normal">{care.notes}</p>
+                      return (
+                        <div
+                          key={care.id}
+                          className="p-3 rounded-xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs"
+                        >
+                          <div className="space-y-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {tree && (
+                                <button
+                                  onClick={() => onSelectTree(tree)}
+                                  className="font-mono text-[11px] font-bold text-amber-300 bg-slate-900 px-2 py-0.5 rounded-md hover:bg-slate-800 cursor-pointer"
+                                  title="Xem hồ sơ cây"
+                                >
+                                  [{streetCode}] {tree.publicCode}
+                                </button>
+                              )}
+                              <span className="font-bold text-slate-800 dark:text-slate-100">
+                                {tree?.displayName || 'Cây xanh'}
+                              </span>
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-[#00FF9D]">
+                                {care.actionType}
+                              </span>
+                              <span className="text-[11px] text-slate-400 font-mono">
+                                {new Date(care.performedAt).toLocaleDateString('vi-VN')} {new Date(care.performedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
 
-                  {/* 🚜 Hiển thị Cơ giới & Vật tư nếu có */}
-                  {(care.equipmentUsed || care.chemicalsUsed) && (
-                    <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 text-[11px] space-y-1">
-                      {care.equipmentUsed && (
-                        <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-                          <Truck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-                          <span>Cơ giới huy động: <strong className="text-slate-900 dark:text-slate-100">{care.equipmentUsed}</strong></span>
+                            {milestone && (
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                <MapPin className="w-3 h-3 text-rose-500" />
+                                {milestone}
+                              </p>
+                            )}
+
+                            <p className="text-slate-600 dark:text-slate-300 font-normal">{care.notes}</p>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[10px] text-slate-500 font-mono">
+                              KTV: <strong>{care.staffName || 'Đội cơ giới'}</strong>
+                            </span>
+                            <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 rounded-lg text-emerald-800 dark:text-[#00FF9D] text-[10px] font-mono">
+                              <ShieldCheck className="w-3 h-3" />
+                              <span>EVM</span>
+                            </div>
+                          </div>
                         </div>
-                      )}
-                      {care.chemicalsUsed && (
-                        <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-                          <Wrench className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                          <span>Vật tư lâm sinh: <strong className="text-slate-900 dark:text-slate-100">{care.chemicalsUsed}</strong></span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                      );
+                    })}
 
-                  {/* Staff attribution chips & before/after health pills */}
-                  <div className="flex items-center gap-3 text-[11px] pt-1 flex-wrap">
-                    {/* Staff attribution chip */}
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300">
-                      <UserCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-[#00FF9D]" />
-                      <span>
-                        Kỹ thuật viên: <strong className="text-slate-800 dark:text-slate-100">{care.staffName || 'Đội kỹ thuật'}</strong>
-                      </span>
-                    </div>
-
-                    {/* Before/after health pills */}
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300">
-                      <span>Chuyển biến:</span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300/50 dark:border-slate-700">
-                        {care.healthBefore}
-                      </span>
-                      <ArrowRight className="w-3 h-3 text-slate-400 dark:text-slate-500" />
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-[#00FF9D] border border-emerald-300/60 dark:border-emerald-500/40">
-                        {care.healthAfter}
-                      </span>
-                    </div>
+                    {!isExpanded && group.records.length > 3 && (
+                      <div className="text-center pt-1">
+                        <button
+                          onClick={() => toggleCorridorExpand(group.corridorName)}
+                          className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                        >
+                          + Xem thêm {group.records.length - 3} lượt chăm sóc khác trên {group.corridorName}...
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
+              );
+            })
+          )}
+        </div>
+      )}
 
-                {/* Blockchain Badge on Right */}
-                <div className="shrink-0 flex md:flex-col items-end justify-between md:justify-center gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800/80">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 font-mono text-[11px] dark:bg-emerald-950/70 dark:border-emerald-500/40 dark:text-[#00FF9D] dark:shadow-[0_0_10px_rgba(0,255,157,0.15)]">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-[#00FF9D]" />
-                    <span>CONFIRMED</span>
+      {/* ========================================================
+          CHẾ ĐỘ 2: THEO DÒNG THỜI GIAN CÓ PHÂN TRANG (TIMELINE FEED)
+         ======================================================== */}
+      {viewMode === 'timeline' && (
+        <div className="space-y-3">
+          {filteredCare.length === 0 ? (
+            <div className="p-12 text-center bg-white dark:bg-[#0c1812] rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 text-xs">
+              Không có bản ghi chăm sóc nào phù hợp với bộ lọc hiện tại.
+            </div>
+          ) : (
+            <>
+              {paginatedCare.map((care) => {
+                const tree = treeMap.get(care.treeId);
+                const streetCode = tree ? getTreeStreetCode(tree) : 'CT';
+                const milestone = tree ? getTreeMilestone(tree) : '';
+                const corridor = tree ? getTreeCorridor(tree) : '';
+
+                return (
+                  <div
+                    key={care.id}
+                    className="bg-white dark:bg-[#0c1812] p-4 sm:p-5 rounded-2xl border border-[#E0EBDD] dark:border-slate-800 hover:border-[#347A50] dark:hover:border-emerald-500/40 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-2xs"
+                  >
+                    <div className="space-y-2.5 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {tree && (
+                          <button
+                            onClick={() => onSelectTree(tree)}
+                            className="font-mono text-xs font-bold text-amber-300 bg-slate-900 px-2.5 py-0.5 rounded-lg border border-slate-700 shadow-2xs hover:bg-slate-800 transition-colors cursor-pointer"
+                            title="Bấm để mở hồ sơ chi tiết cây"
+                          >
+                            [{streetCode}] {tree.publicCode}
+                          </button>
+                        )}
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                          {tree?.displayName || 'Cây xanh đô thị'}
+                        </span>
+                        <span className="text-slate-300 dark:text-slate-700">·</span>
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#174B36] text-white dark:bg-emerald-500/20 dark:text-[#00FF9D] dark:border dark:border-emerald-500/40 font-mono">
+                          {care.actionType}
+                        </span>
+                        <span className="text-slate-300 dark:text-slate-700">·</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                          {new Date(care.performedAt).toLocaleDateString('vi-VN')} {new Date(care.performedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+
+                      {/* Cột mốc số nhà & tuyến đường */}
+                      {milestone && (
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                          <span><strong>{milestone}</strong> · <span>{corridor}</span></span>
+                        </div>
+                      )}
+
+                      <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-normal">{care.notes}</p>
+
+                      {/* 🚜 Hiển thị Cơ giới & Vật tư nếu có */}
+                      {(care.equipmentUsed || care.chemicalsUsed) && (
+                        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 text-[11px] space-y-1">
+                          {care.equipmentUsed && (
+                            <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                              <Truck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                              <span>Cơ giới huy động: <strong className="text-slate-900 dark:text-slate-100">{care.equipmentUsed}</strong></span>
+                            </div>
+                          )}
+                          {care.chemicalsUsed && (
+                            <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                              <Wrench className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                              <span>Vật tư lâm sinh: <strong className="text-slate-900 dark:text-slate-100">{care.chemicalsUsed}</strong></span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Staff attribution chips & before/after health pills */}
+                      <div className="flex items-center gap-3 text-[11px] pt-1 flex-wrap">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300">
+                          <UserCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-[#00FF9D]" />
+                          <span>
+                            Kỹ thuật viên: <strong className="text-slate-800 dark:text-slate-100">{care.staffName || 'Đội kỹ thuật'}</strong>
+                          </span>
+                        </div>
+
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300">
+                          <span>Chuyển biến:</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300/50 dark:border-slate-700">
+                            {care.healthBefore}
+                          </span>
+                          <ArrowRight className="w-3 h-3 text-slate-400 dark:text-slate-500" />
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-[#00FF9D] border border-emerald-300/60 dark:border-emerald-500/40">
+                            {care.healthAfter}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Blockchain Badge on Right */}
+                    <div className="shrink-0 flex md:flex-col items-end justify-between md:justify-center gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800/80">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 font-mono text-[11px] dark:bg-emerald-950/70 dark:border-emerald-500/40 dark:text-[#00FF9D]">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-[#00FF9D]" />
+                        <span>CONFIRMED</span>
+                      </div>
+                      {care.txHash && (
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono truncate max-w-[130px]" title={care.txHash}>
+                          {care.txHash}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {care.txHash && (
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono truncate max-w-[130px]" title={care.txHash}>
-                      {care.txHash}
-                    </span>
-                  )}
+                );
+              })}
+
+              {/* 📑 THANH PHÂN TRANG CHỐNG QUÁ TẢI DOM */}
+              <div className="p-3 bg-white dark:bg-[#0c1812] rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xs">
+                <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                  <span>Hiển thị</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                    className="px-2 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold"
+                  >
+                    <option value={15}>15 dòng</option>
+                    <option value={25}>25 dòng</option>
+                    <option value={50}>50 dòng</option>
+                    <option value={100}>100 dòng</option>
+                  </select>
+                  <span>trên tổng {filteredCare.length.toLocaleString('vi-VN')} bản ghi</span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  <span className="text-xs font-mono font-bold px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                    {currentPage} / {totalPages}
+                  </span>
+
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-            );
-          })}
+            </>
+          )}
         </div>
       )}
 
@@ -474,4 +819,3 @@ export const CareRecordsView: React.FC<CareRecordsViewProps> = ({
     </div>
   );
 };
-

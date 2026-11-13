@@ -5,14 +5,15 @@ const hashService = require('../services/hashService');
 const blockchainClient = require('../services/blockchainClient');
 
 /**
- * 1. Lấy danh sách cây xanh (Hỗ trợ phân trang và bộ lọc: loài cây, tình trạng sức khỏe)
- * Endpoint: GET /api/trees?species=...&health_status=...&page=1&limit=50
+ * 1. Lấy danh sách cây xanh (Hỗ trợ phân trang, lấy toàn bộ all=true và bộ lọc)
+ * Endpoint: GET /api/trees?species=...&health_status=...&page=1&limit=50&all=true
  */
 exports.getAllTrees = (req, res) => {
-  const { species, health_status, page = 1, limit = 50 } = req.query;
+  const { species, health_status, page = 1, limit = 50, all } = req.query;
+  const isAll = all === 'true' || all === '1';
   const pageNum = Math.max(1, parseInt(page) || 1);
-  const limitNum = Math.max(1, Math.min(100, parseInt(limit) || 50));
-  const offset = (pageNum - 1) * limitNum;
+  const limitNum = isAll ? 20000 : Math.max(1, Math.min(10000, parseInt(limit) || 50));
+  const offset = isAll ? 0 : (pageNum - 1) * limitNum;
 
   Tree.getAll({ species, health_status, limit: limitNum, offset }, (err, rows) => {
     if (err) {
@@ -259,6 +260,66 @@ exports.createTree = async (req, res) => {
 };
 
 /**
+ * 4.1. Thêm hàng loạt cây xanh (Bulk Insert với SQLite Transaction hiệu năng cao)
+ * Endpoint: POST /api/trees/bulk
+ */
+exports.createTreesBulk = (req, res) => {
+  const { trees } = req.body;
+  if (!Array.isArray(trees) || trees.length === 0) {
+    return res.status(400).json({ success: false, message: 'Danh sách cây rỗng' });
+  }
+
+  db.serialize(() => {
+    db.run('BEGIN TRANSACTION');
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO trees (
+        tree_code, tree_type_id, species, location_name, address,
+        latitude, longitude, planted_date, height_meter, diameter_cm,
+        health_status, status, data_hash
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    let inserted = 0;
+    for (const t of trees) {
+      const code = t.publicCode || t.tree_code || `CT-${Date.now()}-${inserted}`;
+      const species = t.displayName || t.species || 'Cây Xanh Đô Thị';
+      const address = t.address || t.location_name || 'Ninh Kiều, Cần Thơ';
+      const lat = parseFloat(t.latitude) || 10.034;
+      const lng = parseFloat(t.longitude) || 105.787;
+      const plantedDate = t.plantedAt || t.planted_date || '2023-01-01';
+      const height = t.heightM || t.height_meter || 8;
+      const diameter = t.diameterCm || t.diameter_cm || 25;
+      const health = t.healthStatus === 'GOOD' ? 'Tốt' : t.healthStatus === 'CRITICAL' ? 'Nguy hiểm' : 'Tốt';
+
+      stmt.run(
+        code,
+        1,
+        species,
+        address,
+        address,
+        lat,
+        lng,
+        plantedDate,
+        height,
+        diameter,
+        health,
+        'ACTIVE',
+        t.payloadHash || null
+      );
+      inserted++;
+    }
+
+    stmt.finalize();
+    db.run('COMMIT', (err) => {
+      if (err) {
+        return res.status(500).json({ success: false, message: 'Lỗi commit bulk insert', error: err.message });
+      }
+      res.json({ success: true, message: `Đã lưu vĩnh viễn ${inserted} cây vào SQLite Server`, count: inserted });
+    });
+  });
+};
+
+/**
  * 5. Xuất hình ảnh mã QR (Tuân thủ đặc tả THUAN-03)
  * Endpoint: GET /api/trees/:id/qr
  * Mặc định: Trả về trực tiếp buffer hình ảnh PNG để hiển thị hoặc in ấn nhãn thẻ nhôm đúc
@@ -377,17 +438,18 @@ exports.updateTree = (req, res) => {
 };
 
 /**
- * 7. Xóa cây xanh khỏi hệ thống
+ * 7. Giải tỏa / Đốn hạ cây (Soft Delete - UT-002)
  * Endpoint: DELETE /api/trees/:id
  */
 exports.deleteTree = (req, res) => {
   const { id } = req.params;
+  const { permitNumber, fellingReason, approvedByOfficer } = req.body || {};
 
-  Tree.delete(id, (err, result) => {
+  const onDone = (err, result) => {
     if (err) {
       return res.status(500).json({
         success: false,
-        message: 'Lỗi xóa cây khỏi hệ thống',
+        message: 'Lỗi cập nhật hồ sơ giải tỏa / đốn hạ cây',
         error: err.message
       });
     }
@@ -395,13 +457,19 @@ exports.deleteTree = (req, res) => {
     if (result.changes === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Không tìm thấy cây cần xóa'
+        message: 'Không tìm thấy cây cần giải tỏa'
       });
     }
 
     res.json({
       success: true,
-      message: 'Xóa cây xanh thành công'
+      message: 'Cây đã được chuyển sang trạng thái REMOVED (Lưu trữ hồ sơ đốn hạ, bảo toàn chứng cứ số)'
     });
-  });
+  };
+
+  if (permitNumber || fellingReason) {
+    Tree.archiveFelledTree(id, { permitNumber, fellingReason, approvedByOfficer }, onDone);
+  } else {
+    Tree.delete(id, onDone);
+  }
 };

@@ -523,6 +523,11 @@ export const MapView: React.FC<MapViewProps> = ({
       const isZoomedOut = zoom < 14;
 
       trees.forEach((tree) => {
+        // 🛡️ UT-002: Cây đã đốn hạ/giải tỏa (isActive === false) ẩn mặc định trên bản đồ tác chiến
+        if (tree.isActive === false && selectedHealth !== 'DEAD' && activeSelectedTree?.id !== tree.id) {
+          return;
+        }
+
         // Province Filter
         if (selectedProvinceId !== 'all') {
           const treeProvince = getTreeProvinceId(tree);
@@ -562,11 +567,8 @@ export const MapView: React.FC<MapViewProps> = ({
           if (!treeSearchable.includes(q)) return;
         }
 
-        // ⚡ GIS High-Performance Viewport Culling (Chống giật lag khi có hàng ngàn cây):
-        if (isZoomedOut && renderedCount >= 300 && activeSelectedTree?.id !== tree.id) {
-          return;
-        }
-        if (!isZoomedOut && bounds && !bounds.contains([tree.latitude, tree.longitude]) && activeSelectedTree?.id !== tree.id) {
+        // ⚡ GIS Scalable Viewport Culling (UT-010):
+        if (bounds && !bounds.contains([tree.latitude, tree.longitude]) && activeSelectedTree?.id !== tree.id) {
           return;
         }
 
@@ -578,12 +580,41 @@ export const MapView: React.FC<MapViewProps> = ({
 
         const healthColors: Record<string, string> = {
           GOOD: '#10B981',
-          FAIR: '#64748B',
-          POOR: '#F59E0B',
+          FAIR: '#F59E0B',
+          POOR: '#F97316',
           CRITICAL: '#EF4444',
-          DEAD: '#1E293B',
+          DEAD: '#64748B',
         };
         const color = healthColors[tree.healthStatus] || '#10B981';
+
+        // 🚀 CHẾ ĐỘ HIỂN THỊ SCALABLE (UT-010):
+        // Khi thu nhỏ bản đồ (Zoom < 14): Sử dụng Canvas CircleMarker siêu nhẹ, hiển thị đầy đủ 5.402 cây không giật lag.
+        // Khi phóng to (Zoom >= 14): Hiển thị Ghim DivIcon chi tiết đầy đủ nhãn biển số và tán lá.
+        if (isZoomedOut && activeSelectedTree?.id !== tree.id) {
+          const circlePin = L.circleMarker([tree.latitude, tree.longitude], {
+            radius: 4,
+            fillColor: color,
+            fillOpacity: 0.9,
+            color: '#ffffff',
+            weight: 0.8,
+          });
+
+          circlePin.on('click', () => {
+            setActiveSelectedTree(tree);
+            setActiveSelectedIncident(null);
+            setIsRepositioning(false);
+            setRepositionedCoords(null);
+          });
+
+          circlePin.bindTooltip(`[${streetCode}] ${tree.displayName}`, {
+            direction: 'top',
+            offset: [0, -4],
+          });
+
+          layer.addLayer(circlePin);
+          treeMarkersMapRef.current.set(tree.id, circlePin as any);
+          return;
+        }
 
         const customHtml = `
           <div style="

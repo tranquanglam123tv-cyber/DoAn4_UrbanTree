@@ -41,8 +41,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 app.options('*', cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Phục vụ file tĩnh và trang Verifier (A18/A19)
 app.use(express.static(path.join(__dirname, 'public')));
@@ -153,6 +153,17 @@ app.get('/api/system/network', (req, res) => {
   });
 });
 
+// Endpoint giám sát hàng đợi Blockchain bền vững (P0 Durability Engine)
+const blockchainQueueService = require('./services/blockchainQueueService');
+app.get('/api/blockchain/queue-stats', async (req, res) => {
+  try {
+    const stats = await blockchainQueueService.getStats();
+    res.json({ success: true, queue: stats });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Khởi chạy server nếu chạy trực tiếp
 if (require.main === module) {
   const net = getLocalNetworkInfo();
@@ -163,6 +174,9 @@ if (require.main === module) {
     console.log(`📱 Trên điện thoại:     http://${net.ip}:${PORT}/citizen`);
     console.log(`✨ Hoặc dùng tên miền: http://${net.hostname}:${PORT}/citizen`);
     console.log(`====================================================`);
+
+    // Khởi động Durable Persistent Worker phục hồi các job pending sau restart
+    blockchainQueueService.startWorker();
   });
 }
 

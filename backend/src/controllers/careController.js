@@ -9,10 +9,11 @@ const blockchainClient = require('../services/blockchainClient');
  * Endpoint: GET /api/care-records?tree_id=1&action_type=Cắt tỉa&page=1&limit=50
  */
 exports.getAllCareRecords = (req, res) => {
-  const { tree_id, action_type, page = 1, limit = 50 } = req.query;
+  const { tree_id, action_type, page = 1, limit = 50, all } = req.query;
+  const isAll = all === 'true' || all === '1';
   const pageNum = Math.max(1, parseInt(page) || 1);
-  const limitNum = Math.max(1, Math.min(100, parseInt(limit) || 50));
-  const offset = (pageNum - 1) * limitNum;
+  const limitNum = isAll ? 20000 : Math.max(1, Math.min(10000, parseInt(limit) || 50));
+  const offset = isAll ? 0 : (pageNum - 1) * limitNum;
 
   CareRecord.getAll({ tree_id, action_type, limit: limitNum, offset }, (err, rows) => {
     if (err) {
@@ -136,6 +137,15 @@ exports.addCareRecord = (req, res) => {
       });
     }
 
+    // 🔒 CHÍNH SÁCH BẢO VỆ CÂY ĐÃ HẠ GIẢI / GIẢI TỎA (P0 Policy Enforcement)
+    // Cây có trạng thái REMOVED hoặc DECOMMISSIONED hoặc is_active = 0 bị chặn tuyệt đối không được ghi nhận chăm sóc mới
+    if (tree.status === 'REMOVED' || tree.status === 'DECOMMISSIONED' || tree.is_active === 0 || tree.is_active === false) {
+      return res.status(400).json({
+        success: false,
+        message: `Không thể tạo bản ghi chăm sóc cho cây xanh đã giải tỏa / hạ giải (Mã: ${tree.tree_code || tree.id}, Trạng thái: ${tree.status || 'REMOVED'}). Hồ sơ cây đã đóng.`
+      });
+    }
+
     const actualTreeId = tree.id;
     const actualCareCode = (care_code || `CARE-${Date.now().toString().slice(-4)}`).trim().toUpperCase();
     const actualActionDate = action_date || new Date().toISOString().replace('T', ' ').substring(0, 19);
@@ -223,5 +233,50 @@ exports.addCareRecord = (req, res) => {
         });
       }
     );
+  });
+};
+
+/**
+ * 4. Thêm hàng loạt bản ghi chăm sóc (Bulk Insert với SQLite Transaction)
+ * Endpoint: POST /api/care-records/bulk
+ */
+exports.addCareRecordsBulk = (req, res) => {
+  const { records } = req.body;
+  if (!Array.isArray(records) || records.length === 0) {
+    return res.status(400).json({ success: false, message: 'Danh sách chăm sóc rỗng' });
+  }
+
+  db.serialize(() => {
+    db.run('BEGIN TRANSACTION');
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO care_records (
+        care_code, tree_id, tree_code, caretaker_name, action_type,
+        health_before, health_after, notes, action_date, data_hash
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    let inserted = 0;
+    for (const r of records) {
+      const code = r.id || `care-${Date.now()}-${inserted}`;
+      const treeCode = r.treeId || 'CT-01';
+      const staff = r.staffName || 'Đội Kỹ Thuật';
+      const action = r.actionType || 'Cắt tỉa';
+      const hBefore = r.healthBefore || 'GOOD';
+      const hAfter = r.healthAfter || 'GOOD';
+      const notes = r.notes || '';
+      const date = r.performedAt || new Date().toISOString();
+      const hash = r.payloadHash || null;
+
+      stmt.run(code, 1, treeCode, staff, action, hBefore, hAfter, notes, date, hash);
+      inserted++;
+    }
+
+    stmt.finalize();
+    db.run('COMMIT', (err) => {
+      if (err) {
+        return res.status(500).json({ success: false, message: 'Lỗi commit care records', error: err.message });
+      }
+      res.json({ success: true, message: `Đã lưu vĩnh viễn ${inserted} bản ghi chăm sóc vào SQLite Server`, count: inserted });
+    });
   });
 };

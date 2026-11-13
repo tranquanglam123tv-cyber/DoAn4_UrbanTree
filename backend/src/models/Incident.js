@@ -94,12 +94,17 @@ const Incident = {
       description,
       image_url,
       severity,
-      status
+      status,
+      latitude,
+      longitude,
+      address
     } = data;
 
+    const tracking_code = `INC-${Math.floor(10000 + Math.random() * 90000)}`;
+
     const query = `
-      INSERT INTO incidents (tree_id, reporter_name, reporter_phone, description, image_url, severity, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO incidents (tree_id, reporter_name, reporter_phone, description, image_url, severity, status, latitude, longitude, address, tracking_code)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     db.run(
@@ -111,12 +116,17 @@ const Incident = {
         description,
         image_url || '',
         severity || 'Trung bình',
-        status || 'Chờ xử lý'
+        status || 'Chờ xử lý',
+        latitude || null,
+        longitude || null,
+        address || null,
+        tracking_code
       ],
       function (err) {
         if (err) return callback(err);
         callback(null, {
           id: this ? this.lastID : null,
+          tracking_code,
           ...data
         });
       }

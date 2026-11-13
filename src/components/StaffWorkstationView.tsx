@@ -33,7 +33,16 @@ import {
   Cpu,
 } from 'lucide-react';
 import { storage } from '../db/storage';
-import { CareActionType, Incident, Tree, User } from '../types';
+import {
+  CareActionType,
+  Incident,
+  Tree,
+  User,
+  WorkOrder,
+  WorkOrderHistory,
+  WorkOrderItem,
+  WorkOrderStatus,
+} from '../types';
 import { DigitalAlloyTag } from './DigitalAlloyTag';
 import {
   findNearestTree,
@@ -63,7 +72,9 @@ export const StaffWorkstationView: React.FC<StaffWorkstationViewProps> = ({
   onSelectTree,
   onOpenMap,
 }) => {
-  const [activeTab, setActiveTab] = useState<'shift_tasks' | 'batch_care' | 'corridors' | 'pow_history'>('shift_tasks');
+  const [activeTab, setActiveTab] = useState<'work_orders' | 'shift_tasks' | 'batch_care' | 'corridors' | 'pow_history'>('work_orders');
+  const [workOrdersVersion, setWorkOrdersVersion] = useState(0);
+  const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
   const [selectedCorridorId, setSelectedCorridorId] = useState<string>('corridor-hoa-binh');
   const [batchActionType, setBatchActionType] = useState<CareActionType>('WATERING');
   const [batchNotes, setBatchNotes] = useState<string>('Đã tưới nước dưỡng ẩm và kiểm tra độ vững thân cây');
@@ -115,6 +126,110 @@ export const StaffWorkstationView: React.FC<StaffWorkstationViewProps> = ({
         currentUser.username === 'staff_lam'
     );
   }, [careRecords, currentUser]);
+
+  // Lọc danh sách Lệnh công tác được giao cho tổ của KTV
+  const myWorkOrders = useMemo(() => {
+    const allOrders = storage.getWorkOrders();
+    const teams = storage.getTeams();
+    const myTeam = teams.find(
+      (t) =>
+        t.leaderUserId === currentUser.id ||
+        t.memberUserIds.includes(currentUser.id) ||
+        (currentUser.teamName && t.name.toLowerCase().includes(currentUser.teamName.toLowerCase())) ||
+        currentUser.username === 'staff_lam'
+    );
+
+    if (myTeam) {
+      const teamOrders = allOrders.filter((w) => w.assignedTeamId === myTeam.id);
+      if (teamOrders.length > 0) return teamOrders;
+    }
+    return allOrders.filter(
+      (w) =>
+        w.status === 'ASSIGNED' ||
+        w.status === 'IN_PROGRESS' ||
+        w.status === 'SUBMITTED_FOR_REVIEW' ||
+        w.status === 'REJECTED'
+    );
+  }, [currentUser, workOrdersVersion]);
+
+  const selectedWorkOrderDetails = useMemo(() => {
+    if (!selectedWorkOrderId) return null;
+    return storage.getWorkOrderDetails(selectedWorkOrderId);
+  }, [selectedWorkOrderId, workOrdersVersion]);
+
+  const handleStartFieldWorkOrder = (orderId: string) => {
+    try {
+      storage.transitionWorkOrderStatus(orderId, 'IN_PROGRESS', currentUser, 'Kỹ thuật viên đã nhận lệnh và bắt đầu thi công');
+      setWorkOrdersVersion((v) => v + 1);
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleSubmitFieldWorkOrder = (orderId: string) => {
+    try {
+      storage.transitionWorkOrderStatus(orderId, 'SUBMITTED_FOR_REVIEW', currentUser, 'Đã hoàn tất rà soát toàn bộ cây trên tuyến, đề nghị Giám sát viên nghiệm thu');
+      setWorkOrdersVersion((v) => v + 1);
+      alert('Đã gửi báo cáo nghiệm thu lên Ban Giám Sát thành công!');
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleFieldItemComplete = (itemId: string) => {
+    try {
+      storage.updateWorkOrderItemExecution(itemId, 'COMPLETED', currentUser.id);
+      setWorkOrdersVersion((v) => v + 1);
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleFieldItemSkip = (itemId: string) => {
+    const reason = prompt(
+      'Nhập lý do thực tế bỏ qua cây này (Bắt buộc):\n1. Ô tô đỗ chắn\n2. Vướng đường dây điện trung thế\n3. Chủ nhà không cho tiếp cận\n4. Mưa dông nguy hiểm',
+      'Ô tô đỗ chắn vỉa hè không thể mở chân xe thang'
+    );
+    if (!reason || !reason.trim()) return;
+
+    try {
+      storage.updateWorkOrderItemExecution(itemId, 'SKIPPED', currentUser.id, reason.trim());
+      setWorkOrdersVersion((v) => v + 1);
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleFieldItemFail = (itemId: string) => {
+    const reason = prompt(
+      'Nhập lý do thất bại / không thể thi công (Bắt buộc):\n1. Cần xe thang vươn cao hơn (>18m)\n2. Có tổ ong bắp cày nguy hiểm\n3. Cây mục rỗng gốc nghiêm trọng\n4. Thiếu thiết bị cưa xích chuyên dụng',
+      'Cần xe thang vươn cao hơn (>18m) để tiếp cận tán ngọn'
+    );
+    if (!reason || !reason.trim()) return;
+
+    try {
+      storage.updateWorkOrderItemExecution(itemId, 'FAILED', currentUser.id, reason.trim());
+      setWorkOrdersVersion((v) => v + 1);
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleFieldItemRequestFollowUp = (itemId: string) => {
+    const reason = prompt(
+      'Yêu cầu Điều phối viên hỗ trợ kỹ thuật bổ sung (Follow-up):\nNhập trang thiết bị hoặc năng lực cần chi viện:',
+      'Đề nghị chi viện xe thang 22m và tổ bắt ong bắp cày'
+    );
+    if (!reason || !reason.trim()) return;
+
+    try {
+      storage.markItemNeedsFollowUp(itemId, reason.trim(), currentUser);
+      setWorkOrdersVersion((v) => v + 1);
+      alert('Đã gửi cảnh báo yêu cầu hỗ trợ kỹ thuật đến Điều Phối Viên!');
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
 
   // Trees in selected corridor
   const corridorTrees = useMemo(() => {
@@ -541,6 +656,18 @@ export const StaffWorkstationView: React.FC<StaffWorkstationViewProps> = ({
       {/* 🧭 3. SUB-TAB NAVIGATION PILLS */}
       <div className="flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto">
         <button
+          onClick={() => setActiveTab('work_orders')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === 'work_orders'
+              ? 'bg-white dark:bg-[#0c1812] text-emerald-900 dark:text-emerald-300 shadow-sm border border-emerald-200 dark:border-emerald-500/30'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/60 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Truck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <span>Lệnh Tuyến Của Đội ({myWorkOrders.length})</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('shift_tasks')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
             activeTab === 'shift_tasks'
@@ -593,6 +720,376 @@ export const StaffWorkstationView: React.FC<StaffWorkstationViewProps> = ({
           <span>Bảo Chứng PoW On-Chain ({myCareRecords.length})</span>
         </button>
       </div>
+
+      {/* 🌟 4. TAB CONTENT 0: LỆNH CÔNG TÁC THEO TUYẾN CỦA ĐỘI HIỆN TRƯỜNG */}
+      {activeTab === 'work_orders' && (
+        <div className="space-y-4">
+          {myWorkOrders.length === 0 ? (
+            <div className="p-12 text-center bg-white dark:bg-[#0c1812] rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 text-xs space-y-2">
+              <Truck className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-700" />
+              <div className="font-bold text-slate-700 dark:text-slate-300 text-sm">Hiện không có lệnh công tác mở cho đội của bạn</div>
+              <div className="text-slate-500">Ban chỉ huy điều phối sẽ phân bổ lệnh tuyến và điều xe cơ giới theo ca trực.</div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {myWorkOrders.map((wo) => {
+                const isRejected = wo.status === 'REJECTED';
+                const isDispatched = wo.status === 'ASSIGNED';
+                const isInProgress = wo.status === 'IN_PROGRESS';
+                const isSubmitted = wo.status === 'SUBMITTED_FOR_REVIEW';
+                const isCompleted = wo.status === 'COMPLETED';
+
+                return (
+                  <div
+                    key={wo.id}
+                    className={`p-5 rounded-3xl bg-white dark:bg-[#0c1812] border transition-all shadow-md flex flex-col justify-between ${
+                      isRejected
+                        ? 'border-rose-400 dark:border-rose-600 bg-rose-50/30 dark:bg-rose-950/20'
+                        : isInProgress
+                        ? 'border-blue-400 dark:border-blue-500/50 shadow-blue-500/10 ring-1 ring-blue-400/20'
+                        : 'border-slate-200 dark:border-slate-800'
+                    }`}
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono font-black text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-lg">
+                          {wo.code}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {wo.priority === 'CRITICAL' && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white animate-pulse">
+                              KHẨN CẤP
+                            </span>
+                          )}
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${
+                              isCompleted
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                                : isInProgress
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 animate-pulse'
+                                : isSubmitted
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300'
+                                : isRejected
+                                ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300'
+                                : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-300'
+                            }`}
+                          >
+                            {isCompleted
+                              ? 'ĐÃ NGHIỆM THU'
+                              : isInProgress
+                              ? 'ĐANG THI CÔNG'
+                              : isSubmitted
+                              ? 'CHỜ NGHIỆM THU'
+                              : isRejected
+                              ? 'YÊU CẦU LÀM LẠI'
+                              : 'ĐÃ NHẬN LỆNH'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-black text-base text-slate-900 dark:text-white leading-tight">
+                          {wo.title}
+                        </h4>
+                        <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                          <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                          <span className="font-bold text-slate-800 dark:text-slate-200">
+                            {wo.routeCorridorName || 'Tuyến đô thị'}
+                          </span>
+                          {wo.assignedVehiclePlate && (
+                            <>
+                              <span>•</span>
+                              <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                                Xe: {wo.assignedVehiclePlate}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Thông báo nếu lệnh bị Giám sát viên từ chối để làm lại */}
+                      {isRejected && (
+                        <div className="p-3 rounded-2xl bg-rose-100/80 dark:bg-rose-900/40 border border-rose-300 dark:border-rose-800 text-xs text-rose-900 dark:text-rose-200 space-y-1">
+                          <div className="flex items-center gap-1.5 font-black uppercase text-[11px] text-rose-700 dark:text-rose-300">
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                            <span>Giám Sát Viên Yêu Cầu Khắc Phục Lại:</span>
+                          </div>
+                          <div className="italic text-rose-800 dark:text-rose-200 pl-5">
+                            "{wo.supervisorNotes || 'Cần hoàn thiện các cây còn sót trước khi nghiệm thu lại'}"
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Tiến độ xử lý cây */}
+                      <div className="space-y-1.5 pt-1">
+                        <div className="flex items-center justify-between text-xs font-bold">
+                          <span className="text-slate-500">Tiến độ tuyến:</span>
+                          <span className="text-emerald-600 dark:text-emerald-400">
+                            {wo.completedItems}/{wo.totalItems} cây ({wo.progressPercent}%)
+                          </span>
+                        </div>
+                        <div className="w-full h-2.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-300"
+                            style={{ width: `${wo.progressPercent}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 flex-wrap">
+                      {(isDispatched || isRejected) && (
+                        <button
+                          type="button"
+                          onClick={() => handleStartFieldWorkOrder(wo.id)}
+                          className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-colors"
+                        >
+                          <Play className="w-4 h-4 fill-white" />
+                          <span>{isRejected ? 'Bắt Đầu Làm Lại Tuyến' : 'Bắt Đầu Lăn Bánh / Thi Công'}</span>
+                        </button>
+                      )}
+
+                      {isInProgress && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedWorkOrderId(wo.id)}
+                          className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-colors"
+                        >
+                          <FileText className="w-4 h-4" />
+                          <span>Mở Sổ Kiểm Tra Từng Cây Hiện Trường</span>
+                        </button>
+                      )}
+
+                      {isSubmitted && (
+                        <div className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5 py-1.5">
+                          <Clock className="w-4 h-4 animate-spin" />
+                          <span>Đã nộp báo cáo — Chờ Giám sát viên duyệt</span>
+                        </div>
+                      )}
+
+                      {isCompleted && (
+                        <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 py-1.5">
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Đã nghiệm thu đạt chuẩn</span>
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => setSelectedWorkOrderId(wo.id)}
+                        className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors cursor-pointer ml-auto"
+                      >
+                        Chi Tiết
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 📋 MODAL/DRAWER: SỔ KIỂM TRA HIỆN TRƯỜNG TỪNG CÂY THEO TUYẾN */}
+      {selectedWorkOrderDetails && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-fade-in overflow-y-auto">
+          <div className="bg-white dark:bg-[#0c1812] border border-slate-200 dark:border-slate-800 rounded-3xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/50 dark:bg-white/5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold">
+                  <Truck className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
+                      {selectedWorkOrderDetails.workOrder.code}
+                    </span>
+                    <span className="text-xs text-slate-400">•</span>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      {selectedWorkOrderDetails.workOrder.routeCorridorName || 'Tuyến Đô Thị'}
+                    </span>
+                  </div>
+                  <h3 className="font-black text-base text-slate-900 dark:text-white line-clamp-1">
+                    {selectedWorkOrderDetails.workOrder.title}
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedWorkOrderId(null)}
+                className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Sub-header: Summary stats & Action */}
+            <div className="p-4 bg-slate-100/60 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3 text-xs font-bold">
+                <span className="text-slate-500">Tiến độ tuyến:</span>
+                <span className="text-emerald-600 dark:text-emerald-400 text-sm">
+                  {selectedWorkOrderDetails.workOrder.completedItems}/{selectedWorkOrderDetails.workOrder.totalItems} cây ({selectedWorkOrderDetails.workOrder.progressPercent}%)
+                </span>
+                <span className="text-slate-300 dark:text-slate-700">|</span>
+                <span className="text-slate-600 dark:text-slate-400 font-mono">
+                  Xe: {selectedWorkOrderDetails.workOrder.assignedVehiclePlate || 'N/A'}
+                </span>
+              </div>
+
+              {selectedWorkOrderDetails.workOrder.status === 'IN_PROGRESS' && (
+                <button
+                  type="button"
+                  onClick={() => handleSubmitFieldWorkOrder(selectedWorkOrderDetails.workOrder.id)}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer transition-all self-end sm:self-auto"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>Nộp Báo Cáo Nghiệm Thu Tuyến Lên Ban Giám Sát</span>
+                </button>
+              )}
+            </div>
+
+            {/* Modal Body: Tree items checklist */}
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-3.5 flex-1">
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                Danh Sách {selectedWorkOrderDetails.items.length} Cây Trên Tuyến Cần Xử Lý:
+              </div>
+
+              {selectedWorkOrderDetails.items.map((item, index) => {
+                const isItemCompleted = item.status === 'COMPLETED';
+                const isItemSkipped = item.status === 'SKIPPED';
+                const isItemFailed = item.status === 'FAILED';
+                const isItemFollowUp = item.status === 'NEEDS_FOLLOW_UP';
+
+                return (
+                  <div
+                    key={item.id}
+                    className={`p-4 rounded-2xl border transition-all ${
+                      isItemCompleted
+                        ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800'
+                        : isItemSkipped
+                        ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800'
+                        : isItemFailed
+                        ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-300 dark:border-rose-800'
+                        : isItemFollowUp
+                        ? 'bg-purple-50/50 dark:bg-purple-950/20 border-purple-300 dark:border-purple-800'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black shrink-0 ${
+                            isItemCompleted
+                              ? 'bg-emerald-500 text-white'
+                              : isItemSkipped
+                              ? 'bg-amber-500 text-white'
+                              : isItemFailed
+                              ? 'bg-rose-500 text-white'
+                              : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          {index + 1}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-black text-sm text-slate-900 dark:text-white">
+                              {item.treeStreetCode || item.treeId}
+                            </span>
+                            <span className="text-xs text-slate-400">•</span>
+                            <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                              {item.treeDisplayName || 'Cây đô thị'}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-500 mt-0.5">
+                            Vị trí / Cột mốc: <span className="font-medium text-slate-700 dark:text-slate-300">{item.houseMilestone || 'Vỉa hè'}</span>
+                          </div>
+
+                          {/* Reason or note tag */}
+                          {item.reason && (
+                            <div className="mt-1.5 text-xs text-amber-700 dark:text-amber-300 bg-amber-100/60 dark:bg-amber-900/40 px-2.5 py-1 rounded-lg inline-block">
+                              <span className="font-bold">Lý do:</span> {item.reason}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Field Action Buttons (Large, glove-friendly) */}
+                      <div className="flex items-center gap-1.5 flex-wrap self-end sm:self-center">
+                        <button
+                          type="button"
+                          onClick={() => handleFieldItemComplete(item.id)}
+                          className={`px-3 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors ${
+                            isItemCompleted
+                              ? 'bg-emerald-600 text-white shadow-sm'
+                              : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60'
+                          }`}
+                        >
+                          <Check className="w-4 h-4" />
+                          <span>{isItemCompleted ? 'Đã Hoàn Tất' : 'Hoàn Tất'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleFieldItemSkip(item.id)}
+                          className={`px-2.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors ${
+                            isItemSkipped
+                              ? 'bg-amber-600 text-white shadow-sm'
+                              : 'bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/60 dark:text-amber-300 dark:hover:bg-amber-900/60'
+                          }`}
+                        >
+                          <span>Bỏ Qua</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleFieldItemFail(item.id)}
+                          className={`px-2.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors ${
+                            isItemFailed
+                              ? 'bg-rose-600 text-white shadow-sm'
+                              : 'bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/60 dark:text-rose-300 dark:hover:bg-rose-900/60'
+                          }`}
+                        >
+                          <span>Báo Hỏng</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleFieldItemRequestFollowUp(item.id)}
+                          title="Gửi yêu cầu điều xe thang lớn hơn hoặc chi viện kỹ thuật"
+                          className={`px-2.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors ${
+                            isItemFollowUp
+                              ? 'bg-purple-600 text-white shadow-sm'
+                              : 'bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-950/60 dark:text-purple-300 dark:hover:bg-purple-900/60'
+                          }`}
+                        >
+                          <Radio className="w-3.5 h-3.5" />
+                          <span>Chi Viện</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-white/5">
+              <span className="text-xs text-slate-500">
+                Lưu ý: Mọi thao tác đánh dấu tại hiện trường được đồng bộ trực tiếp lên hệ thống trung tâm.
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedWorkOrderId(null)}
+                className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs cursor-pointer transition-colors"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 🌟 4. TAB CONTENT 1: SỰ CỐ ĐƯỢC GIAO (MY ASSIGNED INCIDENTS) */}
       {activeTab === 'shift_tasks' && (

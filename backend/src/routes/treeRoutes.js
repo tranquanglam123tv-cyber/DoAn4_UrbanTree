@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const treeController = require('../controllers/treeController');
+const { authenticateToken, requireRoles } = require('../middleware/authMiddleware');
 
 // ==========================================
 // 🌳 ROUTES CÂY XANH (Nhiệm vụ THUAN-02 & THUAN-03)
@@ -19,14 +20,18 @@ router.get('/:id', treeController.getTreeById);
 // Xuất hình ảnh mã QR (Buffer PNG trực tiếp hoặc JSON Base64)
 router.get('/:id/qr', treeController.generateQrCode);
 
-// Thêm mới cây xanh & tự động sinh mã QR
-router.post('/', treeController.createTree);
+// 🛡️ BẢO VỆ PHÂN QUYỀN SERVER-SIDE (UT-001)
+// Thêm mới cây xanh & tự động sinh mã QR (Chỉ ADMIN)
+router.post('/', authenticateToken, requireRoles('ADMIN'), treeController.createTree);
 
-// Cập nhật thông tin cây
-router.put('/:id', treeController.updateTree);
+// Thêm hàng loạt cây xanh (Bulk Insert) (Chỉ ADMIN)
+router.post('/bulk', authenticateToken, requireRoles('ADMIN'), treeController.createTreesBulk);
 
-// Xóa cây khỏi hệ thống
-router.delete('/:id', treeController.deleteTree);
+// Cập nhật thông tin cây (ADMIN hoặc KTV STAFF)
+router.put('/:id', authenticateToken, requireRoles('ADMIN', 'STAFF'), treeController.updateTree);
+
+// Giải tỏa / Đốn hạ cây (Soft Delete UT-002 - Bắt buộc ADMIN phê duyệt)
+router.delete('/:id', authenticateToken, requireRoles('ADMIN'), treeController.deleteTree);
 
 module.exports = router;
 

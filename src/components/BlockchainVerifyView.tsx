@@ -22,6 +22,8 @@ import {
   Radio,
   Search,
   Link2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { blockchainService } from '../services/blockchainService';
 import { storage } from '../db/storage';
@@ -58,11 +60,40 @@ export const BlockchainVerifyView: React.FC = () => {
   const [tablePage, setTablePage] = useState(1);
   const [ledgerRecordFilter, setLedgerRecordFilter] = useState<string>('ALL');
 
+  // ⚡ Phân trang & Tìm kiếm Sổ cái On-Chain A18 (Chống đơ giật khi có 4,800+ bản ghi)
+  const [anchorSearch, setAnchorSearch] = useState('');
+  const [anchorTypeFilter, setAnchorTypeFilter] = useState<string>('ALL');
+  const [anchorPage, setAnchorPage] = useState(1);
+  const [anchorPageSize, setAnchorPageSize] = useState(20);
+
   const trees = useMemo(() => storage.getTrees(), [dataVersion]);
   const careRecords = useMemo(() => storage.getCareRecords(), [dataVersion]);
   const incidents = useMemo(() => storage.getIncidents(), [dataVersion]);
   const anchors = useMemo(() => blockchainService.getAllAnchors(), [dataVersion]);
   const nodeStatus = blockchainService.getNodeStatus();
+
+  // ⚡ Lọc và Phân trang cho Sổ cái On-Chain (Mục A18)
+  const filteredAnchors = useMemo(() => {
+    const q = anchorSearch.trim().toLowerCase();
+    return anchors.filter((anc) => {
+      if (anchorTypeFilter !== 'ALL' && anc.recordType !== anchorTypeFilter) return false;
+      if (q) {
+        const match =
+          anc.recordId.toLowerCase().includes(q) ||
+          anc.txHash.toLowerCase().includes(q) ||
+          anc.payloadHash.toLowerCase().includes(q) ||
+          String(anc.blockNumber).includes(q);
+        if (!match) return false;
+      }
+      return true;
+    });
+  }, [anchors, anchorTypeFilter, anchorSearch]);
+
+  const totalAnchorPages = Math.max(1, Math.ceil(filteredAnchors.length / anchorPageSize));
+  const paginatedAnchors = useMemo(() => {
+    const start = (anchorPage - 1) * anchorPageSize;
+    return filteredAnchors.slice(start, start + anchorPageSize);
+  }, [filteredAnchors, anchorPage, anchorPageSize]);
 
   // 📊 THỐNG KÊ BAO PHỦ BLOCKCHAIN (ANCHOR COVERAGE METRICS)
   const totalTrees = trees.length;
@@ -1014,15 +1045,47 @@ export const BlockchainVerifyView: React.FC = () => {
 
       {/* Section A18: Full On-Chain Blockchain Activity Log Table */}
       <div className="bg-white dark:bg-[#0c1812] p-5 rounded-2xl border border-[#E0EBDD] dark:border-slate-800 shadow-2xs space-y-4 text-xs">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800/80 pb-3">
           <div>
             <h2 className="text-sm font-bold text-[#174B36] dark:text-[#00FF9D] flex items-center gap-2">
               <Layers className="w-4 h-4 text-[#347A50] dark:text-emerald-400" />
               <span>A18 — Sổ cái Hoạt động Blockchain (On-Chain Activity Log)</span>
             </h2>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Tổng số {anchors.length} bản ghi đã neo thành công trên mạng Hardhat Local EVM.
+              Tổng số {anchors.length.toLocaleString('vi-VN')} bản ghi đã neo thành công trên mạng Hardhat Local EVM. Phân trang chống nghẽn DOM.
             </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Tìm kiếm */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={anchorSearch}
+                onChange={(e) => {
+                  setAnchorSearch(e.target.value);
+                  setAnchorPage(1);
+                }}
+                placeholder="Tìm mã ID, TX Hash, Block..."
+                className="pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-xl focus:border-emerald-500 text-slate-800 dark:text-slate-200 w-52 sm:w-60"
+              />
+            </div>
+
+            {/* Lọc loại bản ghi */}
+            <select
+              value={anchorTypeFilter}
+              onChange={(e) => {
+                setAnchorTypeFilter(e.target.value);
+                setAnchorPage(1);
+              }}
+              className="px-2.5 py-1.5 text-xs font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-200 cursor-pointer"
+            >
+              <option value="ALL">Tất cả loại ({anchors.length})</option>
+              <option value="CARE_RECORD">CARE_RECORD</option>
+              <option value="TREE_PROFILE">TREE_PROFILE</option>
+              <option value="INCIDENT_REPORT">INCIDENT_REPORT</option>
+            </select>
           </div>
         </div>
 
@@ -1040,31 +1103,84 @@ export const BlockchainVerifyView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 font-mono text-[11px]">
-              {anchors.map((anc) => (
-                <tr key={anc.txHash} className="hover:bg-slate-50/80 dark:hover:bg-[#102017]/70 transition-colors">
-                  <td className="py-2.5 px-3 font-sans font-bold text-[#174B36] dark:text-[#00FF9D]">
-                    {anc.recordType}
-                  </td>
-                  <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300">{anc.recordId}</td>
-                  <td className="py-2.5 px-3 text-slate-600 dark:text-emerald-300/80 max-w-xs truncate" title={anc.payloadHash}>
-                    {anc.payloadHash.slice(0, 16)}...{anc.payloadHash.slice(-8)}
-                  </td>
-                  <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400 max-w-xs truncate" title={anc.txHash}>
-                    {anc.txHash.slice(0, 12)}...{anc.txHash.slice(-6)}
-                  </td>
-                  <td className="py-2.5 px-3 font-bold text-slate-800 dark:text-slate-100">#{anc.blockNumber}</td>
-                  <td className="py-2.5 px-3 font-sans text-slate-500 dark:text-slate-400 text-[10px]">
-                    {new Date(anc.anchoredAt).toLocaleTimeString('vi-VN')} {new Date(anc.anchoredAt).toLocaleDateString('vi-VN')}
-                  </td>
-                  <td className="py-2.5 px-3">
-                    <span className="font-sans font-bold text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-[#00FF9D] dark:border dark:border-emerald-500/40">
-                      CONFIRMED
-                    </span>
+              {paginatedAnchors.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-slate-400 font-sans">
+                    Không tìm thấy bản ghi neo nào phù hợp.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                paginatedAnchors.map((anc) => (
+                  <tr key={anc.txHash} className="hover:bg-slate-50/80 dark:hover:bg-[#102017]/70 transition-colors">
+                    <td className="py-2.5 px-3 font-sans font-bold text-[#174B36] dark:text-[#00FF9D]">
+                      {anc.recordType}
+                    </td>
+                    <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300">{anc.recordId}</td>
+                    <td className="py-2.5 px-3 text-slate-600 dark:text-emerald-300/80 max-w-xs truncate" title={anc.payloadHash}>
+                      {anc.payloadHash.slice(0, 16)}...{anc.payloadHash.slice(-8)}
+                    </td>
+                    <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400 max-w-xs truncate" title={anc.txHash}>
+                      {anc.txHash.slice(0, 12)}...{anc.txHash.slice(-6)}
+                    </td>
+                    <td className="py-2.5 px-3 font-bold text-slate-800 dark:text-slate-100">#{anc.blockNumber}</td>
+                    <td className="py-2.5 px-3 font-sans text-slate-500 dark:text-slate-400 text-[10px]">
+                      {new Date(anc.anchoredAt).toLocaleTimeString('vi-VN')} {new Date(anc.anchoredAt).toLocaleDateString('vi-VN')}
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <span className="font-sans font-bold text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-[#00FF9D] dark:border dark:border-emerald-500/40">
+                        CONFIRMED
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
+        </div>
+
+        {/* 📑 THANH PHÂN TRANG CHỐNG NGHẼN DOM CHO MỤC A18 */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+          <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+            <span>Hiển thị</span>
+            <select
+              value={anchorPageSize}
+              onChange={(e) => {
+                setAnchorPageSize(Number(e.target.value));
+                setAnchorPage(1);
+              }}
+              className="px-2 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold"
+            >
+              <option value={15}>15 dòng</option>
+              <option value={20}>20 dòng</option>
+              <option value={50}>50 dòng</option>
+              <option value={100}>100 dòng</option>
+            </select>
+            <span>/ trang · Tổng cộng {filteredAnchors.length.toLocaleString('vi-VN')} bản ghi</span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setAnchorPage((p) => Math.max(1, p - 1))}
+              disabled={anchorPage === 1}
+              className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer disabled:cursor-not-allowed"
+              title="Trang trước"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+
+            <span className="text-xs font-mono font-bold px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
+              {anchorPage} / {totalAnchorPages}
+            </span>
+
+            <button
+              onClick={() => setAnchorPage((p) => Math.min(totalAnchorPages, p + 1))}
+              disabled={anchorPage === totalAnchorPages}
+              className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer disabled:cursor-not-allowed"
+              title="Trang sau"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 

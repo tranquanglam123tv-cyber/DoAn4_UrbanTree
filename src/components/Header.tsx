@@ -27,7 +27,7 @@ import {
 import { Role, User } from '../types';
 import { storage } from '../db/storage';
 import { hasPermission } from '../utils/permissionUtils';
-import { isStormSeasonPruningNeeded } from '../utils/treeUtils';
+import { isStormSeasonPruningNeeded, buildLatestPruningMap } from '../utils/treeUtils';
 import { EmergencyStormTicker } from './EmergencyStormTicker';
 
 interface HeaderProps {
@@ -40,6 +40,8 @@ interface HeaderProps {
   onLogout: () => void;
   onResetSeed: () => void;
   onOpenStaffManagement?: () => void;
+  onOpenStormPruningModal?: () => void;
+  treeVersion?: number;
   isDark?: boolean;
   onToggleTheme?: () => void;
 }
@@ -54,24 +56,27 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
   onResetSeed,
   onOpenStaffManagement,
+  onOpenStormPruningModal,
+  treeVersion = 0,
   isDark,
   onToggleTheme,
 }) => {
   const users = storage.getUsers();
   const unreadNotifications = storage.getUnreadNotificationCount(currentUser.role);
-  const trees = storage.getTrees();
-  const careRecords = storage.getCareRecords();
 
-  // ⛈️ Tính toán ĐỘNG số lượng cây cần rà soát cắt tỉa theo dữ liệu thực tế
+  // ⛈️ Tính toán ĐỘNG số lượng cây cần rà soát cắt tỉa theo dữ liệu thực tế (O(1) Map)
   const stormAudit = React.useMemo(() => {
-    const list = trees
-      .map((t) => ({ tree: t, audit: isStormSeasonPruningNeeded(t, careRecords) }))
+    const currentTrees = storage.getTrees();
+    const currentCare = storage.getCareRecords();
+    const pruningMap = buildLatestPruningMap(currentCare);
+    const list = currentTrees
+      .map((t) => ({ tree: t, audit: isStormSeasonPruningNeeded(t, currentCare, pruningMap) }))
       .filter((item) => item.audit.isNeeded);
     return {
       neededCount: list.length,
       highUrgencyCount: list.filter((i) => i.audit.urgencyLevel === 'HIGH').length,
     };
-  }, [trees, careRecords]);
+  }, [treeVersion]);
 
   const handleRoleSelect = (role: Role) => {
     if (role === 'CITIZEN') {
@@ -146,6 +151,17 @@ export const Header: React.FC<HeaderProps> = ({
                   <span>Bàn làm việc</span>
                 </button>
                 <button
+                  onClick={() => setActiveTab('work_orders')}
+                  className={`flex items-center gap-1 xl:gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-full text-[11px] xl:text-xs font-bold transition-all active:scale-95 whitespace-nowrap cursor-pointer border shrink-0 ${
+                    activeTab === 'work_orders'
+                      ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
+                      : 'text-amber-800 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/40 border-amber-300/80 dark:border-amber-800/60 hover:bg-amber-100 dark:hover:bg-amber-900/50'
+                  }`}
+                >
+                  <Truck className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span>Lệnh Công Tác Tuyến</span>
+                </button>
+                <button
                   onClick={() => setActiveTab('map')}
                   className={`flex items-center gap-1 xl:gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-full text-[11px] xl:text-xs font-semibold transition-all active:scale-95 whitespace-nowrap cursor-pointer shrink-0 ${
                     activeTab === 'map'
@@ -183,6 +199,17 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <Sliders className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <span>Dashboard</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('work_orders')}
+                  className={`flex items-center gap-1 xl:gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-full text-[11px] xl:text-xs font-bold transition-all active:scale-95 whitespace-nowrap cursor-pointer border shrink-0 ${
+                    activeTab === 'work_orders'
+                      ? 'bg-amber-600 text-white border-amber-700 shadow-xs ring-2 ring-amber-500/30'
+                      : 'text-amber-800 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/40 border-amber-300/80 dark:border-amber-700/60 hover:bg-amber-100 dark:hover:bg-amber-900/50'
+                  }`}
+                >
+                  <Truck className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span>Điều Hành Tuyến & Xe</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('trees')}
@@ -658,10 +685,16 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* ⛈️ Thanh cảnh báo chạy ngang bão (Chỉ hiển thị cho ADMIN khi có cây cần rà soát) */}
+      {/* ⛈️ Thanh cảnh báo chạy ngang bão (Chỉ hiển thị cho ADMIN) */}
       {currentUser.role === 'ADMIN' && (
         <EmergencyStormTicker
-          onNavigateTrees={() => setActiveTab('trees')}
+          onOpenAction={() => {
+            if (onOpenStormPruningModal) {
+              onOpenStormPruningModal();
+            } else {
+              setActiveTab('trees');
+            }
+          }}
           neededCount={stormAudit.neededCount}
           highUrgencyCount={stormAudit.highUrgencyCount}
         />

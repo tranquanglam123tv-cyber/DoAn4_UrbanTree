@@ -218,13 +218,35 @@ const Tree = {
   },
 
   /**
-   * Xóa cây khỏi hệ thống
+   * Giải tỏa / Đốn hạ cây (Soft Delete - UT-002)
+   * Tuyệt đối không xóa vật lý khỏi database để bảo vệ chứng cứ Blockchain & Lịch sử tài sản công
    * @param {number|string} id 
    * @param {Function} callback 
    */
   delete: (id, callback) => {
-    const query = 'DELETE FROM trees WHERE id = ?';
+    const query = "UPDATE trees SET status = 'REMOVED', updated_at = CURRENT_TIMESTAMP WHERE id = ?";
     db.run(query, [id], function (err) {
+      if (err) return callback(err);
+      callback(null, { changes: this ? this.changes : 0 });
+    });
+  },
+
+  /**
+   * Lưu hồ sơ đốn hạ có phê duyệt văn bản (UT-002 Felling Permit Workflow)
+   */
+  archiveFelledTree: (id, fellingData, callback) => {
+    const { permitNumber, fellingReason, approvedByOfficer } = fellingData;
+    const query = `
+      UPDATE trees
+      SET status = 'REMOVED',
+          felling_permit_no = ?,
+          felling_reason = ?,
+          approved_by = ?,
+          felled_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `;
+    db.run(query, [permitNumber || 'GP-KHAN-CAP', fellingReason || 'Mục thân nguy hiểm mùa bão', approvedByOfficer || 'Lãnh đạo Ban QLĐT', id], function (err) {
       if (err) return callback(err);
       callback(null, { changes: this ? this.changes : 0 });
     });

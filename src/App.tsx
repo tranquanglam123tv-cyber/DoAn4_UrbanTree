@@ -25,6 +25,8 @@ import { LoginModal } from './components/LoginModal';
 import { CitizenPortalView } from './components/CitizenPortalView';
 import { StaffWorkstationView } from './components/StaffWorkstationView';
 import { StaffManagementModal } from './components/StaffManagementModal';
+import { StormPruningActionModal } from './components/StormPruningActionModal';
+import { WorkOrderCenterView } from './components/WorkOrderCenterView';
 import { NotificationsView } from './components/NotificationsView';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { SporeBackground } from './components/common/SporeBackground';
@@ -69,8 +71,10 @@ export default function App() {
   const [isQrScannerOpen, setIsQrScannerOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isStaffManagementOpen, setIsStaffManagementOpen] = useState(false);
+  const [isStormPruningModalOpen, setIsStormPruningModalOpen] = useState(false);
   const [publicTreeModalTree, setPublicTreeModalTree] = useState<Tree | null>(null);
   const [incidentReportTreeId, setIncidentReportTreeId] = useState<string | undefined>(undefined);
+  const [targetIncidentId, setTargetIncidentId] = useState<string | undefined>(undefined);
 
   // Notification / Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -82,6 +86,19 @@ export default function App() {
 
   // Lenis instance ref
   const lenisRef = useRef<Lenis | null>(null);
+
+  // Lắng nghe sự kiện đồng bộ từ IndexedDB dung lượng lớn (5,000+ cây)
+  useEffect(() => {
+    const handleDataLoaded = (e: any) => {
+      setTreeVersion((v) => v + 1);
+      const count = e?.detail?.count;
+      if (count && count > 1000) {
+        showToast(`⚡ Đã đồng bộ an toàn ${count.toLocaleString('vi-VN')} cây từ IndexedDB!`);
+      }
+    };
+    window.addEventListener('urbantree:data-loaded', handleDataLoaded);
+    return () => window.removeEventListener('urbantree:data-loaded', handleDataLoaded);
+  }, []);
 
   // Check if any modal is currently open
   const isAnyModalOpen = Boolean(
@@ -265,6 +282,8 @@ export default function App() {
         onLogout={handleLogout}
         onResetSeed={handleResetSeed}
         onOpenStaffManagement={() => setIsStaffManagementOpen(true)}
+        onOpenStormPruningModal={() => setIsStormPruningModalOpen(true)}
+        treeVersion={treeVersion}
         isDark={isDark}
         onToggleTheme={toggleTheme}
       />
@@ -308,6 +327,7 @@ export default function App() {
         {/* Dashboard Vĩ Mô Quản Trị dành riêng cho Lãnh Đạo / Cơ Quan Quản Lý (ADMIN) */}
         {activeTab === 'dashboard' && currentUser.role === 'ADMIN' && (
           <DashboardView
+            key={`dashboard-${treeVersion}`}
             onNavigate={(tab) => setActiveTab(tab)}
             onOpenAddTree={() => setIsAddTreeOpen(true)}
             onOpenCareModal={handleOpenCareModal}
@@ -344,6 +364,7 @@ export default function App() {
 
         {activeTab === 'trees' && currentUser.role !== 'CITIZEN' && (
           <TreeListView
+            key={`tree-list-${treeVersion}`}
             onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
             onOpenQrModal={(tree) => setSelectedTreeForQr(tree)}
             onOpenAddTree={() => setIsAddTreeOpen(true)}
@@ -375,6 +396,7 @@ export default function App() {
 
         {activeTab === 'care' && currentUser.role !== 'CITIZEN' && (
           <CareRecordsView
+            key={`care-records-${treeVersion}`}
             onOpenCareModal={handleOpenCareModal}
             onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
           />
@@ -398,6 +420,7 @@ export default function App() {
             onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
             currentUser={currentUser}
             initialTreeId={incidentReportTreeId}
+            initialIncidentId={targetIncidentId}
           />
         )}
 
@@ -405,14 +428,57 @@ export default function App() {
           <BlockchainVerifyView />
         )}
 
+        {/* 🚜 TRUNG TÂM ĐIỀU HÀNH & LỆNH CÔNG TÁC HIỆN TRƯỜNG */}
+        {activeTab === 'work_orders' && (
+          <WorkOrderCenterView
+            currentUser={currentUser}
+            onSelectTree={(treeId) => {
+              const target = storage.getTreeById(treeId);
+              if (target) setSelectedTreeForDetail(target);
+            }}
+          />
+        )}
+
         {/* 🔔 TRUNG TÂM THÔNG BÁO & CẢNH BÁO ĐIỀU HÀNH ĐÔ THỊ (HỖ TRỢ CẢ 3 VAI TRÒ ADMIN, STAFF, CITIZEN) */}
         {activeTab === 'notifications' && (
           <NotificationsView
             currentUser={currentUser}
             onNavigate={(tab, entityId) => {
-              if (tab === 'incidents' && entityId) {
-                setIncidentReportTreeId(entityId);
+              // 1. Nếu là thông báo bão -> Mở thẳng Trung Tâm Điều Hành Cắt Tỉa Hạ Tán
+              if (tab === 'storm_action' || entityId === 'storm-audit' || (tab === 'trees' && entityId === 'storm-audit')) {
+                setIsStormPruningModalOpen(true);
+                return;
               }
+
+              // 2. Nếu là thông báo sự cố -> Mở thẳng chính xác sự cố cụ thể
+              if (tab === 'incidents') {
+                if (entityId) {
+                  setTargetIncidentId(entityId);
+                  setIncidentReportTreeId(undefined);
+                }
+                setActiveTab('incidents');
+                return;
+              }
+
+              // 3. Nếu là thông báo chăm sóc -> Mở thẳng modal chăm sóc cho cây/tuyến
+              if (tab === 'care') {
+                setActiveTab('care');
+                if (entityId && entityId.startsWith('tree-')) {
+                  handleOpenCareModal(entityId);
+                }
+                return;
+              }
+
+              // 4. Nếu là thông báo cây xanh cụ thể -> Mở thẳng hồ sơ chi tiết cây
+              if (tab === 'trees' && entityId && entityId !== 'storm-audit') {
+                const targetTree = storage.getTreeById(entityId) || storage.getTreeByPublicCode(entityId);
+                if (targetTree) {
+                  setSelectedTreeForDetail(targetTree);
+                }
+                setActiveTab('trees');
+                return;
+              }
+
               setActiveTab(tab);
             }}
           />
@@ -493,7 +559,21 @@ export default function App() {
           initialTreeId={careModalTreeId}
           onClose={() => setIsCareModalOpen(false)}
           onSaved={() => {
+            setTreeVersion((v) => v + 1);
             showToast('Đã lưu nhật ký chăm sóc và neo Smart Contract thành công!');
+          }}
+        />
+      )}
+
+      {isStormPruningModalOpen && (
+        <StormPruningActionModal
+          onClose={() => setIsStormPruningModalOpen(false)}
+          onPruned={() => {
+            setTreeVersion((v) => v + 1);
+          }}
+          onSelectTree={(tree) => {
+            setSelectedTreeForDetail(tree);
+            setIsStormPruningModalOpen(false);
           }}
         />
       )}
