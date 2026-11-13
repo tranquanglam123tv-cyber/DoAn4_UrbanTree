@@ -27,6 +27,7 @@ import {
 import { Role, User } from '../types';
 import { storage } from '../db/storage';
 import { hasPermission } from '../utils/permissionUtils';
+import { isStormSeasonPruningNeeded } from '../utils/treeUtils';
 import { EmergencyStormTicker } from './EmergencyStormTicker';
 
 interface HeaderProps {
@@ -58,6 +59,19 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const users = storage.getUsers();
   const unreadNotifications = storage.getUnreadNotificationCount(currentUser.role);
+  const trees = storage.getTrees();
+  const careRecords = storage.getCareRecords();
+
+  // ⛈️ Tính toán ĐỘNG số lượng cây cần rà soát cắt tỉa theo dữ liệu thực tế
+  const stormAudit = React.useMemo(() => {
+    const list = trees
+      .map((t) => ({ tree: t, audit: isStormSeasonPruningNeeded(t, careRecords) }))
+      .filter((item) => item.audit.isNeeded);
+    return {
+      neededCount: list.length,
+      highUrgencyCount: list.filter((i) => i.audit.urgencyLevel === 'HIGH').length,
+    };
+  }, [trees, careRecords]);
 
   const handleRoleSelect = (role: Role) => {
     if (role === 'CITIZEN') {
@@ -644,9 +658,13 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* ⛈️ Thanh cảnh báo chạy ngang bão (Chỉ hiển thị cho ADMIN) */}
+      {/* ⛈️ Thanh cảnh báo chạy ngang bão (Chỉ hiển thị cho ADMIN khi có cây cần rà soát) */}
       {currentUser.role === 'ADMIN' && (
-        <EmergencyStormTicker onNavigateTrees={() => setActiveTab('trees')} />
+        <EmergencyStormTicker
+          onNavigateTrees={() => setActiveTab('trees')}
+          neededCount={stormAudit.neededCount}
+          highUrgencyCount={stormAudit.highUrgencyCount}
+        />
       )}
     </header>
   );
