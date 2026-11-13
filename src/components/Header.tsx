@@ -281,24 +281,26 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Action Zone: QR Scanner, Persona Switcher, Reset */}
           <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-            {/* Quick Notification Bell Button */}
-            <button
-              onClick={() => setActiveTab('notifications')}
-              title={`Xem ${unreadNotifications} thông báo mới của bạn`}
-              className={`relative flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-full border transition-all shadow-2xs whitespace-nowrap cursor-pointer shrink-0 ${
-                activeTab === 'notifications'
-                  ? 'bg-amber-500 text-white border-amber-600 shadow-xs ring-2 ring-amber-400/30'
-                  : 'bg-amber-50/80 dark:bg-slate-800/90 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-slate-700/90 border-amber-200/80 dark:border-slate-700'
-              }`}
-            >
-              <Bell className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-              <span className="hidden 2xl:inline">Thông báo</span>
-              {unreadNotifications > 0 && (
-                <span className="px-1.5 py-0.5 text-[9px] font-black rounded-full bg-rose-500 text-white leading-none shadow-xs">
-                  {unreadNotifications}
-                </span>
-              )}
-            </button>
+            {/* Quick Notification Bell Button - Chỉ hiển thị cho Quản trị viên (ADMIN) */}
+            {currentUser.role === 'ADMIN' && (
+              <button
+                onClick={() => setActiveTab('notifications')}
+                title={`Xem ${unreadNotifications} thông báo mới của bạn`}
+                className={`relative flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-full border transition-all shadow-2xs whitespace-nowrap cursor-pointer shrink-0 ${
+                  activeTab === 'notifications'
+                    ? 'bg-amber-500 text-white border-amber-600 shadow-xs ring-2 ring-amber-400/30'
+                    : 'bg-amber-50/80 dark:bg-slate-800/90 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-slate-700/90 border-amber-200/80 dark:border-slate-700'
+                }`}
+              >
+                <Bell className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span className="hidden 2xl:inline">Thông báo</span>
+                {unreadNotifications > 0 && (
+                  <span className="px-1.5 py-0.5 text-[9px] font-black rounded-full bg-rose-500 text-white leading-none shadow-xs">
+                    {unreadNotifications}
+                  </span>
+                )}
+              </button>
+            )}
 
             {/* Quick QR Scanner button */}
             <button
@@ -603,27 +605,31 @@ export const Header: React.FC<HeaderProps> = ({
             </>
           )}
 
-          {/* Thông báo Mobile (Mọi vai trò) */}
-          <button
-            onClick={() => setActiveTab('notifications')}
-            className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors flex items-center gap-1 ${
-              activeTab === 'notifications'
-                ? 'bg-amber-600 text-white'
-                : 'text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100'
-            }`}
-          >
-            <span>🔔 Thông báo</span>
-            {unreadNotifications > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-rose-500 text-white">
-                {unreadNotifications}
-              </span>
-            )}
-          </button>
+          {/* Thông báo Mobile (Chỉ dành cho ADMIN) */}
+          {currentUser.role === 'ADMIN' && (
+            <button
+              onClick={() => setActiveTab('notifications')}
+              className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors flex items-center gap-1 ${
+                activeTab === 'notifications'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100'
+              }`}
+            >
+              <span>🔔 Thông báo</span>
+              {unreadNotifications > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-rose-500 text-white">
+                  {unreadNotifications}
+                </span>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* ⛈️ Thanh cảnh báo chạy ngang bão (Nằm sát dưới Navbar, không bị che lấp) */}
-      <EmergencyStormTicker onNavigateTrees={() => setActiveTab('trees')} />
+      {/* ⛈️ Thanh cảnh báo chạy ngang bão (Chỉ hiển thị cho ADMIN) */}
+      {currentUser.role === 'ADMIN' && (
+        <EmergencyStormTicker onNavigateTrees={() => setActiveTab('trees')} />
+      )}
     </header>
   );
 };
