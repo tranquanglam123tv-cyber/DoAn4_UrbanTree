@@ -299,8 +299,8 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Action Zone: QR Scanner, Persona Switcher, Reset */}
           <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-            {/* Quick Notification Bell Button - Chỉ hiển thị cho Quản trị viên (ADMIN) */}
-            {currentUser.role === 'ADMIN' && (
+            {/* Quick Notification Bell Button - Hiển thị cho các tài khoản đã đăng nhập (ADMIN, STAFF, CITIZEN) */}
+            {currentUser.id !== 'citizen-guest' && (
               <button
                 onClick={() => setActiveTab('notifications')}
                 title={`Xem ${unreadNotifications} thông báo mới của bạn`}
@@ -623,8 +623,8 @@ export const Header: React.FC<HeaderProps> = ({
             </>
           )}
 
-          {/* Thông báo Mobile (Chỉ dành cho ADMIN) */}
-          {currentUser.role === 'ADMIN' && (
+          {/* Thông báo Mobile (Hiển thị cho các tài khoản đã đăng nhập: ADMIN, STAFF, CITIZEN) */}
+          {currentUser.id !== 'citizen-guest' && (
             <button
               onClick={() => setActiveTab('notifications')}
               className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors flex items-center gap-1 ${
