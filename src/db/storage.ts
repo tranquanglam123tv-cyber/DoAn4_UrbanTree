@@ -4,6 +4,7 @@
  */
 
 import {
+  AnchorStatus,
   AppNotification,
   CareActionType,
   CareRecord,
@@ -1239,6 +1240,32 @@ class StorageService {
     this.trees[index] = updatedTree;
     this.saveAll();
     return updatedTree;
+  }
+
+  /**
+   * ⚡ CẬP NHẬT TRẠNG THÁI NEO BATCH: Cập nhật đồng loạt hàng ngàn cây mà chỉ lưu DB đúng 1 lần duy nhất
+   */
+  public updateTreesAnchorBatch(
+    updates: Array<{ id: string; txHash: string; status: AnchorStatus }>
+  ): void {
+    const updateMap = new Map(updates.map((u) => [u.id, u]));
+    const now = new Date().toISOString();
+
+    for (let i = 0; i < this.trees.length; i++) {
+      const u = updateMap.get(this.trees[i].id);
+      if (u) {
+        this.trees[i] = {
+          ...this.trees[i],
+          payloadVersion: 1,
+          payloadHash: u.txHash,
+          anchorStatus: u.status,
+          txHash: u.txHash,
+          updatedAt: now,
+        };
+      }
+    }
+
+    this.saveAll();
   }
 
   public deleteTree(id: string): boolean {

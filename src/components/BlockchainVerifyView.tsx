@@ -220,31 +220,48 @@ export const BlockchainVerifyView: React.FC = () => {
     setBatchResultNotice(null);
 
     try {
-      const items = unanchored.map((t) => {
-        const { hash, canonicalJson } = computeRecordHash('TREE_PROFILE', t);
-        return {
-          recordType: 'TREE_PROFILE' as RecordType,
-          recordId: t.id,
-          hash,
-          canonicalJson,
-        };
-      });
+      const CHUNK_SIZE = 500;
+      let totalAnchored = 0;
+      let startBlock = 0;
+      let endBlock = 0;
 
-      const res = await blockchainService.batchAnchorRecords(items);
+      for (let i = 0; i < unanchored.length; i += CHUNK_SIZE) {
+        const chunk = unanchored.slice(i, i + CHUNK_SIZE);
+        setBatchResultNotice(
+          `⚡ Đang xử lý băm & neo khối ${i + 1} - ${Math.min(i + CHUNK_SIZE, unanchored.length)} trên tổng số ${unanchored.length} cây...`
+        );
 
-      // Cập nhật lại thuộc tính cho các cây trong DB
-      res.receipts.forEach((r) => {
-        storage.updateTree(r.recordId, {
-          payloadVersion: 1,
-          payloadHash: r.txHash,
-          anchorStatus: 'CONFIRMED',
-          txHash: r.txHash,
+        // Nhường luồng cho UI render không bị freeze
+        await new Promise((resolve) => setTimeout(resolve, 20));
+
+        const items = chunk.map((t) => {
+          const { hash, canonicalJson } = computeRecordHash('TREE_PROFILE', t);
+          return {
+            recordType: 'TREE_PROFILE' as RecordType,
+            recordId: t.id,
+            hash,
+            canonicalJson,
+          };
         });
-      });
+
+        const res = await blockchainService.batchAnchorRecords(items);
+        if (i === 0) startBlock = res.startBlock;
+        endBlock = res.endBlock;
+        totalAnchored += res.count;
+
+        // Cập nhật batch vào DB 1 lần duy nhất cho toàn bộ chunk, KHÔNG gọi updateTree lặp
+        storage.updateTreesAnchorBatch(
+          res.receipts.map((r) => ({
+            id: r.recordId,
+            txHash: r.txHash,
+            status: 'CONFIRMED',
+          }))
+        );
+      }
 
       setDataVersion((v) => v + 1);
       setBatchResultNotice(
-        `✅ Đã neo thành công ${res.count} cây xanh lên Smart Contract on-chain (từ Block #${res.startBlock} đến #${res.endBlock})! Tính toàn vẹn đạt 100%.`
+        `✅ Đã neo thành công ${totalAnchored} cây xanh lên Smart Contract on-chain (từ Block #${startBlock} đến #${endBlock})! Tính toàn vẹn đạt 100%.`
       );
     } catch (err: any) {
       setBatchResultNotice(`❌ Lỗi khi neo hàng loạt: ${err?.message || err}`);
