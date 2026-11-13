@@ -33,7 +33,7 @@ export const EmergencyStormTicker: React.FC<EmergencyStormTickerProps> = ({
   const alertMessage = `Chiến Dịch Rà Soát Cắt Tỉa Hạ Độ Cao Đón Mùa Mưa Bão (Tháng 5 – Tháng 11): Hệ thống phát hiện ${neededCount} cây loại 2 & loại 3 cao trên 7m chưa được cắt tỉa quá 180 ngày (có ${highUrgencyCount} cây nguy cơ cao gãy đổ khi giông lốc). Đề nghị các tổ KTV điều động xe thang kiểm tra địa bàn khẩn trương!`;
 
   return (
-    <div className="w-full max-w-[1440px] mx-auto transition-all duration-300">
+    <div className="relative z-0 w-full max-w-[1440px] mx-auto transition-all duration-300">
       <div className="relative overflow-hidden rounded-full bg-gradient-to-r from-amber-50/95 via-orange-50/90 to-amber-50/95 dark:from-slate-900/95 dark:via-amber-950/50 dark:to-slate-900/95 border border-amber-400/60 dark:border-amber-600/50 shadow-sm shadow-amber-950/5 dark:shadow-amber-950/20 backdrop-blur-xl px-3 sm:px-4 py-1.5 flex items-center justify-between gap-2.5 marquee-container">
         {/* Left: Pulsing Status Badge */}
         <div className="flex items-center gap-1.5 shrink-0 z-10 bg-amber-500/20 dark:bg-amber-900/60 px-2.5 py-0.5 rounded-full border border-amber-400/60 dark:border-amber-500/50">
