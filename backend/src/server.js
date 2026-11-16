@@ -13,6 +13,9 @@ const registryRoutes = require('./registry');
 const blockchainRoutes = require('./routes/blockchainRoutes');
 const authRoutes = require('./routes/authRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const workOrderRoutes = require('./routes/workOrderRoutes');
+const eventRoutes = require('./routes/eventRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -26,13 +29,16 @@ app.use(
 );
 
 // Middlewares & CORS (Hỗ trợ Localhost, Mobile PWA & Cloudflare Tunnel *.trycloudflare.com)
+// 🔒 REMEDIATION VULN-LEAK-001: Trong production chặn triệt để origin lạ khi bật credentials: true
 const allowedOriginRegex = /^(http:\/\/localhost(:\d+)?|http:\/\/127\.0\.0\.1(:\d+)?|https:\/\/.*\.trycloudflare\.com)$/;
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOriginRegex.test(origin)) {
       callback(null, true);
+    } else if (process.env.NODE_ENV === 'production') {
+      callback(new Error('Chặn bởi chính sách bảo mật CORS: Origin không được phép truy cập API'));
     } else {
-      // Trong môi trường testing/IoT, cho phép linh hoạt để tránh chặn tunnel domain
+      // Trong môi trường testing/dev nội bộ, cho phép linh hoạt
       callback(null, true);
     }
   },
@@ -74,6 +80,10 @@ app.use('/api/v1/care-records', careRoutes);
 app.use('/api/care-records', careRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/work-orders', workOrderRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api', apiRoutes); // Giữ tương thích ngược
 
 // 4. Blockchain Smart Contract & Đối chiếu toàn vẹn dữ liệu (Lâm)

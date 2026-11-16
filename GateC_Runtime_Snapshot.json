@@ -1,0 +1,146 @@
+{
+  "timestamp": "2026-11-16T15:14:13.286Z",
+  "database": {
+    "path": "D:\\TQLCNTT2311074\\Nam4HK1\\UrbunTreeDoAn4\\backend\\urbantree.db",
+    "sizeBytes": 3063808,
+    "sizeMb": "2.922",
+    "sha256": "4eb1517ad74c72d4e50bbb0ceca0dbb71e594f64fe17c3dbbc0ae31272e2ce2a"
+  },
+  "frozenBoundary": {
+    "path": "D:\\TQLCNTT2311074\\Nam4HK1\\UrbunTreeDoAn4\\src\\components\\HomeLandingView.tsx",
+    "gitHash": "09dcbe69957ab2f762ea6e4cf24854cf1ab2117e",
+    "baselineHash": "09dcbe69957ab2f762ea6e4cf24854cf1ab2117e",
+    "matches": true
+  },
+  "counts": {
+    "totalTrees": 5425,
+    "totalWorkOrders": 162,
+    "totalItems": 752,
+    "totalCareRecords": 749,
+    "careBreakdown": {
+      "total": 749,
+      "confirmed": 563,
+      "pending_verification": 186,
+      "rejected": 0
+    },
+    "careDuplicates": 0,
+    "hasUniqueIndex": true,
+    "activeTreeDuplicates": 20
+  },
+  "campaign": {
+    "id": "campaign-storm-2026",
+    "code": "CAMP-STORM-2026",
+    "name": "Đợt diễn tập bão khép kín Wave 5.0",
+    "type": "STORM_PREPARATION",
+    "status": "IN_PROGRESS",
+    "totalDetectedTrees": 5424,
+    "assignedTrees": 80,
+    "inProgressTrees": 55,
+    "fieldCompletedTrees": 35,
+    "verifiedTrees": 443,
+    "resolvedTrees": 443,
+    "remainingTrees": 4981,
+    "unassignedTrees": 4846,
+    "blockedTrees": 0,
+    "reconciliationFormula": "5424 = 443 (VERIFIED) + 55 (IN_PROGRESS) + 80 (ASSIGNED) + 4846 (UNASSIGNED) + 0 (BLOCKED)",
+    "isReconciled": true,
+    "resolvedAt": "2026-11-15T02:07:51.876Z",
+    "history": [
+      {
+        "timestamp": "2026-11-15T02:07:51.766Z",
+        "event": "TEST_INIT",
+        "details": "Khởi tạo đợt kiểm chứng nghiệp vụ với số lượng kiểm soát 10 cây cảnh báo bão."
+      },
+      {
+        "timestamp": "2026-11-15T02:07:51.876Z",
+        "event": "RESOLVED",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-CT-471780-176]: +10 cây được xác nhận an toàn. Còn tồn: 0 cây."
+      },
+      {
+        "timestamp": "2026-11-15T02:41:54.222Z",
+        "event": "RESOLVED",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-CT-513814-273]: +9 cây được xác nhận an toàn. Còn tồn: 0 cây."
+      },
+      {
+        "timestamp": "2026-11-15T02:42:33.197Z",
+        "event": "VERIFIED_BATCH",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-CT-552816-376]: +9 cây được xác nhận an toàn. Còn tồn: 5365 cây."
+      },
+      {
+        "timestamp": "2026-11-15T02:56:33.309Z",
+        "event": "VERIFIED_BATCH",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-CT-392769-180]: +9 cây được xác nhận an toàn. Còn tồn: 5356 cây."
+      },
+      {
+        "timestamp": "2026-11-15T03:48:30.667Z",
+        "event": "VERIFIED_BATCH",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-CT-510212-549]: +9 cây được xác nhận an toàn. Còn tồn: 5298 cây."
+      },
+      {
+        "timestamp": "2026-11-15T04:33:02.972Z",
+        "event": "VERIFIED_BATCH",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-CT-182463-273]: +9 cây được xác nhận an toàn. Còn tồn: 5280 cây."
+      },
+      {
+        "timestamp": "2026-11-15T04:50:17.302Z",
+        "event": "VERIFIED_BATCH",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-STORM-304-50]: +50 cây được xác nhận an toàn. Còn tồn: 5230 cây."
+      },
+      {
+        "timestamp": "2026-11-15T04:50:26.792Z",
+        "event": "VERIFIED_BATCH",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-STORM-304-50]: +50 cây được xác nhận an toàn. Còn tồn: 5180 cây."
+      },
+      {
+        "timestamp": "2026-11-15T04:50:39.821Z",
+        "event": "VERIFIED_BATCH",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-CT-0722]: +2 cây được xác nhận an toàn. Còn tồn: 5178 cây."
+      },
+      {
+        "timestamp": "2026-11-15T04:56:33.423Z",
+        "event": "VERIFIED_BATCH",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-STORM-32-5497]: +20 cây được xác nhận an toàn. Còn tồn: 5158 cây."
+      },
+      {
+        "timestamp": "2026-11-15T04:56:37.637Z",
+        "event": "VERIFIED_BATCH",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-STORM-304-0126]: +20 cây được xác nhận an toàn. Còn tồn: 5138 cây."
+      },
+      {
+        "timestamp": "2026-11-15T04:56:41.756Z",
+        "event": "VERIFIED_BATCH",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-STORM-HB-48]: +48 cây được xác nhận an toàn. Còn tồn: 5090 cây."
+      },
+      {
+        "timestamp": "2026-11-15T04:56:45.316Z",
+        "event": "VERIFIED_BATCH",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-STORM-32-42]: +42 cây được xác nhận an toàn. Còn tồn: 5048 cây."
+      },
+      {
+        "timestamp": "2026-11-15T04:59:24.689Z",
+        "event": "VERIFIED_BATCH",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-STORM-304-1934]: +20 cây được xác nhận an toàn. Còn tồn: 5028 cây."
+      },
+      {
+        "timestamp": "2026-11-15T04:59:47.280Z",
+        "event": "VERIFIED_BATCH",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-STORM-32-1978]: +20 cây được xác nhận an toàn. Còn tồn: 5008 cây."
+      },
+      {
+        "timestamp": "2026-11-15T05:05:03.721Z",
+        "event": "VERIFIED_BATCH",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-CT-103389-794]: +9 cây được xác nhận an toàn. Còn tồn: 4999 cây."
+      },
+      {
+        "timestamp": "2026-11-15T06:39:05.595Z",
+        "event": "VERIFIED_BATCH",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-CT-745319-175]: +9 cây được xác nhận an toàn. Còn tồn: 4990 cây."
+      },
+      {
+        "timestamp": "2026-11-16T15:14:04.629Z",
+        "event": "VERIFIED_BATCH",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-CT-043957-429]: +9 cây được xác nhận an toàn. Còn tồn: 4981 cây."
+      }
+    ]
+  }
+}

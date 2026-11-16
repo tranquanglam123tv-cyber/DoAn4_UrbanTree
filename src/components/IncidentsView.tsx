@@ -17,18 +17,22 @@ import {
   Image as ImageIcon,
   RotateCcw,
   Wrench,
+  Truck,
 } from 'lucide-react';
 import { storage } from '../db/storage';
-import { Incident, IncidentSeverity, IncidentStatus, IncidentUpdate, User } from '../types';
+import { Incident, IncidentSeverity, IncidentStatus, IncidentUpdate, User, WorkOrderType, WorkOrderPriority } from '../types';
 import { TreeSearchSelect } from './common/TreeSearchSelect';
 import { calculateIncidentSLA } from '../utils/treeUtils';
 import { assertPermission } from '../utils/permissionUtils';
+import { RightSlideOverDrawer } from './common/RightSlideOverDrawer';
+import { useEscapeOverlay } from '../hooks/useEscapeOverlay';
 
 interface IncidentsViewProps {
   onSelectTree: (tree: any) => void;
   currentUser: User;
   initialTreeId?: string;
   initialIncidentId?: string;
+  initialStatusFilter?: string;
 }
 
 export const IncidentsView: React.FC<IncidentsViewProps> = ({
@@ -36,6 +40,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
   currentUser,
   initialTreeId,
   initialIncidentId,
+  initialStatusFilter,
 }) => {
   const incidents = storage.getIncidents();
   const trees = storage.getTrees();
@@ -62,7 +67,16 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
 
   // Admin / Staff filter & search
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<string>(initialStatusFilter || 'ALL');
+
+  useEffect(() => {
+    if (initialStatusFilter) {
+      setStatusFilter(initialStatusFilter);
+      if (initialStatusFilter === 'ACTIVE') {
+        setActiveSubTab('admin');
+      }
+    }
+  }, [initialStatusFilter]);
   const [staffScope, setStaffScope] = useState<'MY_ASSIGNED' | 'ALL'>('MY_ASSIGNED');
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(() => {
     if (initialIncidentId) {
@@ -76,6 +90,43 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
     }
     return null;
   });
+
+  const [dataVersion, setDataVersion] = useState(0);
+
+  useEffect(() => {
+    storage.syncIncidentsFromBackend().then(() => {
+      setDataVersion((v) => v + 1);
+    });
+    const handleSync = () => setDataVersion((v) => v + 1);
+    window.addEventListener('urbantree:incidents-synced', handleSync);
+    return () => window.removeEventListener('urbantree:incidents-synced', handleSync);
+  }, []);
+
+  // Wave 4.2: Work Order creation from Incident modal state
+  const [showWorkOrderModal, setShowWorkOrderModal] = useState(false);
+  useEscapeOverlay('incident-wo-modal', showWorkOrderModal, () => setShowWorkOrderModal(false));
+  const [woTaskType, setWoTaskType] = useState<WorkOrderType>('PRUNING');
+  const [woPriority, setWoPriority] = useState<WorkOrderPriority>('HIGH');
+  const [woRouteId, setWoRouteId] = useState<string>('');
+  const [woTeamId, setWoTeamId] = useState<string>('');
+  const [woEquipmentPlate, setWoEquipmentPlate] = useState<string>('');
+  const [woTitle, setWoTitle] = useState<string>('');
+  const [isCreatingWO, setIsCreatingWO] = useState(false);
+
+  const allRoutes = useMemo(() => storage.getRoutes(), [dataVersion]);
+  const allTeams = useMemo(() => storage.getTeams(), [dataVersion]);
+  const allEquipment = useMemo(() => storage.getEquipment(), [dataVersion]);
+
+  // 📱 Responsive Viewport Detection for Incident Detail (FIX-06)
+  const [isMobileScreen, setIsMobileScreen] = useState(() => typeof window !== 'undefined' && window.innerWidth < 1024);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileScreen(window.innerWidth < 1024);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Tự động định vị và chọn chính xác sự cố được điều hướng từ Thông báo
   useEffect(() => {
@@ -282,6 +333,400 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
       setLookupResult(null);
       setLookupError(`Không tìm thấy sự cố với mã "${lookupCode}". Vui lòng kiểm tra lại.`);
     }
+  };
+
+  const openCreateWorkOrderModal = () => {
+    if (!selectedIncident) return;
+    setWoTitle(`[Xử lý sự cố #${selectedIncident.publicCode}] ${selectedIncident.description.slice(0, 45)}...`);
+    setWoPriority(selectedIncident.severity === 'CRITICAL' ? 'CRITICAL' : (selectedIncident.severity === 'HIGH' ? 'HIGH' : 'MEDIUM'));
+    setWoTaskType('PRUNING');
+    setWoRouteId(allRoutes[0]?.id || 'route-hoa-binh');
+    setWoTeamId(allTeams[0]?.id || 'team-1');
+    const availEq = allEquipment.find(e => e.status === 'AVAILABLE');
+    setWoEquipmentPlate(availEq?.plateNumber || allEquipment[0]?.plateNumber || '');
+    setShowWorkOrderModal(true);
+  };
+
+  const handleCreateWorkOrderFromIncident = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedIncident) return;
+    setIsCreatingWO(true);
+    try {
+      const selectedRoute = allRoutes.find(r => r.id === woRouteId);
+      const selectedTeam = allTeams.find(t => t.id === woTeamId);
+      const selectedEq = allEquipment.find(e => e.plateNumber === woEquipmentPlate);
+
+      const created = await storage.createWorkOrderFromIncident({
+        incidentId: selectedIncident.id,
+        title: woTitle || `Xử lý sự cố #${selectedIncident.publicCode}`,
+        type: woTaskType,
+        priority: woPriority,
+        routeId: woRouteId || undefined,
+        routeCorridorName: selectedRoute?.name,
+        assignedTeamId: woTeamId || undefined,
+        assignedTeamName: selectedTeam?.name,
+        assignedVehiclePlate: woEquipmentPlate || undefined,
+        assignedVehicleName: selectedEq?.name,
+        treeIds: selectedIncident.treeId ? [selectedIncident.treeId] : [],
+        slaTargetMinutes: 240
+      });
+
+      setShowWorkOrderModal(false);
+      alert(`🎉 Đã khởi tạo thành công Lệnh công tác [${created.code}]!\nSự cố #${selectedIncident.publicCode} đã tự động chuyển sang "Đang xử lý".`);
+
+      setSelectedIncident(prev => prev ? {
+        ...prev,
+        status: 'IN_PROGRESS',
+        workOrderId: created.id,
+        workOrderCode: created.code
+      } : null);
+      setDataVersion(v => v + 1);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi tạo lệnh công tác từ sự cố');
+    } finally {
+      setIsCreatingWO(false);
+    }
+  };
+
+  // 📋 Reusable Incident Detail Body (used in Desktop Sidebar & Mobile Slide-Over Drawer - FIX-06)
+  const renderIncidentDetailBody = () => {
+    if (!selectedIncident) return null;
+    return (
+      <>
+                  {/* Incident Info */}
+                  <div className="space-y-2 text-slate-700 dark:text-slate-300">
+                    <div>
+                      <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Người gửi phản ánh:</span>
+                      <span className="font-semibold text-slate-900 dark:text-slate-100">{selectedIncident.reporterName}</span>
+                      {selectedIncident.reporterPhone && (
+                        <span className="text-slate-500 dark:text-slate-400 font-mono ml-2">({selectedIncident.reporterPhone})</span>
+                      )}
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Mô tả hiện trường:</span>
+                      <p className="bg-slate-50 dark:bg-slate-900/70 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 leading-relaxed text-[11px] text-slate-800 dark:text-slate-200">
+                        {selectedIncident.description}
+                      </p>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Địa chỉ:</span>
+                      <span className="text-slate-800 dark:text-slate-200">{selectedIncident.address}</span>
+                    </div>
+
+                    {/* ⏱️ SLA MONITOR BOX */}
+                    {(() => {
+                      const selSla = calculateIncidentSLA(selectedIncident);
+                      return (
+                        <div
+                          className={`p-3 rounded-xl border space-y-1.5 ${
+                            selSla.isOverdue
+                              ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/60'
+                              : 'bg-slate-50 dark:bg-slate-900/50 border-slate-200/80 dark:border-slate-800'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-[11px] font-bold">
+                            <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                              <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                              <span>Cam kết SLA: {selSla.limitLabel}</span>
+                            </span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${selSla.badgeClass}`}>
+                              {selSla.statusText}
+                            </span>
+                          </div>
+
+                          <div className="w-full bg-slate-200 dark:bg-slate-700/80 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className={`h-full transition-all duration-500 ${
+                                selSla.isOverdue
+                                  ? 'bg-rose-600'
+                                  : selSla.percentUsed >= 70
+                                  ? 'bg-amber-500'
+                                  : 'bg-emerald-500'
+                              }`}
+                              style={{ width: `${Math.min(selSla.percentUsed, 100)}%` }}
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                            <span>
+                              Đã trôi qua: <strong>{selSla.elapsedMinutes} phút</strong>
+                            </span>
+                            <span>
+                              {selSla.isResolved
+                                ? 'Hoàn tất nghiệm thu On-Chain'
+                                : selSla.isOverdue
+                                ? '🚨 Vi phạm tiến độ đáp ứng'
+                                : `Còn lại: ${selSla.remainingMinutes} phút`}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* KHỐI LIÊN KẾT HOẶC KHỞI TẠO LỆNH CÔNG TÁC (WAVE 4.2) */}
+        {selectedIncident.workOrderId ? (
+          <div className="p-3 bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 rounded-xl space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Wrench className="w-3.5 h-3.5" />
+                <span>Lệnh Công Tác Phụ Trách</span>
+              </span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200">
+                {selectedIncident.workOrderCode || selectedIncident.workOrderId}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-600 dark:text-slate-300">
+              Sự cố này đã được điều phối thi công qua Lệnh công tác. Khi giám sát nghiệm thu hoàn tất, sự cố sẽ tự động chuyển sang "Đã hoàn thành".
+            </p>
+          </div>
+        ) : (currentUser.role === 'ADMIN' || currentUser.role === 'DISPATCHER') && selectedIncident.status !== 'RESOLVED' && selectedIncident.status !== 'REJECTED' && (
+          <div className="p-3 bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
+                <Wrench className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Điều Phối Cơ Giới & Công Tác Tuyến</span>
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300">
+                Chưa có Lệnh
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-600 dark:text-slate-400">
+              Tạo Lệnh công tác chính thức để điều phối tổ đội, gắn xe cơ giới và theo dõi checklist thực thi.
+            </p>
+            <button
+              type="button"
+              onClick={openCreateWorkOrderModal}
+              className="w-full py-2 bg-[#174B36] hover:bg-[#347A50] text-white font-bold rounded-lg text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+            >
+              <Wrench className="w-3.5 h-3.5" />
+              <span>🚜 Khởi Tạo Lệnh Công Tác Xử Lý Sự Cố</span>
+            </button>
+          </div>
+        )}
+
+        {/* Status Transition Form */}
+                  <form onSubmit={handleUpdateStatus} className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="font-bold text-[#174B36] dark:text-emerald-400 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                        <UserCheck className="w-3.5 h-3.5" />
+                        <span>{currentUser.role === 'ADMIN' ? 'Điều Phối & Phân Công Nhiệm Vụ' : 'Cập nhật hiện trường'}</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
+                        {currentUser.role === 'ADMIN' ? 'Vai trò Admin: Điều phối' : 'Vai trò Staff: Xử lý'}
+                      </span>
+                    </div>
+
+                    {currentUser.role === 'ADMIN' ? (
+                      /* KHỐI FORM RIÊNG DÀNH CHO ADMIN ĐIỀU PHỐI */
+                      <div className="space-y-3 bg-emerald-50/40 dark:bg-emerald-950/20 p-3 rounded-xl border border-emerald-200/60 dark:border-emerald-800/40">
+                        <div className="text-[11px] text-emerald-800 dark:text-emerald-300 leading-relaxed font-medium">
+                          👮 <strong>Quy trình thực tế:</strong> Admin chỉ thực hiện sàng lọc phản ánh, chỉ định giao việc cho Kỹ thuật viên (Staff). Việc chụp ảnh nghiệm thu, cưa cắt dọn dẹp hiện trường sẽ do <strong>bên Staff thực hiện tại chỗ</strong>.
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Lệnh điều phối sự cố:
+                          </label>
+                          <select
+                            value={newStatus}
+                            onChange={(e) => setNewStatus(e.target.value as IncidentStatus)}
+                            className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white font-bold focus:border-[#347A50] dark:focus:border-emerald-400 text-xs"
+                          >
+                            <option value="ASSIGNED">👉 Phân công Kỹ thuật viên xử lý (ASSIGNED)</option>
+                            <option value="REOPENED">⚠️ Yêu cầu tổ KTV làm lại (REOPENED - Khi dân tái phản ánh)</option>
+                            <option value="REJECTED">🚫 Từ chối / Tin báo sai / Ngoài thẩm quyền (REJECTED)</option>
+                          </select>
+                        </div>
+
+                        {newStatus === 'ASSIGNED' && (
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                              Chọn Kỹ thuật viên (Staff) phụ trách địa bàn *:
+                            </label>
+                            <select
+                              value={assignStaffId}
+                              onChange={(e) => setAssignStaffId(e.target.value)}
+                              className="w-full px-2.5 py-1.5 border border-emerald-300 dark:border-emerald-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white font-medium focus:border-emerald-500 text-xs"
+                              required
+                            >
+                              <option value="">-- Chọn KTV tiếp nhận vé công tác --</option>
+                              {users.filter((u) => u.role === 'STAFF').map((staff) => (
+                                <option key={staff.id} value={staff.id}>
+                                  👷 {staff.fullName} — Đội Kỹ thuật Đô thị (STAFF)
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Lưu ý điều phối gửi KTV (Tùy chọn):
+                          </label>
+                          <input
+                            type="text"
+                            value={transitionNote}
+                            onChange={(e) => setTransitionNote(e.target.value)}
+                            placeholder="Ví dụ: Ưu tiên điều xe thang 12m vì cành sà sát đường dây điện..."
+                            className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white dark:placeholder-slate-500 text-xs"
+                          />
+                        </div>
+
+                        {/* Banner nhắc nhở KTV sẽ cập nhật hiện trường */}
+                        <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                          <span>KTV phụ trách: <strong>{users.find((u) => u.id === (assignStaffId || selectedIncident.assignedToUserId))?.fullName || 'Chưa chỉ định'}</strong></span>
+                          <span className="text-emerald-600 font-semibold">Staff sẽ chụp ảnh &amp; nghiệm thu On-Chain</span>
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={isUpdating}
+                          className="w-full py-2 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-bold rounded-lg text-xs transition-colors shadow-2xs cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          <span>{isUpdating ? 'Đang điều phối...' : 'Lưu Lệnh Điều Phối & Bàn Giao KTV'}</span>
+                        </button>
+                      </div>
+                    ) : (
+                      /* KHỐI FORM DÀNH CHO STAFF CẬP NHẬT HIỆN TRƯỜNG & NGHIỆM THU */
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                            Trạng thái tiến độ thực địa:
+                          </label>
+                          <select
+                            value={newStatus}
+                            onChange={(e) => setNewStatus(e.target.value as IncidentStatus)}
+                            className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white font-medium focus:border-[#347A50] dark:focus:border-emerald-400"
+                          >
+                            <option value="IN_PROGRESS">Đang xử lý tại hiện trường (IN_PROGRESS)</option>
+                            <option value="RESOLVED">Đã xử lý xong (RESOLVED - Nghiệm thu On-Chain)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                            Ghi chú hành động thực tế tại chỗ *:
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={transitionNote}
+                            onChange={(e) => setTransitionNote(e.target.value)}
+                            placeholder="Mô tả cụ thể: Đã cắt hạ 2 nhánh khô, quét dọn vỉa hè an toàn..."
+                            className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white dark:placeholder-slate-500 focus:border-[#347A50] dark:focus:border-emerald-400"
+                            required
+                          />
+                        </div>
+
+                        {/* Ảnh chụp hiện trường xử lý thực địa */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                              Ảnh chụp hiện trường sau xử lý:
+                            </label>
+                            <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                              Minh chứng nghiệm thu
+                            </span>
+                          </div>
+
+                          <input
+                            type="file"
+                            ref={statusPhotoInputRef}
+                            accept="image/*"
+                            capture="environment"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  const base64 = reader.result as string;
+                                  setTransitionImageUrl(base64);
+                                  setTransitionImagePreview(base64);
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                            className="hidden"
+                          />
+
+                          {transitionImagePreview ? (
+                            <div className="relative rounded-lg overflow-hidden border border-emerald-300 dark:border-emerald-600/60 max-h-28 group flex items-center justify-center bg-slate-900">
+                              <img
+                                src={transitionImagePreview}
+                                alt="Ảnh xử lý"
+                                className="w-full h-28 object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => statusPhotoInputRef.current?.click()}
+                                  className="px-2 py-1 bg-white text-slate-800 rounded text-[10px] font-semibold cursor-pointer"
+                                >
+                                  Đổi ảnh
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setTransitionImagePreview(null);
+                                    setTransitionImageUrl('');
+                                  }}
+                                  className="px-2 py-1 bg-red-600 text-white rounded text-[10px] font-semibold cursor-pointer"
+                                >
+                                  Xóa
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => statusPhotoInputRef.current?.click()}
+                              className="w-full py-1.5 border border-dashed border-emerald-300 dark:border-emerald-700/60 bg-emerald-50/50 dark:bg-emerald-950/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg flex items-center justify-center gap-1.5 text-[11px] text-emerald-800 dark:text-emerald-300 font-medium cursor-pointer transition-colors"
+                            >
+                              <Camera className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                              <span>Chụp / Tải ảnh nghiệm thu sau xử lý</span>
+                            </button>
+                          )}
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={isUpdating}
+                          className="w-full py-2 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold rounded-lg text-xs transition-colors shadow-2xs cursor-pointer"
+                        >
+                          {isUpdating ? 'Đang lưu & băm lịch sử...' : 'Xác nhận xử lý & Ký On-Chain'}
+                        </button>
+                      </div>
+                    )}
+                  </form>
+
+                  {/* Immutable Timeline History */}
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                    <span className="font-bold text-[#174B36] dark:text-emerald-400 text-[11px] uppercase tracking-wider block">
+                      Lịch sử diễn biến (Bất biến)
+                    </span>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      {storage.getIncidentUpdates(selectedIncident.id).map((upd) => (
+                        <div key={upd.id} className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-[11px] space-y-0.5">
+                          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                            <span className="font-bold text-slate-800 dark:text-slate-200">{upd.actorName}</span>
+                            <span className="font-mono text-[10px]">
+                              {new Date(upd.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <div className="text-[#347A50] dark:text-emerald-400 font-semibold">
+                            {upd.oldStatus} ➔ {upd.newStatus}
+                          </div>
+                          <p className="text-slate-600 dark:text-slate-300">{upd.note}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+      </>
+    );
   };
 
   return (
@@ -519,8 +964,8 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
               )}
             </div>
 
-            {/* Incident Details & Workflow State Machine Panel */}
-            <div className="lg:col-span-1">
+            {/* Incident Details & Workflow State Machine Panel (Desktop: Sidebar, Mobile: Slide-over Drawer - FIX-06) */}
+            <div className="hidden lg:block lg:col-span-1">
               {selectedIncident ? (
                 <div className="bg-white dark:bg-[#0c1812] p-5 rounded-2xl border border-[#E0EBDD] dark:border-emerald-500/20 shadow-sm sticky top-20 space-y-4 text-xs">
                   <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -535,296 +980,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                     </span>
                   </div>
 
-                  {/* Incident Info */}
-                  <div className="space-y-2 text-slate-700 dark:text-slate-300">
-                    <div>
-                      <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Người gửi phản ánh:</span>
-                      <span className="font-semibold text-slate-900 dark:text-slate-100">{selectedIncident.reporterName}</span>
-                      {selectedIncident.reporterPhone && (
-                        <span className="text-slate-500 dark:text-slate-400 font-mono ml-2">({selectedIncident.reporterPhone})</span>
-                      )}
-                    </div>
-
-                    <div>
-                      <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Mô tả hiện trường:</span>
-                      <p className="bg-slate-50 dark:bg-slate-900/70 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 leading-relaxed text-[11px] text-slate-800 dark:text-slate-200">
-                        {selectedIncident.description}
-                      </p>
-                    </div>
-
-                    <div>
-                      <span className="text-slate-400 dark:text-slate-500 block text-[10px]">Địa chỉ:</span>
-                      <span className="text-slate-800 dark:text-slate-200">{selectedIncident.address}</span>
-                    </div>
-
-                    {/* ⏱️ SLA MONITOR BOX */}
-                    {(() => {
-                      const selSla = calculateIncidentSLA(selectedIncident);
-                      return (
-                        <div
-                          className={`p-3 rounded-xl border space-y-1.5 ${
-                            selSla.isOverdue
-                              ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/60'
-                              : 'bg-slate-50 dark:bg-slate-900/50 border-slate-200/80 dark:border-slate-800'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between text-[11px] font-bold">
-                            <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-                              <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                              <span>Cam kết SLA: {selSla.limitLabel}</span>
-                            </span>
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${selSla.badgeClass}`}>
-                              {selSla.statusText}
-                            </span>
-                          </div>
-
-                          <div className="w-full bg-slate-200 dark:bg-slate-700/80 rounded-full h-1.5 overflow-hidden">
-                            <div
-                              className={`h-full transition-all duration-500 ${
-                                selSla.isOverdue
-                                  ? 'bg-rose-600'
-                                  : selSla.percentUsed >= 70
-                                  ? 'bg-amber-500'
-                                  : 'bg-emerald-500'
-                              }`}
-                              style={{ width: `${Math.min(selSla.percentUsed, 100)}%` }}
-                            />
-                          </div>
-
-                          <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
-                            <span>
-                              Đã trôi qua: <strong>{selSla.elapsedMinutes} phút</strong>
-                            </span>
-                            <span>
-                              {selSla.isResolved
-                                ? 'Hoàn tất nghiệm thu On-Chain'
-                                : selSla.isOverdue
-                                ? '🚨 Vi phạm tiến độ đáp ứng'
-                                : `Còn lại: ${selSla.remainingMinutes} phút`}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                  {/* Status Transition Form */}
-                  <form onSubmit={handleUpdateStatus} className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="font-bold text-[#174B36] dark:text-emerald-400 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
-                        <UserCheck className="w-3.5 h-3.5" />
-                        <span>{currentUser.role === 'ADMIN' ? 'Điều Phối & Phân Công Nhiệm Vụ' : 'Cập nhật hiện trường'}</span>
-                      </div>
-                      <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
-                        {currentUser.role === 'ADMIN' ? 'Vai trò Admin: Điều phối' : 'Vai trò Staff: Xử lý'}
-                      </span>
-                    </div>
-
-                    {currentUser.role === 'ADMIN' ? (
-                      /* KHỐI FORM RIÊNG DÀNH CHO ADMIN ĐIỀU PHỐI */
-                      <div className="space-y-3 bg-emerald-50/40 dark:bg-emerald-950/20 p-3 rounded-xl border border-emerald-200/60 dark:border-emerald-800/40">
-                        <div className="text-[11px] text-emerald-800 dark:text-emerald-300 leading-relaxed font-medium">
-                          👮 <strong>Quy trình thực tế:</strong> Admin chỉ thực hiện sàng lọc phản ánh, chỉ định giao việc cho Kỹ thuật viên (Staff). Việc chụp ảnh nghiệm thu, cưa cắt dọn dẹp hiện trường sẽ do <strong>bên Staff thực hiện tại chỗ</strong>.
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                            Lệnh điều phối sự cố:
-                          </label>
-                          <select
-                            value={newStatus}
-                            onChange={(e) => setNewStatus(e.target.value as IncidentStatus)}
-                            className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white font-bold focus:border-[#347A50] dark:focus:border-emerald-400 text-xs"
-                          >
-                            <option value="ASSIGNED">👉 Phân công Kỹ thuật viên xử lý (ASSIGNED)</option>
-                            <option value="REOPENED">⚠️ Yêu cầu tổ KTV làm lại (REOPENED - Khi dân tái phản ánh)</option>
-                            <option value="REJECTED">🚫 Từ chối / Tin báo sai / Ngoài thẩm quyền (REJECTED)</option>
-                          </select>
-                        </div>
-
-                        {newStatus === 'ASSIGNED' && (
-                          <div>
-                            <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                              Chọn Kỹ thuật viên (Staff) phụ trách địa bàn *:
-                            </label>
-                            <select
-                              value={assignStaffId}
-                              onChange={(e) => setAssignStaffId(e.target.value)}
-                              className="w-full px-2.5 py-1.5 border border-emerald-300 dark:border-emerald-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white font-medium focus:border-emerald-500 text-xs"
-                              required
-                            >
-                              <option value="">-- Chọn KTV tiếp nhận vé công tác --</option>
-                              {users.filter((u) => u.role === 'STAFF').map((staff) => (
-                                <option key={staff.id} value={staff.id}>
-                                  👷 {staff.fullName} — Đội Kỹ thuật Đô thị (STAFF)
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-
-                        <div>
-                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                            Lưu ý điều phối gửi KTV (Tùy chọn):
-                          </label>
-                          <input
-                            type="text"
-                            value={transitionNote}
-                            onChange={(e) => setTransitionNote(e.target.value)}
-                            placeholder="Ví dụ: Ưu tiên điều xe thang 12m vì cành sà sát đường dây điện..."
-                            className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white dark:placeholder-slate-500 text-xs"
-                          />
-                        </div>
-
-                        {/* Banner nhắc nhở KTV sẽ cập nhật hiện trường */}
-                        <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
-                          <span>KTV phụ trách: <strong>{users.find((u) => u.id === (assignStaffId || selectedIncident.assignedToUserId))?.fullName || 'Chưa chỉ định'}</strong></span>
-                          <span className="text-emerald-600 font-semibold">Staff sẽ chụp ảnh &amp; nghiệm thu On-Chain</span>
-                        </div>
-
-                        <button
-                          type="submit"
-                          disabled={isUpdating}
-                          className="w-full py-2 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-bold rounded-lg text-xs transition-colors shadow-2xs cursor-pointer flex items-center justify-center gap-1.5"
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                          <span>{isUpdating ? 'Đang điều phối...' : 'Lưu Lệnh Điều Phối & Bàn Giao KTV'}</span>
-                        </button>
-                      </div>
-                    ) : (
-                      /* KHỐI FORM DÀNH CHO STAFF CẬP NHẬT HIỆN TRƯỜNG & NGHIỆM THU */
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                            Trạng thái tiến độ thực địa:
-                          </label>
-                          <select
-                            value={newStatus}
-                            onChange={(e) => setNewStatus(e.target.value as IncidentStatus)}
-                            className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white font-medium focus:border-[#347A50] dark:focus:border-emerald-400"
-                          >
-                            <option value="IN_PROGRESS">Đang xử lý tại hiện trường (IN_PROGRESS)</option>
-                            <option value="RESOLVED">Đã xử lý xong (RESOLVED - Nghiệm thu On-Chain)</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                            Ghi chú hành động thực tế tại chỗ *:
-                          </label>
-                          <textarea
-                            rows={2}
-                            value={transitionNote}
-                            onChange={(e) => setTransitionNote(e.target.value)}
-                            placeholder="Mô tả cụ thể: Đã cắt hạ 2 nhánh khô, quét dọn vỉa hè an toàn..."
-                            className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white dark:placeholder-slate-500 focus:border-[#347A50] dark:focus:border-emerald-400"
-                            required
-                          />
-                        </div>
-
-                        {/* Ảnh chụp hiện trường xử lý thực địa */}
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                              Ảnh chụp hiện trường sau xử lý:
-                            </label>
-                            <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-                              Minh chứng nghiệm thu
-                            </span>
-                          </div>
-
-                          <input
-                            type="file"
-                            ref={statusPhotoInputRef}
-                            accept="image/*"
-                            capture="environment"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                const reader = new FileReader();
-                                reader.onloadend = () => {
-                                  const base64 = reader.result as string;
-                                  setTransitionImageUrl(base64);
-                                  setTransitionImagePreview(base64);
-                                };
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                            className="hidden"
-                          />
-
-                          {transitionImagePreview ? (
-                            <div className="relative rounded-lg overflow-hidden border border-emerald-300 dark:border-emerald-600/60 max-h-28 group flex items-center justify-center bg-slate-900">
-                              <img
-                                src={transitionImagePreview}
-                                alt="Ảnh xử lý"
-                                className="w-full h-28 object-cover"
-                              />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => statusPhotoInputRef.current?.click()}
-                                  className="px-2 py-1 bg-white text-slate-800 rounded text-[10px] font-semibold cursor-pointer"
-                                >
-                                  Đổi ảnh
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setTransitionImagePreview(null);
-                                    setTransitionImageUrl('');
-                                  }}
-                                  className="px-2 py-1 bg-red-600 text-white rounded text-[10px] font-semibold cursor-pointer"
-                                >
-                                  Xóa
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => statusPhotoInputRef.current?.click()}
-                              className="w-full py-1.5 border border-dashed border-emerald-300 dark:border-emerald-700/60 bg-emerald-50/50 dark:bg-emerald-950/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg flex items-center justify-center gap-1.5 text-[11px] text-emerald-800 dark:text-emerald-300 font-medium cursor-pointer transition-colors"
-                            >
-                              <Camera className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                              <span>Chụp / Tải ảnh nghiệm thu sau xử lý</span>
-                            </button>
-                          )}
-                        </div>
-
-                        <button
-                          type="submit"
-                          disabled={isUpdating}
-                          className="w-full py-2 bg-[#174B36] hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold rounded-lg text-xs transition-colors shadow-2xs cursor-pointer"
-                        >
-                          {isUpdating ? 'Đang lưu & băm lịch sử...' : 'Xác nhận xử lý & Ký On-Chain'}
-                        </button>
-                      </div>
-                    )}
-                  </form>
-
-                  {/* Immutable Timeline History */}
-                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
-                    <span className="font-bold text-[#174B36] dark:text-emerald-400 text-[11px] uppercase tracking-wider block">
-                      Lịch sử diễn biến (Bất biến)
-                    </span>
-                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                      {storage.getIncidentUpdates(selectedIncident.id).map((upd) => (
-                        <div key={upd.id} className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-[11px] space-y-0.5">
-                          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-                            <span className="font-bold text-slate-800 dark:text-slate-200">{upd.actorName}</span>
-                            <span className="font-mono text-[10px]">
-                              {new Date(upd.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                          <div className="text-[#347A50] dark:text-emerald-400 font-semibold">
-                            {upd.oldStatus} ➔ {upd.newStatus}
-                          </div>
-                          <p className="text-slate-600 dark:text-slate-300">{upd.note}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  {renderIncidentDetailBody()}
                 </div>
               ) : (
                 <div className="p-8 text-center bg-white dark:bg-[#0c1812] rounded-2xl border border-[#E0EBDD] dark:border-emerald-500/20 text-slate-400 dark:text-slate-500 text-xs">
@@ -1252,6 +1408,170 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
           )}
         </div>
       )}
+      {/* WAVE 4.2: MODAL KHỞI TẠO LỆNH CÔNG TÁC TỪ SỰ CỐ */}
+      {showWorkOrderModal && selectedIncident && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 animate-scale-up">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-[#174B36] dark:text-emerald-400 flex items-center justify-center font-bold">
+                  <Truck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                    Khởi Tạo Lệnh Công Tác Xử Lý Sự Cố
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Sự cố: <span className="font-mono font-bold text-[#174B36] dark:text-emerald-400">{selectedIncident.publicCode}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowWorkOrderModal(false)}
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1 rounded-lg cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateWorkOrderFromIncident} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Tiêu đề lệnh công tác *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={woTitle}
+                  onChange={(e) => setWoTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white text-xs font-medium focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Loại hình công tác *
+                  </label>
+                  <select
+                    value={woTaskType}
+                    onChange={(e) => setWoTaskType(e.target.value as WorkOrderType)}
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white text-xs font-semibold focus:border-emerald-500"
+                  >
+                    <option value="PRUNING">✂️ Cắt Tỉa / Hạ Độ Cao</option>
+                    <option value="EMERGENCY_REMOVAL">🚨 Đốn Hạ Khẩn Cấp (Hiểm Họa)</option>
+                    <option value="SUPPORT_STAKING">🛡️ Giằng Chống Cọc Đón Bão</option>
+                    <option value="PEST_TREATMENT">🧪 Xử Lý Sâu Bệnh / Nấm Thân</option>
+                    <option value="ROOT_SURVEY">🔍 Khảo Sát Siêu Âm Rễ</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Mức độ ưu tiên *
+                  </label>
+                  <select
+                    value={woPriority}
+                    onChange={(e) => setWoPriority(e.target.value as WorkOrderPriority)}
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white text-xs font-semibold focus:border-emerald-500"
+                  >
+                    <option value="CRITICAL">🔴 Khẩn cấp (SLA 4h)</option>
+                    <option value="HIGH">🟠 Cao (SLA 8h)</option>
+                    <option value="MEDIUM">🟡 Tiêu chuẩn (SLA 24h)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Tuyến đường / Hành lang
+                  </label>
+                  <select
+                    value={woRouteId}
+                    onChange={(e) => setWoRouteId(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white text-xs font-semibold focus:border-emerald-500"
+                  >
+                    <option value="">-- Tuyến nội ô chung --</option>
+                    {allRoutes.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} [{r.code}]
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Tổ / Đội thi công phụ trách *
+                  </label>
+                  <select
+                    value={woTeamId}
+                    onChange={(e) => setWoTeamId(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white text-xs font-semibold focus:border-emerald-500"
+                    required
+                  >
+                    {allTeams.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({t.leaderName})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Phương tiện / Xe cơ giới điều động
+                </label>
+                <select
+                  value={woEquipmentPlate}
+                  onChange={(e) => setWoEquipmentPlate(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white text-xs font-semibold focus:border-emerald-500 font-mono"
+                >
+                  <option value="">-- Không điều động xe cơ giới --</option>
+                  {allEquipment.map((eq) => (
+                    <option key={eq.id} value={eq.plateNumber}>
+                      [{eq.plateNumber}] {eq.name} ({eq.status === 'AVAILABLE' ? 'Khả dụng' : 'Đang bận'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedIncident.treeId && (
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs flex items-center justify-between">
+                  <span className="text-slate-600 dark:text-slate-300">
+                    Cây xanh mục tiêu xử lý:
+                  </span>
+                  <span className="font-mono font-bold text-emerald-600">
+                    ID #{selectedIncident.treeId}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowWorkOrderModal(false)}
+                  className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold cursor-pointer"
+                >
+                  Hủy Bỏ
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingWO}
+                  className="px-5 py-2 rounded-xl bg-[#174B36] hover:bg-[#347A50] text-white text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
+                >
+                  <Truck className="w-4 h-4" />
+                  <span>{isCreatingWO ? 'Đang Khởi Tạo...' : 'Xác Nhận Tạo Lệnh Công Tác'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

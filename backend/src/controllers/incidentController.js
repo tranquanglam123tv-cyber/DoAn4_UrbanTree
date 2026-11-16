@@ -1,5 +1,7 @@
 const Incident = require('../models/Incident');
 const db = require('../config/db');
+const sseService = require('../services/sseService');
+const notificationService = require('../services/notificationService');
 
 /**
  * 🔒 BẢO VỆ THÔNG TIN CÁ NHÂN (UT-004 PII PROTECTION)
@@ -55,7 +57,8 @@ function calculateHaversineDistanceKm(lat1, lon1, lat2, lon2) {
  */
 exports.getAllIncidents = (req, res) => {
   const { status, severity, tree_id, page = 1, limit = 50, all } = req.query;
-  const callerRole = (req.user && req.user.role) || (req.headers['x-user-role'] ? String(req.headers['x-user-role']).toUpperCase() : 'CITIZEN');
+  // 🔒 P0 SECURITY: Quyền xem PII CHỈ dựa trên JWT Token đã qua xác thực, TUYỆT ĐỐI không tin header client
+  const callerRole = (req.user && req.user.role) ? String(req.user.role).toUpperCase() : 'CITIZEN';
   const isAll = all === 'true' || all === '1';
   const pageNum = Math.max(1, parseInt(page) || 1);
   const limitNum = isAll ? 20000 : Math.max(1, Math.min(10000, parseInt(limit) || 50));
@@ -94,7 +97,7 @@ exports.getAllIncidents = (req, res) => {
  */
 exports.getIncidentById = (req, res) => {
   const { id } = req.params;
-  const callerRole = (req.user && req.user.role) || (req.headers['x-user-role'] ? String(req.headers['x-user-role']).toUpperCase() : 'CITIZEN');
+  const callerRole = (req.user && req.user.role) ? String(req.user.role).toUpperCase() : 'CITIZEN';
 
   Incident.getById(id, (err, row) => {
     if (err) {
@@ -274,12 +277,71 @@ exports.reportIncident = (req, res) => {
         longitude: !isNaN(lngNum) ? lngNum : null,
         address: address ? address.trim() : null
       },
-      (err, newIncident) => {
+      async (err, newIncident) => {
         if (err) {
           return res.status(500).json({
             success: false,
             message: 'Lỗi lưu thông tin tiếp nhận sự cố',
             error: err.message
+          });
+        }
+
+        // ⚡ SSE BROADCAST (PII MINIMIZED - Tuyệt đối không đưa SĐT/Họ tên thật vào payload)
+        sseService.broadcast({
+          eventType: 'incident.created',
+          entityType: 'incident',
+          entityId: String(newIncident.id),
+          actor: { userId: 'citizen', role: 'CITIZEN' },
+          targetRoles: ['ADMIN', 'DISPATCHER'],
+          payload: {
+            id: newIncident.id,
+            trackingCode: newIncident.tracking_code,
+            description: newIncident.description,
+            severity: newIncident.severity,
+            status: newIncident.status || 'Chờ xử lý',
+            address: newIncident.address,
+            latitude: newIncident.latitude,
+            longitude: newIncident.longitude
+          }
+        });
+
+        // 🔔 PERSISTENT NOTIFICATION (Wave 3.2: Lưu thông báo phản ánh mới cho Quản trị viên)
+        let notif = null;
+        try {
+          notif = await notificationService.createNotification({
+            targetRole: 'ADMIN',
+            title: 'Phản ánh sự cố mới',
+            message: `Tiếp nhận phản ánh sự cố [${newIncident.severity || 'Khẩn cấp'}] tại ${newIncident.address || 'khu vực công cộng'}.`,
+            type: 'INCIDENT_NEW',
+            severity: newIncident.severity === 'Khẩn cấp' ? 'CRITICAL' : 'WARNING',
+            entityType: 'INCIDENT',
+            entityId: String(newIncident.id),
+            linkTab: 'incidents',
+            linkId: String(newIncident.id),
+          });
+        } catch (notifErr) {
+          console.warn('⚠️ Lỗi tạo notification sự cố:', notifErr.message);
+        }
+
+        if (notif) {
+          sseService.broadcast({
+            eventType: 'notification.pushed',
+            entityType: 'notification',
+            entityId: notif.id,
+            actor: { userId: 'citizen', role: 'CITIZEN' },
+            targetRoles: ['ADMIN', 'DISPATCHER'],
+            payload: {
+              id: notif.id,
+              title: notif.title,
+              message: notif.message,
+              type: notif.type,
+              severity: notif.severity,
+              entityType: notif.entityType,
+              entityId: notif.entityId,
+              linkTab: notif.linkTab,
+              linkId: notif.linkId,
+              createdAt: notif.createdAt,
+            }
           });
         }
 
@@ -310,36 +372,154 @@ exports.updateIncidentStatus = (req, res) => {
     });
   }
 
+  const STATUS_MAP = {
+    'PENDING': 'Chờ xử lý',
+    'IN_PROGRESS': 'Đang xử lý',
+    'RESOLVED': 'Đã hoàn thành',
+    'COMPLETED': 'Đã hoàn thành',
+    'REJECTED': 'Từ chối',
+    'Chờ xử lý': 'Chờ xử lý',
+    'Đã tiếp nhận': 'Đang xử lý',
+    'Đang xử lý': 'Đang xử lý',
+    'Đã giải quyết': 'Đã hoàn thành',
+    'Đã hoàn thành': 'Đã hoàn thành',
+    'Từ chối': 'Từ chối'
+  };
+
+  const normalizedStatus = STATUS_MAP[status] || status;
   const validStatuses = ['Chờ xử lý', 'Đang xử lý', 'Đã hoàn thành', 'Từ chối'];
-  if (!validStatuses.includes(status)) {
+  if (!validStatuses.includes(normalizedStatus)) {
     return res.status(400).json({
       success: false,
-      message: `Trạng thái không hợp lệ. Chỉ chấp nhận một trong các giá trị: ${validStatuses.join(', ')}`
+      message: `Trạng thái không hợp lệ. Chỉ chấp nhận một trong các giá trị: ${validStatuses.join(', ')} hoặc (PENDING, IN_PROGRESS, RESOLVED, REJECTED)`
     });
   }
 
-  Incident.updateStatus(id, status, resolved_at, (err, result) => {
-    if (err) {
+  // 🔒 WAVE 3.3 INCIDENT STATE MACHINE TRANSITION GUARD
+  Incident.getById(id, (getErr, currentIncident) => {
+    if (getErr) {
       return res.status(500).json({
         success: false,
-        message: 'Lỗi cập nhật trạng thái sự cố',
-        error: err.message
+        message: 'Lỗi truy vấn sự cố',
+        error: getErr.message
       });
     }
 
-    if (result.changes === 0) {
+    if (!currentIncident) {
       return res.status(404).json({
         success: false,
         message: `Không tìm thấy sự cố với ID: ${id}`
       });
     }
 
-    res.json({
-      success: true,
-      message: `Cập nhật trạng thái sự cố thành: ${status}`,
-      incident_id: parseInt(id),
-      status: result.status,
-      resolved_at: result.resolved_at
+    const currentStatus = currentIncident.status || 'Chờ xử lý';
+
+    // 1. Idempotency: Không tạo side effect nếu trạng thái không đổi
+    if (currentStatus === normalizedStatus) {
+      return res.json({
+        success: true,
+        alreadyInStatus: true,
+        message: `Sự cố #${id} hiện đã ở trạng thái "${normalizedStatus}"`,
+        incident_id: parseInt(id),
+        status: currentStatus,
+        resolved_at: currentIncident.resolved_at
+      });
+    }
+
+    // 2. Ma trận chuyển trạng thái hợp lệ
+    const VALID_TRANSITIONS = {
+      'Chờ xử lý': ['Đang xử lý', 'Từ chối'],
+      'Đang xử lý': ['Đã hoàn thành'],
+      'Đã hoàn thành': [], // Terminal
+      'Từ chối': []        // Terminal
+    };
+
+    const allowed = VALID_TRANSITIONS[currentStatus] || [];
+    if (!allowed.includes(normalizedStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: `Chuyển trạng thái không hợp lệ: Không thể chuyển sự cố từ "${currentStatus}" sang "${normalizedStatus}". Trạng thái cho phép: [${allowed.join(', ') || 'Không có - Trạng thái kết thúc'}]`
+      });
+    }
+
+    Incident.updateStatus(id, normalizedStatus, resolved_at, async (err, result) => {
+      if (err) {
+        return res.status(500).json({
+          success: false,
+          message: 'Lỗi cập nhật trạng thái sự cố',
+          error: err.message
+        });
+      }
+
+      // Ghi lịch sử chuyển đổi trạng thái vào incident_updates
+      db.run(
+        `INSERT INTO incident_updates (incident_id, actor_id, old_status, new_status, notes) VALUES (?, ?, ?, ?, ?)`,
+        [id, (req.user && req.user.id) ? req.user.id : null, currentStatus, normalizedStatus, `Chuyển trạng thái sự cố từ "${currentStatus}" sang "${normalizedStatus}"`],
+        () => {}
+      );
+
+      // ⚡ SSE BROADCAST (Phát sự kiện cập nhật trạng thái sự cố)
+      sseService.broadcast({
+        eventType: 'incident.status_changed',
+        entityType: 'incident',
+        entityId: String(id),
+        actor: { userId: (req.user && req.user.id) ? String(req.user.id) : 'staff', role: req.user ? req.user.role : 'STAFF' },
+        targetRoles: ['ADMIN', 'DISPATCHER', 'STAFF'],
+        payload: {
+          id: parseInt(id),
+          status: normalizedStatus,
+          previousStatus: currentStatus,
+          resolvedAt: result.resolved_at
+        }
+      });
+
+      // 🔔 PERSISTENT NOTIFICATION (Wave 3.2: Lưu thông báo cập nhật tiến độ sự cố)
+      let notif = null;
+      try {
+        notif = await notificationService.createNotification({
+          targetRole: 'STAFF',
+          title: 'Cập nhật trạng thái sự cố',
+          message: `Sự cố #${id} đã được chuyển sang trạng thái: "${normalizedStatus}".`,
+          type: 'INCIDENT_RESOLVED',
+          severity: normalizedStatus === 'Đã hoàn thành' ? 'SUCCESS' : 'INFO',
+          entityType: 'INCIDENT',
+          entityId: String(id),
+          linkTab: 'incidents',
+          linkId: String(id),
+        });
+      } catch (notifErr) {
+        console.warn('⚠️ Lỗi tạo notification sự cố update:', notifErr.message);
+      }
+
+      if (notif) {
+        sseService.broadcast({
+          eventType: 'notification.pushed',
+          entityType: 'notification',
+          entityId: notif.id,
+          actor: { userId: (req.user && req.user.id) ? String(req.user.id) : 'staff', role: req.user ? req.user.role : 'STAFF' },
+          targetRoles: ['ADMIN', 'DISPATCHER', 'STAFF'],
+          payload: {
+            id: notif.id,
+            title: notif.title,
+            message: notif.message,
+            type: notif.type,
+            severity: notif.severity,
+            entityType: notif.entityType,
+            entityId: notif.entityId,
+            linkTab: notif.linkTab,
+            linkId: notif.linkId,
+            createdAt: notif.createdAt,
+          }
+        });
+      }
+
+      res.json({
+        success: true,
+        message: `Cập nhật trạng thái sự cố thành: ${normalizedStatus}`,
+        incident_id: parseInt(id),
+        status: result.status,
+        resolved_at: result.resolved_at
+      });
     });
   });
 };

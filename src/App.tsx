@@ -25,11 +25,12 @@ import { LoginModal } from './components/LoginModal';
 import { CitizenPortalView } from './components/CitizenPortalView';
 import { StaffWorkstationView } from './components/StaffWorkstationView';
 import { StaffManagementModal } from './components/StaffManagementModal';
-import { StormPruningActionModal } from './components/StormPruningActionModal';
 import { WorkOrderCenterView } from './components/WorkOrderCenterView';
 import { NotificationsView } from './components/NotificationsView';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { SporeBackground } from './components/common/SporeBackground';
+import { useRealtimeSync } from './hooks/useRealtimeSync';
+import { useEscapeOverlay } from './hooks/useEscapeOverlay';
 import { storage } from './db/storage';
 import { Tree, User } from './types';
 
@@ -38,6 +39,13 @@ gsap.registerPlugin(ScrollTrigger);
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('home');
   const [currentUser, setCurrentUser] = useState<User>(storage.getActiveUser());
+
+  // 🎯 Bộ lọc Drill-Down từ Dashboard sang Cây xanh & Sự cố
+  const [treeHealthFilter, setTreeHealthFilter] = useState<string>('ALL');
+  const [incidentStatusFilter, setIncidentStatusFilter] = useState<string>('ALL');
+
+  // ⚡ Kích hoạt Quản lý Kết nối Realtime SSE tập trung cho toàn ứng dụng
+  useRealtimeSync(currentUser);
   const [isDark, setIsDark] = useState<boolean>(() => {
     const saved = localStorage.getItem('urbantree_theme');
     if (saved) return saved === 'dark';
@@ -71,7 +79,6 @@ export default function App() {
   const [isQrScannerOpen, setIsQrScannerOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isStaffManagementOpen, setIsStaffManagementOpen] = useState(false);
-  const [isStormPruningModalOpen, setIsStormPruningModalOpen] = useState(false);
   const [publicTreeModalTree, setPublicTreeModalTree] = useState<Tree | null>(null);
   const [incidentReportTreeId, setIncidentReportTreeId] = useState<string | undefined>(undefined);
   const [targetIncidentId, setTargetIncidentId] = useState<string | undefined>(undefined);
@@ -88,16 +95,34 @@ export default function App() {
   const lenisRef = useRef<Lenis | null>(null);
 
   // Lắng nghe sự kiện đồng bộ từ IndexedDB dung lượng lớn (5,000+ cây)
+  const hasShownInitialSyncToastRef = useRef(false);
   useEffect(() => {
     const handleDataLoaded = (e: any) => {
       setTreeVersion((v) => v + 1);
       const count = e?.detail?.count;
-      if (count && count > 1000) {
-        showToast(`⚡ Đã đồng bộ an toàn ${count.toLocaleString('vi-VN')} cây từ IndexedDB!`);
+      // Chỉ thông báo lần đầu tiên khi mở ứng dụng, tránh spam toast ở các lần sync ngầm
+      if (!hasShownInitialSyncToastRef.current && count && count > 1000) {
+        hasShownInitialSyncToastRef.current = true;
+        showToast(`⚡ Đã đồng bộ an toàn ${count.toLocaleString('vi-VN')} cây từ cơ sở dữ liệu!`);
       }
     };
+    const handleSync = () => setTreeVersion((v) => v + 1);
+
     window.addEventListener('urbantree:data-loaded', handleDataLoaded);
-    return () => window.removeEventListener('urbantree:data-loaded', handleDataLoaded);
+    window.addEventListener('urbantree:care-records-synced', handleSync);
+    window.addEventListener('urbantree:work-orders-synced', handleSync);
+    window.addEventListener('urbantree:incidents-synced', handleSync);
+    window.addEventListener('urbantree:campaign-updated', handleSync);
+    window.addEventListener('urbantree:storm-dispatched', handleSync);
+
+    return () => {
+      window.removeEventListener('urbantree:data-loaded', handleDataLoaded);
+      window.removeEventListener('urbantree:care-records-synced', handleSync);
+      window.removeEventListener('urbantree:work-orders-synced', handleSync);
+      window.removeEventListener('urbantree:incidents-synced', handleSync);
+      window.removeEventListener('urbantree:campaign-updated', handleSync);
+      window.removeEventListener('urbantree:storm-dispatched', handleSync);
+    };
   }, []);
 
   // Check if any modal is currently open
@@ -112,6 +137,13 @@ export default function App() {
     isStaffManagementOpen ||
     publicTreeModalTree
   );
+
+  // ⌨️ GLOBAL ESCAPE OVERLAY MANAGEMENT
+  useEscapeOverlay('app-qr-modal', Boolean(selectedTreeForQr), () => setSelectedTreeForQr(null));
+  useEscapeOverlay('app-qr-scanner', isQrScannerOpen, () => setIsQrScannerOpen(false));
+  useEscapeOverlay('app-public-tree', Boolean(publicTreeModalTree), () => setPublicTreeModalTree(null));
+  useEscapeOverlay('app-login-modal', isLoginModalOpen, () => setIsLoginModalOpen(false));
+  useEscapeOverlay('app-staff-modal', isStaffManagementOpen, () => setIsStaffManagementOpen(false));
 
   // Automark Lenis Smooth Scroll Engine
   useEffect(() => {
@@ -266,7 +298,7 @@ export default function App() {
 
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-5 right-5 z-50 bg-[#174B36] text-white px-4 py-2.5 rounded-xl shadow-lg border border-[#347A50] text-xs font-medium animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="fixed bottom-20 sm:bottom-5 right-4 sm:right-5 z-50 bg-[#174B36] text-white px-4 py-2.5 rounded-xl shadow-lg border border-[#347A50] text-xs font-medium animate-in fade-in slide-in-from-bottom-2 duration-200 pointer-events-auto">
           {toastMessage}
         </div>
       )}
@@ -282,14 +314,14 @@ export default function App() {
         onLogout={handleLogout}
         onResetSeed={handleResetSeed}
         onOpenStaffManagement={() => setIsStaffManagementOpen(true)}
-        onOpenStormPruningModal={() => setIsStormPruningModalOpen(true)}
+        onOpenStormPruningModal={() => setActiveTab('work_orders')}
         treeVersion={treeVersion}
         isDark={isDark}
         onToggleTheme={toggleTheme}
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 overflow-x-hidden">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-24 lg:pb-8 overflow-x-hidden">
         {/* Trang Chủ (Landing Page công cộng ai cũng xem được) */}
         {activeTab === 'home' && (
           <HomeLandingView
@@ -328,7 +360,19 @@ export default function App() {
         {activeTab === 'dashboard' && currentUser.role === 'ADMIN' && (
           <DashboardView
             key={`dashboard-${treeVersion}`}
-            onNavigate={(tab) => setActiveTab(tab)}
+            onNavigate={(tab, filterParams) => {
+              if (tab === 'trees') {
+                setTreeHealthFilter(filterParams?.health || 'ALL');
+                setActiveTab('trees');
+                return;
+              }
+              if (tab === 'incidents') {
+                setIncidentStatusFilter(filterParams?.status || 'ALL');
+                setActiveTab('incidents');
+                return;
+              }
+              setActiveTab(tab);
+            }}
             onOpenAddTree={() => setIsAddTreeOpen(true)}
             onOpenCareModal={handleOpenCareModal}
             onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
@@ -364,13 +408,15 @@ export default function App() {
 
         {activeTab === 'trees' && currentUser.role !== 'CITIZEN' && (
           <TreeListView
-            key={`tree-list-${treeVersion}`}
+            key={`tree-list-${treeVersion}-${treeHealthFilter}`}
+            initialHealthFilter={treeHealthFilter}
             onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
             onOpenQrModal={(tree) => setSelectedTreeForQr(tree)}
             onOpenAddTree={() => setIsAddTreeOpen(true)}
             onOpenEditTree={(tree) => setSelectedTreeForEdit(tree)}
             onOpenCareModal={handleOpenCareModal}
             onOpenPublicView={(tree) => setPublicTreeModalTree(tree)}
+            onOpenMapView={() => setActiveTab('map')}
           />
         )}
 
@@ -391,6 +437,7 @@ export default function App() {
               setAddTreeCoords(null);
             }}
             onTreeUpdated={() => setTreeVersion((v) => v + 1)}
+            onOpenListView={() => setActiveTab('trees')}
           />
         )}
 
@@ -417,10 +464,12 @@ export default function App() {
 
         {activeTab === 'incidents' && (
           <IncidentsView
+            key={`incidents-${incidentStatusFilter}`}
             onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
             currentUser={currentUser}
             initialTreeId={incidentReportTreeId}
             initialIncidentId={targetIncidentId}
+            initialStatusFilter={incidentStatusFilter}
           />
         )}
 
@@ -429,7 +478,7 @@ export default function App() {
         )}
 
         {/* 🚜 TRUNG TÂM ĐIỀU HÀNH & LỆNH CÔNG TÁC HIỆN TRƯỜNG */}
-        {activeTab === 'work_orders' && (
+        {activeTab === 'work_orders' && currentUser.role !== 'CITIZEN' && (
           <WorkOrderCenterView
             currentUser={currentUser}
             onSelectTree={(treeId) => {
@@ -438,15 +487,29 @@ export default function App() {
             }}
           />
         )}
+        {activeTab === 'work_orders' && currentUser.role === 'CITIZEN' && (
+          <HomeLandingView
+            currentUser={currentUser}
+            onOpenMap={() => setActiveTab('map')}
+            onOpenReport={() => {
+              setIncidentReportTreeId(undefined);
+              setActiveTab('incidents');
+            }}
+            onOpenQrScanner={() => setIsQrScannerOpen(true)}
+            onOpenAdminDashboard={() => setIsLoginModalOpen(true)}
+            onOpenLogin={() => setIsLoginModalOpen(true)}
+            onSelectTree={(tree) => setSelectedTreeForDetail(tree)}
+          />
+        )}
 
         {/* 🔔 TRUNG TÂM THÔNG BÁO & CẢNH BÁO ĐIỀU HÀNH ĐÔ THỊ (HỖ TRỢ CẢ 3 VAI TRÒ ADMIN, STAFF, CITIZEN) */}
         {activeTab === 'notifications' && (
           <NotificationsView
             currentUser={currentUser}
             onNavigate={(tab, entityId) => {
-              // 1. Nếu là thông báo bão -> Mở thẳng Trung Tâm Điều Hành Cắt Tỉa Hạ Tán
+              // 1. Nếu là thông báo bão -> Mở thẳng Trung Tâm Điều Hành Lệnh & Xe Tuyến (Source of Truth)
               if (tab === 'storm_action' || entityId === 'storm-audit' || (tab === 'trees' && entityId === 'storm-audit')) {
-                setIsStormPruningModalOpen(true);
+                setActiveTab('work_orders');
                 return;
               }
 
@@ -565,18 +628,6 @@ export default function App() {
         />
       )}
 
-      {isStormPruningModalOpen && (
-        <StormPruningActionModal
-          onClose={() => setIsStormPruningModalOpen(false)}
-          onPruned={() => {
-            setTreeVersion((v) => v + 1);
-          }}
-          onSelectTree={(tree) => {
-            setSelectedTreeForDetail(tree);
-            setIsStormPruningModalOpen(false);
-          }}
-        />
-      )}
 
       {isQrScannerOpen && (
         <QRScannerModal

@@ -23,7 +23,16 @@ import {
   RotateCcw,
   Search,
   Globe2,
+  HelpCircle,
+  Zap,
+  Truck,
+  Wrench,
+  ShieldAlert,
+  Clock,
+  ArrowRight,
+  CheckCircle2,
 } from 'lucide-react';
+import { useEscapeOverlay } from '../hooks/useEscapeOverlay';
 import { storage } from '../db/storage';
 import { Incident, Tree, User } from '../types';
 import {
@@ -267,6 +276,90 @@ export const ALL_LOCATION_LANDMARKS: LocationLandmark[] = [
   },
 ];
 
+export interface RemediationPlan {
+  actionTitle: string;
+  solutionDetail: string;
+  recommendedTeamName: string;
+  recommendedTeamId: string;
+  recommendedVehicleName: string;
+  recommendedVehiclePlate: string;
+  urgencyLabel: string;
+  safetyRadiusM: number;
+  slaMinutes: number;
+}
+
+export function getIncidentRemediationPlan(incident: Incident): RemediationPlan {
+  const desc = (incident.description || '').toLowerCase();
+
+  if (desc.includes('gãy') || desc.includes('canh') || desc.includes('nhánh') || desc.includes('tước') || desc.includes('sap gay')) {
+    return {
+      actionTitle: 'Cắt Tỉa Hạ Cành Sắp Gãy Khẩn Cấp',
+      solutionDetail: 'Điều xe thang vươn cao cắt bỏ cành xé toạc, giải tỏa áp lực tán ngọn đón bão, lập rào chắn tĩnh không an toàn.',
+      recommendedTeamName: 'Tổ Cơ Giới Cắt Tỉa Hạ Tán Số 1 (Ninh Kiều)',
+      recommendedTeamId: 'team-1',
+      recommendedVehicleName: 'Xe Thang Nâng Người Chuyên Dụng 18m',
+      recommendedVehiclePlate: '65A-0892',
+      urgencyLabel: 'KHẨN CẤP (Ưu tiên mức 1)',
+      safetyRadiusM: 8,
+      slaMinutes: 120,
+    };
+  }
+
+  if (desc.includes('nghiêng') || desc.includes('đổ') || desc.includes('bật gốc') || desc.includes('sụp') || desc.includes('nguy cap')) {
+    return {
+      actionTitle: 'Gia Cố Chống Đổ & Neo Cáp Thép Chịu Lực',
+      solutionDetail: 'Dùng cẩu tự hành nâng đỡ thân nghiêng, đóng 3 cọc thép định hình tam giác, hạ 40% diện tích tán giảm cản gió.',
+      recommendedTeamName: 'Tổ Cơ Động Ứng Cứu Khẩn Cấp Mùa Bão',
+      recommendedTeamId: 'team-3',
+      recommendedVehicleName: 'Xe Cẩu Thùng Tự Hành 5 Tấn',
+      recommendedVehiclePlate: '65A-012.34',
+      urgencyLabel: 'CỰC KỲ NGUY HIỂM',
+      safetyRadiusM: 12,
+      slaMinutes: 60,
+    };
+  }
+
+  if (desc.includes('dây điện') || desc.includes('cháy') || desc.includes('chập') || desc.includes('điện')) {
+    return {
+      actionTitle: 'Phối Hợp Điện Lực Cắt Điện & Tỉa Tán Thông Quang',
+      solutionDetail: 'Khoanh vùng cảnh báo rò điện, phối hợp Điện lực Cần Thơ cô lập lộ đường dây và dùng cưa sào cách điện tỉa cành vướng.',
+      recommendedTeamName: 'Tổ Cơ Giới Cắt Tỉa Hạ Tán Số 1 (Ninh Kiều)',
+      recommendedTeamId: 'team-1',
+      recommendedVehicleName: 'Xe Thang Nâng Người Cách Điện 22KV',
+      recommendedVehiclePlate: '65A-0892',
+      urgencyLabel: 'NGUY CƠ CHÁY NỔ',
+      safetyRadiusM: 15,
+      slaMinutes: 90,
+    };
+  }
+
+  if (desc.includes('sâu') || desc.includes('mục') || desc.includes('bọng') || desc.includes('nấm') || desc.includes('rỗng')) {
+    return {
+      actionTitle: 'Nạo Vét Bọng Mục & Khử Trùng Cây Bệnh',
+      solutionDetail: 'Cạo sạch mô mục rỗng, quét dung dịch Booc-đô sát trùng, trám keo lâm nghiệp chống ngấm nước thối rễ.',
+      recommendedTeamName: 'Tổ Bảo Dưỡng & Trị Liệu Cây Xanh',
+      recommendedTeamId: 'team-2',
+      recommendedVehicleName: 'Xe Bán Tải Thiết Bị Trị Liệu',
+      recommendedVehiclePlate: '65A-1104',
+      urgencyLabel: 'THEO DÕI ĐIỀU TRỊ',
+      safetyRadiusM: 4,
+      slaMinutes: 240,
+    };
+  }
+
+  return {
+    actionTitle: 'Cắt Tỉa Khắc Phục Điểm Nóng Mùa Bão',
+    solutionDetail: 'Khảo sát hiện trường, phát quang tán che khuất biển báo/tầm nhìn và cắt hạ nhánh nguy hiểm trước dông lốc.',
+    recommendedTeamName: 'Tổ Cơ Giới Cắt Tỉa Hạ Tán Số 1 (Ninh Kiều)',
+    recommendedTeamId: 'team-1',
+    recommendedVehicleName: 'Xe Thang Nâng Người Chuyên Dụng 18m',
+    recommendedVehiclePlate: '65A-0892',
+    urgencyLabel: 'ĐIỀU ĐỘNG TIÊU CHUẨN',
+    safetyRadiusM: 6,
+    slaMinutes: 180,
+  };
+}
+
 interface MapViewProps {
   currentUser: User;
   onSelectTree: (tree: Tree) => void;
@@ -275,6 +368,7 @@ interface MapViewProps {
   onOpenAddTree: (coords?: { latitude: number; longitude: number; address?: string }) => void;
   onOpenEditTree: (tree: Tree) => void;
   onTreeUpdated?: () => void;
+  onOpenListView?: () => void;
 }
 
 export const MapView: React.FC<MapViewProps> = ({
@@ -285,6 +379,7 @@ export const MapView: React.FC<MapViewProps> = ({
   onOpenAddTree,
   onOpenEditTree,
   onTreeUpdated,
+  onOpenListView,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -337,6 +432,41 @@ export const MapView: React.FC<MapViewProps> = ({
   const [treeToDelete, setTreeToDelete] = useState<Tree | null>(null);
   const [deleteReason, setDeleteReason] = useState<string>('Chặt hạ giải tỏa quy hoạch');
 
+  // ⚡ Map Transition Skeleton & Loading HUD
+  const [isMapTransitioning, setIsMapTransitioning] = useState<boolean>(false);
+  const mapTransitionTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const triggerMapTransition = (durationMs = 700) => {
+    setIsMapTransitioning(true);
+    if (mapTransitionTimerRef.current) clearTimeout(mapTransitionTimerRef.current);
+    mapTransitionTimerRef.current = setTimeout(() => {
+      setIsMapTransitioning(false);
+    }, durationMs);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (mapTransitionTimerRef.current) clearTimeout(mapTransitionTimerRef.current);
+    };
+  }, []);
+
+  // 🛡️ BS 5837 RPZ Contextual Tooltip State
+  const [showRpzTooltip, setShowRpzTooltip] = useState<boolean>(false);
+
+  // ⌨️ ESC Overlays (Stack-managed)
+  useEscapeOverlay('map-delete-tree-modal', !!treeToDelete, () => {
+    setTreeToDelete(null);
+  });
+
+  useEscapeOverlay('map-selected-tree-drawer', !!activeSelectedTree, () => {
+    setActiveSelectedTree(null);
+    setIsRepositioning(false);
+  });
+
+  useEscapeOverlay('map-selected-incident-drawer', !!activeSelectedIncident, () => {
+    setActiveSelectedIncident(null);
+  });
+
   // 🔍 Cursor Live Coordinates (Direct DOM Ref to eliminate 60fps React re-renders)
   const cursorCoordsRef = useRef<HTMLDivElement>(null);
 
@@ -351,6 +481,91 @@ export const MapView: React.FC<MapViewProps> = ({
   const trees = storage.getTrees();
   const incidents = storage.getIncidents();
   const isAdmin = currentUser.role === 'ADMIN';
+
+  const [isDispatchingIncident, setIsDispatchingIncident] = useState(false);
+  const [isResolvingIncident, setIsResolvingIncident] = useState(false);
+
+  // ⚡ Xử lý khẩn cấp 1-chạm cho sự cố trên bản đồ
+  const handleDispatchIncident = async (incident: Incident) => {
+    if (isDispatchingIncident) return;
+    setIsDispatchingIncident(true);
+    const plan = getIncidentRemediationPlan(incident);
+    try {
+      const newWo = await storage.createWorkOrderFromIncident({
+        incidentId: incident.id,
+        title: `[XỬ LÝ KHẨN CẤP] ${plan.actionTitle} - ${incident.address || 'Hiện trường'}`,
+        description: `${plan.solutionDetail} (Sự cố: ${incident.description})`,
+        type: 'EMERGENCY_RESPONSE',
+        priority: incident.severity === 'HIGH' ? 'HIGH' : 'CRITICAL',
+        zoneId: 'ninh-kieu',
+        routeCorridorName: incident.address || 'Tuyến Đô Thị Cần Thơ',
+        assignedTeamId: plan.recommendedTeamId,
+        assignedTeamName: plan.recommendedTeamName,
+        assignedVehicleName: plan.recommendedVehicleName,
+        assignedVehiclePlate: plan.recommendedVehiclePlate,
+        slaTargetMinutes: plan.slaMinutes,
+      });
+
+      // Cập nhật trạng thái sự cố sang IN_PROGRESS
+      await storage.updateIncidentStatus({
+        incidentId: incident.id,
+        newStatus: 'IN_PROGRESS',
+        actorUserId: currentUser.id,
+        actorName: currentUser.fullName || currentUser.username,
+        note: `Đã kích hoạt Lệnh công tác khẩn cấp [${newWo.code}] & điều xe thang ${plan.recommendedVehiclePlate} tới hiện trường`,
+      });
+
+      setActiveSelectedIncident((prev) => (prev ? { ...prev, status: 'IN_PROGRESS', workOrderId: newWo.id, workOrderCode: newWo.code } : null));
+      showToast(`🎉 Đã lập Lệnh điều xe [${newWo.code}] & gán cho ${plan.recommendedTeamName} thành công!`);
+    } catch (err: any) {
+      alert(`Lỗi tạo lệnh xử lý: ${err.message}`);
+    } finally {
+      setIsDispatchingIncident(false);
+    }
+  };
+
+  // ✅ Đóng / Giải quyết sự cố an toàn
+  const handleResolveIncident = async (incident: Incident) => {
+    if (isResolvingIncident) return;
+    setIsResolvingIncident(true);
+    try {
+      await storage.updateIncidentStatus({
+        incidentId: incident.id,
+        newStatus: 'RESOLVED',
+        actorUserId: currentUser.id,
+        actorName: currentUser.fullName || currentUser.username,
+        note: 'Admin/Giám sát viên đã xác nhận xử lý an toàn điểm nóng sự cố trên bản đồ GIS',
+      });
+
+      setActiveSelectedIncident((prev) => (prev ? { ...prev, status: 'RESOLVED' } : null));
+      showToast(`✅ Đã đóng điểm cảnh báo [${incident.publicCode}], trạng thái: ĐÃ XỬ LÝ AN TOÀN!`);
+    } catch (err: any) {
+      alert(`Lỗi đóng sự cố: ${err.message}`);
+    } finally {
+      setIsResolvingIncident(false);
+    }
+  };
+
+  // ⚡ Tạo Lệnh cắt tỉa khẩn cấp cho Cây nguy cấp
+  const handleCreateWorkOrderForTree = (tree: Tree) => {
+    try {
+      const isCritical = tree.healthStatus === 'CRITICAL';
+      const newWo = storage.createWorkOrder({
+        title: `[KHẨN CẤP] Cắt tỉa hạ tán giải tỏa hiểm họa - ${tree.streetCode || tree.displayName}`,
+        description: `Cắt tỉa hạ 40% thể tích tán, kiểm tra mọt bọng rỗng thân và gia cố chống đổ cho cây ${tree.displayName}`,
+        type: 'PRUNING',
+        priority: isCritical ? 'CRITICAL' : 'HIGH',
+        zoneId: 'ninh-kieu',
+        treeIds: [tree.id],
+        assignedTeamId: 'team-1',
+        createdByUserId: currentUser.id,
+      });
+
+      showToast(`⚡ Đã lập Lệnh công tác khẩn cấp [${newWo.code}] cho cây ${tree.displayName}!`);
+    } catch (err: any) {
+      alert(`Lỗi tạo lệnh: ${err.message}`);
+    }
+  };
 
   // Province & Zone Resolution
   const activeProvince =
@@ -375,6 +590,7 @@ export const MapView: React.FC<MapViewProps> = ({
     setSelectedZoneId('all');
     setSelectedLocation('ALL');
     setSelectedCorridorFilter('ALL');
+    triggerMapTransition(1000);
 
     const prov = NATIONAL_PROVINCES.find((p) => p.id === provId) || NATIONAL_PROVINCES[1];
     if (mapInstanceRef.current) {
@@ -387,6 +603,7 @@ export const MapView: React.FC<MapViewProps> = ({
   const handleSelectZone = (zoneId: string) => {
     setSelectedZoneId(zoneId);
     setSelectedLocation('ALL');
+    triggerMapTransition(800);
     const zone = availableZones.find((z) => z.id === zoneId);
     if (zone && mapInstanceRef.current) {
       mapInstanceRef.current.flyTo(zone.center, zone.zoom, { duration: 1.2 });
@@ -750,12 +967,19 @@ export const MapView: React.FC<MapViewProps> = ({
           setActiveSelectedTree(null);
         });
 
+        const plan = getIncidentRemediationPlan(inc);
         marker.bindPopup(`
-          <div style="min-width: 190px; font-family: inherit;">
-            <div style="font-weight: bold; font-size: 12px; color: #DC2626;">${inc.publicCode} · ${inc.severity}</div>
-            <div style="font-size: 11px; color: #334155; margin-top: 2px;">${inc.description}</div>
-            <div style="margin-top: 6px; font-size: 10px; color: #64748b;">
-              Trạng thái: <strong>${inc.status}</strong>
+          <div style="min-width: 230px; font-family: inherit; line-height: 1.4;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+              <span style="font-weight: 800; font-size: 11px; color: #DC2626; background: #FEE2E2; padding: 2px 6px; border-radius: 4px;">${inc.publicCode} · ${inc.severity}</span>
+              <span style="font-size: 10px; font-weight: bold; color: ${(inc.status as string) === 'RESOLVED' ? '#059669' : '#D97706'};">${inc.status}</span>
+            </div>
+            <div style="font-size: 12px; font-weight: 700; color: #1E293B; margin-top: 5px;">${inc.description}</div>
+            <div style="font-size: 11px; color: #64748B; margin-top: 2px;">📍 ${inc.address || 'Hiện trường Cần Thơ'}</div>
+            <div style="margin-top: 6px; padding: 5px 8px; background: #FEF3C7; border-left: 3px solid #D97706; border-radius: 4px;">
+              <div style="font-size: 10px; font-weight: 800; color: #B45309; text-transform: uppercase;">⚡ Giải Pháp Đề Xuất:</div>
+              <div style="font-size: 11px; font-weight: 700; color: #92400E; margin-top: 1px;">${plan.actionTitle}</div>
+              <div style="font-size: 10px; color: #78350F; margin-top: 2px;">🚒 Xe: ${plan.recommendedVehiclePlate} · ⏱️ SLA: ${plan.slaMinutes}p</div>
             </div>
           </div>
         `);
@@ -783,6 +1007,7 @@ export const MapView: React.FC<MapViewProps> = ({
   const handleSelectLocation = (locId: string) => {
     setSelectedLocation(locId);
     if (locId !== 'ALL') {
+      triggerMapTransition(800);
       const loc = ALL_LOCATION_LANDMARKS.find((l) => l.id === locId);
       if (loc && mapInstanceRef.current) {
         mapInstanceRef.current.flyTo(loc.coords, loc.zoom, { duration: 1.2 });
@@ -996,33 +1221,55 @@ export const MapView: React.FC<MapViewProps> = ({
 
   return (
     <div className="space-y-3.5 animate-fade-in">
-      {/* 👑 ADMIN MULTI-DISTRICT / ZONE CONTROLLER BAR */}
-      <div className="bento-card p-3.5 sm:p-4 dark:bg-[#0c1812] dark:border-emerald-500/20 flex flex-col gap-3">
+      {/* 📱 Mobile Workspace Segmented Switcher (GIS Map ↔ List) - FIX-01 */}
+      {onOpenListView && (
+        <div className="lg:hidden flex items-center p-1 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
+          <button
+            type="button"
+            onClick={onOpenListView}
+            className="flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 min-h-[44px] text-slate-600 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-300 active:scale-98 cursor-pointer"
+          >
+            <Trees className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span>📋 Danh Sách Cây</span>
+          </button>
+          <button
+            type="button"
+            className="flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 min-h-[44px] bg-white dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-xs cursor-default"
+          >
+            <MapPin className="w-4 h-4 text-rose-500" />
+            <span>🗺️ Bản Đồ GIS</span>
+          </button>
+        </div>
+      )}
+
+      {/* 👑 GIS OPERATIONS CONTROL PANEL */}
+      <div className="bento-card p-3 sm:p-4 dark:bg-[#0c1812] dark:border-emerald-500/20 flex flex-col gap-3">
         {/* Row 1: Header + Admin Badge + Location Action Buttons */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-800 flex items-center justify-center text-emerald-700 dark:text-emerald-400">
-                <MapPin className="w-4 h-4" />
-              </div>
-              <h1 className="text-base font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <span>Bản đồ Số Cây Xanh &amp; Không Gian GIS Đô Thị</span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-800 flex items-center justify-center text-emerald-700 dark:text-emerald-400 shrink-0">
+              <MapPin className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-base font-black text-slate-900 dark:text-slate-100">
+                  Bản đồ Số Cây Xanh &amp; Không Gian GIS
+                </h1>
                 {isAdmin && (
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 font-bold flex items-center gap-1">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 font-bold hidden sm:inline-flex items-center gap-1">
                     <ShieldCheck className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                    <span>ADMIN JURISDICTION</span>
+                    <span>ADMIN</span>
                   </span>
                 )}
-              </h1>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {activeZone.agency} · {activeZone.description}
+              </p>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              {activeZone.agency} · {activeZone.description}
-            </p>
           </div>
 
           {/* Quick Actions (GPS Me + Add Tree on Map) */}
-          <div className="flex items-center gap-2 shrink-0">
-            {/* GPS Locate Me Button */}
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
             <button
               type="button"
               onClick={handleLocateMe}
@@ -1033,7 +1280,6 @@ export const MapView: React.FC<MapViewProps> = ({
               <span>Vị trí của tôi</span>
             </button>
 
-            {/* Admin Add Tree via Map Pin */}
             {isAdmin && (
               <button
                 type="button"
@@ -1044,117 +1290,112 @@ export const MapView: React.FC<MapViewProps> = ({
                     showToast('🎯 Chế độ ghim đang bật: Hãy click bất kỳ điểm nào trên bản đồ để cắm mốc cây mới!');
                   }
                 }}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
                   isPinAddMode
                     ? 'bg-rose-600 text-white animate-pulse shadow-rose-500/30 ring-2 ring-rose-400'
                     : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20'
                 }`}
               >
                 <Crosshair className="w-3.5 h-3.5" />
-                <span>{isPinAddMode ? 'Hủy ghim vị trí' : '➕ Ghim thêm cây trên map'}</span>
+                <span>{isPinAddMode ? 'Hủy ghim' : '➕ Ghim thêm cây'}</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Row 2A: 🏙️ BỘ CHỌN TỈNH / THÀNH PHỐ TOÀN QUỐC (NATIONAL PROVINCE SELECTOR) */}
-        <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-            <span className="text-xs font-black text-blue-700 dark:text-blue-400 uppercase tracking-wider shrink-0 flex items-center gap-1.5">
-              <Globe2 className="w-3.5 h-3.5" />
-              <span>Tỉnh / Thành phố:</span>
-            </span>
-
-            {NATIONAL_PROVINCES.map((prov) => {
-              const isProvSelected = selectedProvinceId === prov.id;
-              const provTreeCount =
-                prov.id === 'all' ? trees.length : (treesByProvince[prov.id] || 0);
-
-              return (
-                <button
-                  key={prov.id}
-                  type="button"
-                  onClick={() => handleSelectProvince(prov.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer border ${
-                    isProvSelected
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs ring-2 ring-blue-400/30'
-                      : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900/90 dark:hover:bg-slate-800 dark:text-slate-300 dark:border-slate-800'
-                  }`}
-                >
-                  <span>{prov.shortName}</span>
-                  <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-black ${
-                      isProvSelected
-                        ? 'bg-white/25 text-white'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                    }`}
-                  >
-                    {provTreeCount}
-                  </span>
-                </button>
-              );
-            })}
+        {/* Row 2: Bộ chọn Tỉnh/Thành & Quận/Huyện tích hợp gọn gàng + Tìm kiếm & Tuyến đường */}
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center gap-2 text-xs">
+          {/* Tỉnh / Thành phố */}
+          <div className="flex items-center gap-1.5 bg-blue-50/70 dark:bg-blue-950/40 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-900/60">
+            <Globe2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+            <select
+              value={selectedProvinceId}
+              onChange={(e) => handleSelectProvince(e.target.value)}
+              className="bg-transparent text-xs font-bold text-blue-900 dark:text-blue-200 border-none outline-hidden cursor-pointer"
+            >
+              {NATIONAL_PROVINCES.map((prov) => (
+                <option key={prov.id} value={prov.id} className="text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900">
+                  {prov.name} ({prov.id === 'all' ? trees.length : (treesByProvince[prov.id] || 0)})
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Badge Cơ quan chủ quản theo Tỉnh / Thành */}
-          <div className="hidden sm:flex items-center gap-2 text-[11px] font-bold text-slate-500 dark:text-slate-400 shrink-0">
-            <span className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/50 border border-blue-200/60 dark:border-blue-900 text-blue-800 dark:text-blue-300 font-mono text-[10px] uppercase">
-              {activeProvince.badge}
-            </span>
-          </div>
-        </div>
-
-        {/* Row 2B: 🏛️ QUẬN / HUYỆN & KHU VỰC QUẢN LÝ (DYNAMIC DISTRICTS) */}
-        <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
-            <span className="text-xs font-extrabold text-slate-600 dark:text-slate-300 uppercase tracking-wider shrink-0 flex items-center gap-1">
-              <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>Khu vực ({activeProvince.shortName}):</span>
-            </span>
-
-            {/* District / Zone Buttons of Active Province */}
-            {availableZones.map((zone) => {
-              const isSelected = selectedZoneId === zone.id;
-              const countInZone =
-                zone.id === 'all'
-                  ? currentProvinceTrees.length
-                  : currentProvinceTrees.filter((t) => getTreeZoneId(t) === zone.id).length;
-
-              return (
-                <button
-                  key={zone.id}
-                  type="button"
-                  onClick={() => handleSelectZone(zone.id)}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer border ${
-                    isSelected
-                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                      : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900/90 dark:hover:bg-slate-800 dark:text-slate-300 dark:border-slate-800'
-                  }`}
-                >
-                  <span>{zone.shortName}</span>
-                  <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-extrabold ${
-                      isSelected
-                        ? 'bg-white/25 text-white'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                    }`}
-                  >
-                    {countInZone}
-                  </span>
-                </button>
-              );
-            })}
+          {/* Quận / Khu vực */}
+          <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-800">
+            <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <select
+              value={selectedZoneId}
+              onChange={(e) => handleSelectZone(e.target.value)}
+              className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 border-none outline-hidden cursor-pointer max-w-[150px] truncate"
+            >
+              {availableZones.map((zone) => {
+                const countInZone =
+                  zone.id === 'all'
+                    ? currentProvinceTrees.length
+                    : currentProvinceTrees.filter((t) => getTreeZoneId(t) === zone.id).length;
+                return (
+                  <option key={zone.id} value={zone.id} className="text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900">
+                    {zone.shortName} ({countInZone})
+                  </option>
+                );
+              })}
+            </select>
           </div>
 
-          {/* District Quick Stats Pill */}
-          <div className="flex items-center gap-3 text-[11px] font-bold text-slate-600 dark:text-slate-300 self-end lg:self-auto shrink-0">
-            <span>Cây trong vùng: <strong className="text-emerald-700 dark:text-emerald-400">{currentZoneTrees.length} cây</strong></span>
-            <span>·</span>
-            <span>Khỏe mạnh: <strong className="text-teal-700 dark:text-teal-400">{goodRate}%</strong></span>
+          {/* Tuyến đường */}
+          <select
+            value={selectedCorridorFilter}
+            onChange={(e) => setSelectedCorridorFilter(e.target.value)}
+            className="px-2.5 py-1 text-xs font-semibold border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 cursor-pointer max-w-[170px] truncate"
+          >
+            <option value="ALL">🛣️ Tất cả tuyến</option>
+            {availableCorridors.map((c) => (
+              <option key={c.name} value={c.name}>
+                {c.name} ({c.prefix})
+              </option>
+            ))}
+          </select>
+
+          {/* Địa điểm nổi tiếng */}
+          <select
+            value={selectedLocation}
+            onChange={(e) => handleSelectLocation(e.target.value)}
+            className="px-2.5 py-1 text-xs font-bold border border-emerald-300 dark:border-emerald-600/70 rounded-full bg-emerald-50/80 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 focus:ring-1 focus:ring-emerald-500 cursor-pointer max-w-[170px] truncate"
+            title="Chọn địa điểm để bản đồ tự động bay tới"
+          >
+            <option value="ALL">📍 Địa điểm nổi tiếng</option>
+            {availableLandmarks.map((loc) => (
+              <option key={loc.id} value={loc.id}>
+                {loc.name}
+              </option>
+            ))}
+          </select>
+
+          {/* Ô tìm kiếm nhanh */}
+          <div className="relative flex items-center ml-auto">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Tìm số nhà, vị trí..."
+              value={searchLocationInput}
+              onChange={(e) => setSearchLocationInput(e.target.value)}
+              className="pl-7 pr-6 py-1 text-xs border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 w-36 sm:w-44 focus:ring-1 focus:ring-emerald-500 transition-all"
+            />
+            {searchLocationInput && (
+              <button
+                type="button"
+                onClick={() => setSearchLocationInput('')}
+                className="absolute right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs cursor-pointer"
+                title="Xóa tìm kiếm"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Row 3: Sub-filters (Trees checkbox, Location dropdown, Corridor dropdown, Search input, Health status) */}
+        {/* Row 3: Lớp hiển thị GIS (Layer Toggles) + Sức khỏe + Thống kê */}
         <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-emerald-950/30 px-3 py-1 rounded-full border border-slate-200 dark:border-emerald-800/60">
@@ -1166,57 +1407,6 @@ export const MapView: React.FC<MapViewProps> = ({
               />
               <span className="font-semibold text-emerald-800 dark:text-emerald-300">Cây xanh ({filteredTrees.length})</span>
             </label>
-
-            {/* 📍 BỘ LỌC VỊ TRÍ / ĐỊA ĐIỂM (ĐỒNG BỘ THEO TỈNH THÀNH) */}
-            <select
-              value={selectedLocation}
-              onChange={(e) => handleSelectLocation(e.target.value)}
-              className="px-3 py-1 text-xs font-bold border border-emerald-300 dark:border-emerald-600/70 rounded-full bg-emerald-50/80 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-2xs max-w-[210px] truncate"
-              title="Chọn vị trí hoặc địa điểm nổi tiếng để bản đồ tự động bay tới và lọc cây"
-            >
-              <option value="ALL">📍 Tất cả vị trí / địa điểm</option>
-              {availableLandmarks.map((loc) => (
-                <option key={loc.id} value={loc.id}>
-                  {loc.name} ({loc.district})
-                </option>
-              ))}
-            </select>
-
-            {/* Lọc Tuyến Phố (Đồng bộ theo tỉnh thành) */}
-            <select
-              value={selectedCorridorFilter}
-              onChange={(e) => setSelectedCorridorFilter(e.target.value)}
-              className="px-3 py-1 text-xs font-semibold border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 cursor-pointer max-w-[200px] truncate"
-            >
-              <option value="ALL">🛣️ Tất cả tuyến đường</option>
-              {availableCorridors.map((c) => (
-                <option key={c.name} value={c.name}>
-                  {c.name} ({c.prefix})
-                </option>
-              ))}
-            </select>
-
-            {/* 🔍 Ô TÌM KIẾM NHANH VỊ TRÍ, SỐ NHÀ, ĐỊA CHỈ */}
-            <div className="relative flex items-center">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 text-slate-400 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Tìm số nhà, vị trí..."
-                value={searchLocationInput}
-                onChange={(e) => setSearchLocationInput(e.target.value)}
-                className="pl-7 pr-6 py-1 text-xs border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 w-36 sm:w-44 focus:ring-1 focus:ring-emerald-500 transition-all"
-              />
-              {searchLocationInput && (
-                <button
-                  type="button"
-                  onClick={() => setSearchLocationInput('')}
-                  className="absolute right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs cursor-pointer"
-                  title="Xóa tìm kiếm"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
 
             <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-200 bg-rose-50 dark:bg-rose-950/30 px-3 py-1 rounded-full border border-rose-200 dark:border-rose-800/60">
               <input
@@ -1230,21 +1420,63 @@ export const MapView: React.FC<MapViewProps> = ({
               </span>
             </label>
 
-            {/* 🛡️ CÔNG TẮC BẬT VÙNG BẢO VỆ RỄ CÂY (ROOT PROTECTION ZONE - RPZ) */}
-            <label
-              className="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-200 bg-amber-50 dark:bg-amber-950/30 px-3 py-1 rounded-full border border-amber-300 dark:border-amber-700/60 shadow-2xs hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
-              title="Quy chuẩn BS 5837: Hiển thị bán kính bảo vệ rễ cây an toàn khi thi công đào vỉa hè / đặt cáp viễn thông"
-            >
-              <input
-                type="checkbox"
-                checked={showRootProtectionZone}
-                onChange={(e) => setShowRootProtectionZone(e.target.checked)}
-                className="rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
-              />
-              <span className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1">
-                <span>🛡️ Vùng rễ (RPZ)</span>
-              </span>
-            </label>
+            <div className="relative inline-flex items-center">
+              <label
+                className="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-200 bg-amber-50 dark:bg-amber-950/30 pl-3 pr-2 py-1 rounded-full border border-amber-300 dark:border-amber-700/60 shadow-2xs hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                title="Quy chuẩn BS 5837: Hiển thị bán kính bảo vệ rễ cây an toàn khi thi công đào vỉa hè"
+              >
+                <input
+                  type="checkbox"
+                  checked={showRootProtectionZone}
+                  onChange={(e) => setShowRootProtectionZone(e.target.checked)}
+                  className="rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+                />
+                <span className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1">
+                  <span>🛡️ Vùng rễ (RPZ)</span>
+                </span>
+                <button
+                  type="button"
+                  aria-label="Xem giải thích quy chuẩn vùng rễ BS 5837:2012"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowRpzTooltip((prev) => !prev);
+                  }}
+                  onMouseEnter={() => setShowRpzTooltip(true)}
+                  onMouseLeave={() => setShowRpzTooltip(false)}
+                  className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-amber-200/80 dark:hover:bg-amber-800/80 text-amber-700 dark:text-amber-300 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                </button>
+              </label>
+
+              {showRpzTooltip && (
+                <div
+                  role="tooltip"
+                  onMouseEnter={() => setShowRpzTooltip(true)}
+                  onMouseLeave={() => setShowRpzTooltip(false)}
+                  className="absolute bottom-full left-0 mb-2 w-[min(20rem,calc(100vw-2.5rem))] p-3.5 bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-md text-white text-[11px] rounded-xl shadow-2xl border border-amber-500/50 z-50 pointer-events-auto leading-relaxed animate-in fade-in zoom-in-95 duration-150"
+                >
+                  <div className="flex items-center gap-1.5 font-bold text-amber-300 mb-1.5">
+                    <span>🛡️ Quy chuẩn Vùng Rễ (RPZ) — BS 5837:2012</span>
+                  </div>
+                  <p className="text-slate-300 mb-2">
+                    <strong>Root Protection Zone (RPZ)</strong> xác định bán kính an toàn tối thiểu xung quanh gốc cây để ngăn chặn tổn hại hệ thống rễ cọc và rễ hút khi thi công đào hào, đặt cáp hoặc hạ tầng ngầm.
+                  </p>
+                  <div className="p-2 bg-slate-800/90 rounded-lg font-mono text-[10px] text-amber-300 border border-amber-500/30 mb-2">
+                    Công thức: R = max(3m, D_canopy / 2, 0.12 × D_trunk_cm)
+                  </div>
+                  <ul className="list-disc list-inside text-[10px] text-slate-300 space-y-0.5">
+                    <li><strong>Bán kính sàn:</strong> Tối thiểu 3.0m cho mọi loại cây.</li>
+                    <li><strong>Theo tán lá:</strong> Bằng nửa bán kính tán cây thực tế.</li>
+                    <li><strong>Theo thân:</strong> Hệ số 12× đường kính thân (cm → m).</li>
+                  </ul>
+                  <div className="mt-2 text-[10px] text-amber-400 font-semibold border-t border-slate-800 pt-1.5">
+                    ⚠️ Nghiêm cấm đặt xe ủi, máy xúc cơ giới hoặc đào cắt kết cấu rễ trong vành đai giới hạn này.
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 dark:border-slate-800">
               <span className="text-slate-500 dark:text-slate-400">Sức khỏe:</span>
@@ -1262,18 +1494,47 @@ export const MapView: React.FC<MapViewProps> = ({
             </div>
           </div>
 
-          {/* Current Live Cursor GPS Coordinates (Direct DOM update - 0 React overhead) */}
-          <div
-            ref={cursorCoordsRef}
-            className="font-mono text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 shrink-0"
-          >
-            📍 Di chuột trên bản đồ...
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-300">
+              <span>Cây trong vùng: <strong className="text-emerald-700 dark:text-emerald-400">{currentZoneTrees.length} cây</strong></span>
+              <span>·</span>
+              <span>Khỏe mạnh: <strong className="text-teal-700 dark:text-teal-400">{goodRate}%</strong></span>
+            </div>
+
+            {/* Current Live Cursor GPS Coordinates */}
+            <div
+              ref={cursorCoordsRef}
+              className="font-mono text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 shrink-0"
+            >
+              📍 Di chuột trên bản đồ...
+            </div>
           </div>
         </div>
       </div>
 
       {/* 🗺️ MAP CONTAINER (GPU Hardware Accelerated) */}
-      <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 dark:border-emerald-500/20 shadow-lg shadow-slate-900/5 h-[620px] bg-slate-100 dark:bg-slate-950 transform-gpu will-change-transform">
+      <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 dark:border-emerald-500/20 shadow-lg shadow-slate-900/5 h-[580px] sm:h-[640px] xl:h-[calc(100vh-230px)] bg-slate-100 dark:bg-slate-950 transform-gpu will-change-transform">
+        {/* ⚡ GIS Loading HUD / Skeleton Indicator */}
+        {isMapTransitioning && (
+          <div className="absolute inset-0 z-30 bg-slate-950/25 dark:bg-black/35 backdrop-blur-[2px] flex items-center justify-center pointer-events-none animate-in fade-in duration-150">
+            <div className="bg-slate-900/95 dark:bg-slate-950/95 text-white px-5 py-3 rounded-2xl border border-emerald-500/50 shadow-2xl flex items-center gap-3.5 text-xs font-bold">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+              </span>
+              <div className="flex flex-col">
+                <span className="text-emerald-400 font-extrabold flex items-center gap-1.5">
+                  <Compass className="w-3.5 h-3.5 animate-spin" />
+                  Đang đồng bộ tọa độ không gian GIS
+                </span>
+                <span className="text-[10px] text-slate-300 font-normal">
+                  Đang tái định vị góc nhìn & kết xuất lớp bản đồ thực địa...
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ⚡ GIS High-Performance LOD Badge (Tầm nhìn toàn cảnh) */}
         {currentZoom < 14 && trees.length > 300 && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-slate-900/90 backdrop-blur-md text-white px-4 py-2 rounded-2xl border border-emerald-500/40 shadow-xl flex items-center gap-2.5 text-xs pointer-events-auto">
@@ -1369,7 +1630,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
         {/* 🌿 SELECTED TREE FLOATING DRAWER (WITH ADMIN CRUD & REPOSITION) */}
         {activeSelectedTree && (
-          <div className="absolute top-4 right-4 z-20 w-88 bg-white dark:bg-[#0c1812] rounded-2xl border border-[#E0EBDD] dark:border-emerald-500/30 shadow-2xl p-4 text-xs space-y-3 animate-in fade-in slide-in-from-right-4 duration-150">
+          <div className="absolute bottom-4 right-4 z-20 w-88 max-w-[calc(100vw-32px)] max-h-[calc(100%-2rem)] overflow-y-auto scrollbar-thin bg-white/95 dark:bg-[#0c1812]/95 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-emerald-500/30 shadow-2xl p-4 text-xs space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-150 pointer-events-auto">
             {/* Header */}
             <div className="flex items-start justify-between">
               <div>
@@ -1392,13 +1653,15 @@ export const MapView: React.FC<MapViewProps> = ({
                 </p>
               </div>
               <button
+                type="button"
+                aria-label="Đóng thông tin cây"
                 onClick={() => {
                   setActiveSelectedTree(null);
                   setIsRepositioning(false);
                 }}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 min-h-[44px] min-w-[44px] -mr-2 -mt-2 flex items-center justify-center rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -1425,6 +1688,29 @@ export const MapView: React.FC<MapViewProps> = ({
                 </span>
               </div>
             </div>
+
+            {/* ⚠️ CẢNH BÁO SỨC KHỎE CÂY & GIẢI PHÁP LÂM NGHIỆP */}
+            {(activeSelectedTree.healthStatus === 'CRITICAL' || activeSelectedTree.healthStatus === 'POOR') && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/40 text-amber-900 dark:text-amber-200 space-y-2">
+                <div className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{activeSelectedTree.healthStatus === 'CRITICAL' ? 'Cây Nguy Cấp: Nguy Cơ Đổ Gãy Cao' : 'Cây Kém: Cần Can Thiệp Kỹ Thuật'}</span>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                  {activeSelectedTree.healthStatus === 'CRITICAL'
+                    ? '💡 Giải pháp: Điều xe thang hạ bớt cành nặng ngọn, gia cố cọc chống chịu lực, khoanh vùng rễ RPZ an toàn.'
+                    : '💡 Giải pháp: Cắt tỉa cành khô, quét vôi sát trùng gốc, bổ sung phân bón vi lượng phục hồi rễ.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handleCreateWorkOrderForTree(activeSelectedTree)}
+                  className="w-full py-1.5 px-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 shadow-sm cursor-pointer transition-all hover:scale-102"
+                >
+                  <Zap className="w-3.5 h-3.5 text-amber-200" />
+                  <span>⚡ Tạo Lệnh Cắt Tỉa Khẩn Cấp Cho Cây Này</span>
+                </button>
+              </div>
+            )}
 
             {/* 🛠️ ADMIN CRUD & REPOSITION ACTIONS */}
             {isAdmin && (
@@ -1488,34 +1774,166 @@ export const MapView: React.FC<MapViewProps> = ({
           </div>
         )}
 
-        {/* Selected Incident Drawer */}
-        {activeSelectedIncident && (
-          <div className="absolute top-4 right-4 z-20 w-80 bg-white dark:bg-[#0c1812] rounded-xl border border-red-200 dark:border-rose-500/30 shadow-xl p-4 text-xs space-y-3 animate-in fade-in slide-in-from-right-4 duration-150">
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 dark:bg-rose-950/80 text-red-700 dark:text-rose-400 dark:border dark:border-rose-800/50">
-                  {activeSelectedIncident.publicCode}
-                </span>
-                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm mt-1">{activeSelectedIncident.severity} - Sự cố</h3>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">{activeSelectedIncident.address}</p>
+        {/* Selected Incident Drawer With Real Operational Remediation Solution */}
+        {activeSelectedIncident && (() => {
+          const plan = getIncidentRemediationPlan(activeSelectedIncident);
+          const linkedTree = activeSelectedIncident.treeId ? trees.find((t) => t.id === activeSelectedIncident.treeId) : null;
+          const isResolved = activeSelectedIncident.status === 'RESOLVED';
+          const isInProgress = activeSelectedIncident.status === 'IN_PROGRESS';
+
+          return (
+            <div className="absolute bottom-4 right-4 z-20 w-88 sm:w-96 max-w-[calc(100vw-32px)] max-h-[calc(100%-2rem)] overflow-y-auto scrollbar-thin bg-white/95 dark:bg-[#0c1812]/95 backdrop-blur-md rounded-2xl border border-rose-300 dark:border-rose-500/40 shadow-2xl p-4 text-xs space-y-3.5 animate-in fade-in slide-in-from-bottom-4 duration-150 pointer-events-auto">
+              {/* Header */}
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50">
+                      {activeSelectedIncident.publicCode}
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                      isResolved
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300'
+                        : isInProgress
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-300'
+                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300'
+                    }`}>
+                      {isResolved ? 'ĐÃ XỬ LÝ AN TOÀN' : isInProgress ? 'ĐANG TÁC CHIẾN' : 'CHỜ ĐIỀU PHỐI'}
+                    </span>
+                  </div>
+                  <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm mt-1.5 flex items-center gap-1">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>{activeSelectedIncident.severity} · Điểm Cảnh Báo Nguy Hiểm</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    📍 {activeSelectedIncident.address || 'Đường Đô Thị Cần Thơ'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Đóng thông tin sự cố"
+                  onClick={() => setActiveSelectedIncident(null)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 -mr-1.5 -mt-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <button
-                onClick={() => setActiveSelectedIncident(null)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
 
-            <div className="p-2.5 bg-red-50/50 dark:bg-rose-950/30 rounded-lg text-slate-700 dark:text-slate-300 text-[11px] border border-transparent dark:border-rose-900/40">
-              {activeSelectedIncident.description}
-            </div>
+              {/* Mô tả hiện trường sự cố */}
+              <div className="p-2.5 bg-rose-50/60 dark:bg-rose-950/30 rounded-xl text-slate-800 dark:text-slate-200 text-xs border border-rose-200/60 dark:border-rose-900/40">
+                <div className="text-[10px] font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wide mb-1">
+                  Mô Tả Hiện Trường:
+                </div>
+                <p className="font-medium italic">"{activeSelectedIncident.description}"</p>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5">
+                  Người phản ánh: <strong>{activeSelectedIncident.reporterName || 'Người dân'}</strong> · Số điện thoại: <strong>{activeSelectedIncident.reporterPhone || 'Không công khai'}</strong>
+                </div>
+              </div>
 
-            <div className="text-[10px] text-slate-400 dark:text-slate-400">
-              Người báo: {activeSelectedIncident.reporterName} · Trạng thái: {activeSelectedIncident.status}
+              {/* 💡 KHỐI PHƯƠNG ÁN & GIẢI PHÁP KỸ THUẬT LÂM NGHIỆP ĐỀ XUẤT */}
+              <div className="p-3.5 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 rounded-xl border border-amber-300 dark:border-amber-700/60 space-y-2.5">
+                <div className="flex items-center justify-between gap-1">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-amber-900 dark:text-amber-200 uppercase tracking-wide">
+                    <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
+                    <span>Giải Pháp Kỹ Thuật Đề Xuất</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-200/60 dark:bg-amber-900/60 px-1.5 py-0.5 rounded">
+                    SLA: {plan.slaMinutes}p
+                  </span>
+                </div>
+
+                <div className="text-xs font-bold text-slate-900 dark:text-amber-100">
+                  {plan.actionTitle}
+                </div>
+
+                <p className="text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed">
+                  {plan.solutionDetail}
+                </p>
+
+                {/* Các thông số tác chiến */}
+                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-amber-200/60 dark:border-amber-800/40 text-[11px]">
+                  <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                    <Truck className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                    <span className="truncate">Xe: <strong className="text-slate-800 dark:text-slate-100">{plan.recommendedVehiclePlate}</strong></span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                    <ShieldAlert className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <span>Cách ly: <strong className="text-slate-800 dark:text-slate-100">R = {plan.safetyRadiusM}m</strong></span>
+                  </div>
+                </div>
+
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                  <span>Tổ đảm trách:</span>
+                  <strong className="text-slate-700 dark:text-slate-300">{plan.recommendedTeamName}</strong>
+                </div>
+              </div>
+
+              {/* HÀNG NÚT HÀNH ĐỘNG THỰC THI 1-CHẠM */}
+              <div className="space-y-2 pt-1">
+                {!isResolved && (
+                  <button
+                    type="button"
+                    disabled={isDispatchingIncident}
+                    onClick={() => handleDispatchIncident(activeSelectedIncident)}
+                    className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all hover:scale-102"
+                  >
+                    <Zap className="w-4 h-4 text-amber-300" />
+                    <span>
+                      {isDispatchingIncident
+                        ? 'Đang Khởi Tạo Lệnh...'
+                        : isInProgress
+                        ? '⚡ Điều Xe Bổ Sung / Tạo Lệnh Xử Lý Lại'
+                        : '⚡ Điều Xe & Tạo Lệnh Xử Lý Khẩn Cấp (1-Chạm)'}
+                    </span>
+                  </button>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  {!isResolved ? (
+                    <button
+                      type="button"
+                      disabled={isResolvingIncident}
+                      onClick={() => handleResolveIncident(activeSelectedIncident)}
+                      className="py-2 px-2 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 rounded-xl font-bold text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>{isResolvingIncident ? 'Đang đóng...' : 'Đã Xử Lý Xong'}</span>
+                    </button>
+                  ) : (
+                    <div className="py-2 px-2 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 rounded-xl font-bold text-xs flex items-center justify-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Đã Xử Lý An Toàn</span>
+                    </div>
+                  )}
+
+                  {linkedTree ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveSelectedTree(linkedTree);
+                        setActiveSelectedIncident(null);
+                      }}
+                      className="py-2 px-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <Trees className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>Soi Cây #{linkedTree.streetCode || linkedTree.displayName}</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        showToast(`📍 Sự cố tại tọa độ [${activeSelectedIncident.latitude.toFixed(4)}, ${activeSelectedIncident.longitude.toFixed(4)}]`);
+                      }}
+                      className="py-2 px-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                      <span>Tọa Độ Hiện Trường</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* ⚠️ DIALOG XÁC NHẬN GIẢI TỎA / XÓA CÂY (ADMIN CONFIRMATION MODAL) */}

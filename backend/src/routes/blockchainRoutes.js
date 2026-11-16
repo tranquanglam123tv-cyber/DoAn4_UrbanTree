@@ -3,11 +3,20 @@ const router = express.Router();
 const blockchainClient = require('../services/blockchainClient');
 const hashService = require('../services/hashService');
 const db = require('../config/db');
+const blockchainController = require('../controllers/blockchainController');
 
 /**
  * ⛓️ BLOCKCHAIN API ROUTES (Dành cho Người 1 - Trần Quang Lâm)
  * Đảm nhận các chức năng Neo dữ liệu bất biến, Cổng kiểm toán xác minh A18/A19
  */
+
+// ==========================================
+// 0. PERSISTENT SQLITE-BACKED ANCHOR LEDGER ENDPOINTS (WAVE 5.0.3)
+// ==========================================
+router.get('/anchors/status', blockchainController.getAnchorStatus);
+router.post('/anchors/batch', blockchainController.batchAnchor);
+router.get('/anchors/records', blockchainController.getRecords);
+router.post('/anchors/verify', blockchainController.verifyRecord);
 
 // ==========================================
 // 1. KIỂM TRA TRẠNG THÁI KẾT NỐI MẠNG BLOCKCHAIN

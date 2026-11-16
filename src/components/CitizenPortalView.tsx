@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import { storage } from '../db/storage';
 import { Incident, Tree, User } from '../types';
+import { useEscapeOverlay } from '../hooks/useEscapeOverlay';
 
 interface CitizenPortalViewProps {
   currentUser: User;
@@ -73,6 +74,10 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   const [reopenImageUrl, setReopenImageUrl] = useState('');
   const [isSubmittingReopen, setIsSubmittingReopen] = useState(false);
   const [reopenSuccessMsg, setReopenSuccessMsg] = useState<string | null>(null);
+
+  // Wave 4.8 / FIX-10: Close modals on Escape key via global LIFO overlay stack
+  useEscapeOverlay('citizen-qr-modal', showQrModal, () => setShowQrModal(false));
+  useEscapeOverlay('citizen-reopen-modal', !!reopenModalIncident, () => setReopenModalIncident(null));
 
   const incidents = storage.getIncidents();
   const trees = storage.getTrees();
@@ -370,7 +375,11 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
                 <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-slate-600 dark:text-emerald-200/80">
                   <span className="flex items-center gap-1">
                     <Phone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>0912 ··· 678</span>
+                    <span>
+                      {currentUser.phone
+                        ? currentUser.phone.replace(/(\d{4})\d+(\d{3})/, '$1 ··· $2')
+                        : '0912 ··· 678'}
+                    </span>
                   </span>
                   <span>•</span>
                   <span className="flex items-center gap-1">
@@ -1546,7 +1555,12 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
 
       {/* 🪪 8. CITIZEN QR PASS MODAL */}
       {showQrModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowQrModal(false);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-slate-950/80 backdrop-blur-sm animate-fade-in"
+        >
           <div className="bg-white dark:bg-[#0c1812] rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 dark:border-emerald-500/30 space-y-5 relative">
             <button
               onClick={() => setShowQrModal(false)}
@@ -1638,7 +1652,12 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
 
       {/* ⚠️ RE-REPORT / TÁI BÁO CÁO MODAL */}
       {reopenModalIncident && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setReopenModalIncident(null);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in"
+        >
           <div className="bg-white dark:bg-[#0c1812] rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-amber-500/30 space-y-5 relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setReopenModalIncident(null)}

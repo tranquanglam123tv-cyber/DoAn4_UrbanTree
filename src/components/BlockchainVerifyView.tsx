@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -65,6 +65,23 @@ export const BlockchainVerifyView: React.FC = () => {
   const [anchorTypeFilter, setAnchorTypeFilter] = useState<string>('ALL');
   const [anchorPage, setAnchorPage] = useState(1);
   const [anchorPageSize, setAnchorPageSize] = useState(20);
+  const [remoteStatus, setRemoteStatus] = useState<any>(null);
+
+  // Sync persistent anchor state from SQLite backend (Wave 5.0.3)
+  useEffect(() => {
+    blockchainService.syncFromBackend().then(() => {
+      setDataVersion((v) => v + 1);
+    });
+
+    fetch('http://localhost:5001/api/blockchain/anchors/status')
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success && json.data) {
+          setRemoteStatus(json.data);
+        }
+      })
+      .catch((err) => console.warn('Anchor status fetch error:', err));
+  }, []);
 
   const trees = useMemo(() => storage.getTrees(), [dataVersion]);
   const careRecords = useMemo(() => storage.getCareRecords(), [dataVersion]);
@@ -95,23 +112,26 @@ export const BlockchainVerifyView: React.FC = () => {
     return filteredAnchors.slice(start, start + anchorPageSize);
   }, [filteredAnchors, anchorPage, anchorPageSize]);
 
-  // 📊 THỐNG KÊ BAO PHỦ BLOCKCHAIN (ANCHOR COVERAGE METRICS)
-  const totalTrees = trees.length;
+  // 📊 THỐNG KÊ BAO PHỦ BLOCKCHAIN (ANCHOR COVERAGE METRICS TỪ SQLITE PERSISTENT SOURCE)
+  const totalTrees = remoteStatus?.trees?.total ?? trees.length;
   const anchoredTreesCount = useMemo(() => {
+    if (remoteStatus?.trees) return remoteStatus.trees.anchored;
     return trees.filter((t) => !!blockchainService.getAnchor('TREE_PROFILE', t.id)).length;
-  }, [trees, anchors]);
+  }, [trees, anchors, remoteStatus]);
   const unanchoredTreesCount = Math.max(0, totalTrees - anchoredTreesCount);
   const treeCoveragePercent = totalTrees > 0 ? Math.round((anchoredTreesCount / totalTrees) * 100) : 0;
 
-  const totalCare = careRecords.length;
+  const totalCare = remoteStatus?.careRecords?.total ?? careRecords.length;
   const anchoredCareCount = useMemo(() => {
+    if (remoteStatus?.careRecords) return remoteStatus.careRecords.anchored;
     return careRecords.filter((c) => !!blockchainService.getAnchor('CARE_RECORD', c.id)).length;
-  }, [careRecords, anchors]);
+  }, [careRecords, anchors, remoteStatus]);
 
-  const totalIncidents = incidents.length;
+  const totalIncidents = remoteStatus?.incidents?.total ?? incidents.length;
   const anchoredIncidentsCount = useMemo(() => {
+    if (remoteStatus?.incidents) return remoteStatus.incidents.anchored;
     return incidents.filter((i) => !!blockchainService.getAnchor('INCIDENT_REPORT', i.id)).length;
-  }, [incidents, anchors]);
+  }, [incidents, anchors, remoteStatus]);
 
   // Cây lọc theo trạng thái neo cho TreeSearchSelect
   const displayTreesForSelector = useMemo(() => {
@@ -290,6 +310,13 @@ export const BlockchainVerifyView: React.FC = () => {
         );
       }
 
+      fetch('http://localhost:5001/api/blockchain/anchors/status')
+        .then((r) => r.json())
+        .then((json) => {
+          if (json.success && json.data) setRemoteStatus(json.data);
+        })
+        .catch(() => {});
+
       setDataVersion((v) => v + 1);
       setBatchResultNotice(
         `✅ Đã neo thành công ${totalAnchored} cây xanh lên Smart Contract on-chain (từ Block #${startBlock} đến #${endBlock})! Tính toàn vẹn đạt 100%.`
@@ -329,6 +356,14 @@ export const BlockchainVerifyView: React.FC = () => {
       });
 
       const res = await blockchainService.batchAnchorRecords(items);
+
+      fetch('http://localhost:5001/api/blockchain/anchors/status')
+        .then((r) => r.json())
+        .then((json) => {
+          if (json.success && json.data) setRemoteStatus(json.data);
+        })
+        .catch(() => {});
+
       setDataVersion((v) => v + 1);
       setBatchResultNotice(`✅ Đã neo thành công ${res.count} nhật ký chăm sóc lên Smart Contract!`);
     } catch (err: any) {

@@ -422,6 +422,27 @@ html.dark .hero-badge-anim .rectangle, .dark .hero-badge-anim .rectangle {
   }
 }
 
+/* 📱 iOS Notch & Home Indicator Safe-Area Utilities */
+.safe-area-bottom {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+}
+
+.safe-area-top {
+  padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+}
+
+.safe-area-left {
+  padding-left: max(0.5rem, env(safe-area-inset-left, 0px));
+}
+
+.safe-area-right {
+  padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
+}
+
+.bottom-mobile-safe {
+  bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+}
+
 @media all and (display-mode: standalone) {
   body {
     overscroll-behavior-y: none;

@@ -182,6 +182,9 @@ db.serialize(() => {
   // 📍 Lọc Trùng Không Gian & Thời Gian (Spatial-Temporal Deduplication - UT-005)
   addColumnIfNotExists('incidents', 'duplicate_count', 'INTEGER DEFAULT 0');
   addColumnIfNotExists('incidents', 'master_incident_id', 'INTEGER');
+  // 🔗 Liên kết Lệnh Công Tác Hiện Trường (Wave 3.3 Incident Lifecycle Integration)
+  addColumnIfNotExists('incidents', 'work_order_id', 'TEXT');
+  db.run(`CREATE INDEX IF NOT EXISTS idx_incidents_work_order ON incidents(work_order_id);`);
 
   // ==============================================================
   // 6. NHÓM LỊCH SỬ TIẾN ĐỘ SỰ CỐ (incident_updates)
@@ -490,6 +493,32 @@ db.serialize(() => {
   `);
   db.run(`CREATE INDEX IF NOT EXISTS idx_anchor_queue_status ON blockchain_anchor_queue(status, next_retry_at);`);
 
+  // 10.9. Quy Tắc Bảo Dưỡng Tuyến Định Kỳ (maintenance_rules)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS maintenance_rules (
+      id TEXT PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      scope_type TEXT DEFAULT 'ROUTE',
+      route_id TEXT,
+      task_type TEXT NOT NULL CHECK(task_type IN ('PRUNING', 'WATERING', 'FERTILIZATION', 'PEST_CONTROL', 'SURVEY')),
+      priority TEXT NOT NULL CHECK(priority IN ('LOW', 'NORMAL', 'MEDIUM', 'HIGH', 'CRITICAL')),
+      interval_days INTEGER DEFAULT 30,
+      required_capabilities TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_maint_rules_active ON maintenance_rules(is_active, route_id);`);
+
+  // Các cột bổ sung cho Data Integrity & Tracking
+  addColumnIfNotExists('care_records', 'work_order_id', 'TEXT');
+  addColumnIfNotExists('care_records', 'work_order_code', 'TEXT');
+  addColumnIfNotExists('work_orders', 'batch_index', 'INTEGER DEFAULT 1');
+  addColumnIfNotExists('work_orders', 'total_batches', 'INTEGER DEFAULT 1');
+  addColumnIfNotExists('work_orders', 'backlog_trees_count', 'INTEGER DEFAULT 0');
+
   // ==============================================================
   // CHÈN DỮ LIỆU MẪU BAN ĐẦU (SEED DATA)
   // ==============================================================
@@ -497,10 +526,11 @@ db.serialize(() => {
   db.get("SELECT COUNT(*) AS count FROM users", (err, row) => {
     if (!err && row && row.count === 0) {
       console.log('👤 Đang khởi tạo danh mục Người dùng mẫu...');
+      // 🔒 Mật khẩu băm chuẩn bcrypt ($2b$10$): admin123 cho admin, 123456 cho nhân viên
       const sampleUsers = [
-        ['admin', 'admin@urbantree.vn', '$2b$10$hashedAdminPassword', 'Đặng Thế Thuận (Admin)', '0901234567', 'ADMIN', 'ACTIVE'],
-        ['staff_lam', 'lam@urbantree.vn', '$2b$10$hashedLamPassword', 'Trần Quang Lâm (Kỹ sư Blockchain)', '0907654321', 'STAFF', 'ACTIVE'],
-        ['staff_thuan', 'thuan@urbantree.vn', '$2b$10$hashedThuanPassword', 'Đặng Thế Thuận (Kỹ sư Backend)', '0901112233', 'STAFF', 'ACTIVE']
+        ['admin', 'admin@urbantree.vn', '$2b$10$k26tFkJrtqvbsOvdxhCTFOpUxdlc/E.wrAs7A4eITax/mruO5rVGO', 'Đặng Thế Thuận (Admin)', '0901234567', 'ADMIN', 'ACTIVE'],
+        ['staff_lam', 'lam@urbantree.vn', '$2b$10$11n47YPAG7111L4C6epoGu5lYDo40u67OsyTi/1UlfJ1OV5jPhu86', 'Trần Quang Lâm (Kỹ sư Blockchain)', '0907654321', 'STAFF', 'ACTIVE'],
+        ['staff_thuan', 'thuan@urbantree.vn', '$2b$10$11n47YPAG7111L4C6epoGu5lYDo40u67OsyTi/1UlfJ1OV5jPhu86', 'Đặng Thế Thuận (Kỹ sư Backend)', '0901112233', 'STAFF', 'ACTIVE']
       ];
       const stmt = db.prepare("INSERT INTO users (username, email, password_hash, full_name, phone, role, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
       sampleUsers.forEach(u => stmt.run(u));
@@ -535,6 +565,64 @@ db.serialize(() => {
       ];
       const stmt = db.prepare("INSERT INTO trees (tree_code, tree_type_id, species, location_name, address, latitude, longitude, planted_date, height_meter, diameter_cm, health_status, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
       sampleTrees.forEach(tree => stmt.run(tree));
+      stmt.finalize();
+    }
+  });
+
+  // 4. Seed Maintenance Rules (Định kỳ chăm sóc tuyến)
+  db.get("SELECT COUNT(*) AS count FROM maintenance_rules", (err, row) => {
+    if (!err && row && row.count === 0) {
+      console.log('📋 Đang khởi tạo danh mục Quy tắc bảo dưỡng mẫu (maintenance_rules)...');
+      const initialRules = [
+        ['rule-prune-hb', 'RULE-PRUNE-HB', 'Cắt tỉa an toàn hành lang điện & hạ tán', 'ROUTE', 'route-hoa-binh', 'PRUNING', 'HIGH', 30, JSON.stringify(['HEAVY_PRUNING', 'AERIAL_PLATFORM']), 1],
+        ['rule-water-304', 'RULE-WATER-304', 'Tưới nước duy trì sinh trưởng mùa khô', 'ROUTE', 'route-30-4', 'WATERING', 'MEDIUM', 7, JSON.stringify(['WATERING']), 1],
+        ['rule-fert-cmt8', 'RULE-FERT-CMT8', 'Bón phân vi sinh & kích rễ định kỳ', 'ROUTE', 'route-cmt8', 'FERTILIZATION', 'NORMAL', 60, JSON.stringify(['FERTILIZING']), 1],
+        ['rule-prune-vvk', 'RULE-PRUNE-VVK', 'Cắt tỉa cành vươn tĩnh không đại lộ', 'ROUTE', 'route-vo-van-kiet', 'PRUNING', 'HIGH', 45, JSON.stringify(['HEAVY_PRUNING']), 1],
+        ['rule-surv-32', 'RULE-SURV-32', 'Khảo sát chẩn đoán sâu đục thân & mối mọt', 'ROUTE', 'route-3-2', 'SURVEY', 'NORMAL', 90, JSON.stringify(['PEST_CONTROL']), 1]
+      ];
+      const stmt = db.prepare(`
+        INSERT INTO maintenance_rules (id, code, name, scope_type, route_id, task_type, priority, interval_days, required_capabilities, is_active)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      initialRules.forEach(r => stmt.run(r));
+      stmt.finalize();
+    }
+  });
+
+  // 5. Seed Operational Zones (Địa bàn vận hành Ninh Kiều, Bình Thủy, Cái Răng)
+  db.get("SELECT COUNT(*) AS count FROM operational_zones", (err, row) => {
+    if (!err && row && row.count === 0) {
+      console.log('🗺️ Đang khởi tạo danh mục Địa bàn vận hành (operational_zones)...');
+      const initialZones = [
+        ['zone-ninh-kieu', 'ZONE-NK', 'Quận Ninh Kiều (Trung Tâm Đô Thị)', 'Quận Ninh Kiều', 'Vùng lõi trung tâm hành chính thương mại, mật độ giao thông rất cao, nhiều cây cổ thụ loại 3.', 'ACTIVE'],
+        ['zone-binh-thuy', 'ZONE-BT', 'Quận Bình Thủy (Hành Lang Sân Bay & Ven Sông)', 'Quận Bình Thủy', 'Khu vực ven sông Hậu và trục kết nối Cảng hàng không Quốc tế Cần Thơ, thường xuyên chịu gió lốc mùa mưa.', 'ACTIVE'],
+        ['zone-cai-rang', 'ZONE-CR', 'Quận Cái Răng (Khu Đô Thị Mới Nam Cần Thơ)', 'Quận Cái Răng', 'Vùng đô thị mở rộng phía Nam sông Cần Thơ, nhiều tuyến đại lộ lớn nhiều cây mới trồng loại 1 và loại 2.', 'ACTIVE']
+      ];
+      const stmt = db.prepare(`
+        INSERT INTO operational_zones (id, code, name, district, description, status)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      initialZones.forEach(z => stmt.run(z));
+      stmt.finalize();
+    }
+  });
+
+  // 6. Seed Routes (5 Tuyến đường trọng điểm Cần Thơ)
+  db.get("SELECT COUNT(*) AS count FROM routes", (err, row) => {
+    if (!err && row && row.count === 0) {
+      console.log('🛣️ Đang khởi tạo danh mục 5 Tuyến đường huyết mạch (routes)...');
+      const initialRoutes = [
+        ['route-hoa-binh', 'zone-ninh-kieu', 'COR-HB', 'Đại Lộ Hòa Bình', 'Trục đại lộ trung tâm Ninh Kiều dài 1.8km, cây Sao đen, Dầu rái loại 2 & 3', 'Vòng xoay Ngã tư Bưu điện Cần Thơ', 'Tượng đài Bác Hồ - Bến Ninh Kiều', 420, 'ACTIVE'],
+        ['route-30-4', 'zone-ninh-kieu', 'COR-304', 'Đường 30 Tháng 4', 'Trục huyết mạch dài 3.2km nối Ninh Kiều sang Cái Răng', 'Ngã tư Hòa Bình - 30/4', 'Cầu Đầu Sấu', 610, 'ACTIVE'],
+        ['route-cmt8', 'zone-binh-thuy', 'COR-CMT8', 'Đường Cách Mạng Tháng 8', 'Trục ven sông Hậu dài 4.5km, nhiều cây xà cừ cổ thụ mùa bão dễ gãy nhánh', 'Cầu Cái Khế', 'Cầu Bình Thủy', 780, 'ACTIVE'],
+        ['route-vo-van-kiet', 'zone-binh-thuy', 'COR-VVK', 'Đường Võ Văn Kiệt', 'Trục đại lộ nối trung tâm ra Sân bay Cần Thơ dài 6.2km, dải phân cách rộng', 'Ngã tư Mậu Thân - Võ Văn Kiệt', 'Sân Bay Quốc Tế Cần Thơ', 850, 'ACTIVE'],
+        ['route-3-2', 'zone-ninh-kieu', 'COR-32', 'Đường 3 Tháng 2', 'Trục đô thị sinh viên và thương mại dài 3.8km', 'Ngã ba Hùng Vương - 3/2', 'Cầu Rạch Ngỗng 2', 540, 'ACTIVE']
+      ];
+      const stmt = db.prepare(`
+        INSERT INTO routes (id, zone_id, code, name, description, start_point, end_point, total_trees_count, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      initialRoutes.forEach(r => stmt.run(r));
       stmt.finalize();
     }
   });
@@ -576,6 +664,67 @@ db.serialize(() => {
       completed_at DATETIME
     )
   `);
+
+  // ==============================================================
+  // 14. BẢNG THÔNG BÁO HỆ THỐNG ĐIỀU HÀNH BỀN VỮNG (notifications - WAVE 3.2)
+  // Phục vụ Persistent Notification Hub & Multi-Device Inbox
+  // ==============================================================
+  db.run(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id TEXT PRIMARY KEY,
+      user_id INTEGER NULL,
+      target_role TEXT NULL,
+      title TEXT NOT NULL,
+      message TEXT NOT NULL,
+      type TEXT NOT NULL,
+      severity TEXT NOT NULL DEFAULT 'INFO',
+      entity_type TEXT NULL,
+      entity_id TEXT NULL,
+      link_tab TEXT NULL,
+      link_id TEXT NULL,
+      is_read INTEGER NOT NULL DEFAULT 0,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      read_at DATETIME NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run(`CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_notifications_role ON notifications(target_role);`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(is_read);`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at);`);
+
+  // ==============================================================
+  // 15. BẢNG CHIẾN DỊCH VẬN HÀNH ĐÔ THỊ (campaigns - WAVE 4.9)
+  // Phục vụ Chiến Dịch Mùa Bão & Rà Soát Cắt Tỉa Hạ Độ Cao Toàn Thành Phố
+  // ==============================================================
+  db.run(`
+    CREATE TABLE IF NOT EXISTS campaigns (
+      id TEXT PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'STORM_PREPARATION',
+      status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK(status IN ('DETECTED', 'ACTIVE', 'IN_PROGRESS', 'NEAR_COMPLETION', 'RESOLVED', 'CLOSED')),
+      target_corridor_ids TEXT,
+      target_scope TEXT DEFAULT 'ALL_CITY',
+      total_detected_trees INTEGER DEFAULT 0,
+      assigned_trees INTEGER DEFAULT 0,
+      in_progress_trees INTEGER DEFAULT 0,
+      field_completed_trees INTEGER DEFAULT 0,
+      verified_trees INTEGER DEFAULT 0,
+      resolved_trees INTEGER DEFAULT 0,
+      remaining_trees INTEGER DEFAULT 0,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      resolved_at DATETIME NULL,
+      notes TEXT,
+      history_json TEXT
+    )
+  `);
+
+  db.run(`CREATE INDEX IF NOT EXISTS idx_campaigns_status ON campaigns(status);`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_campaigns_type ON campaigns(type);`);
+  addColumnIfNotExists('work_orders', 'campaign_id', 'TEXT');
 });
 
 module.exports = db;

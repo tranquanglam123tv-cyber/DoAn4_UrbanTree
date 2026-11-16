@@ -4,6 +4,7 @@ import { CareActionType, TreeHealthStatus } from '../types';
 import { storage } from '../db/storage';
 import { TreeSearchSelect } from './common/TreeSearchSelect';
 import { assertPermission } from '../utils/permissionUtils';
+import { useEscapeOverlay } from '../hooks/useEscapeOverlay';
 
 interface CareFormModalProps {
   initialTreeId?: string;
@@ -33,6 +34,20 @@ export const CareFormModal: React.FC<CareFormModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // 🛡️ BẢO VỆ DỮ LIỆU CHƯA LƯU: Kiểm tra form dirty khi bấm ESC hoặc đóng modal
+  const isDirty = Boolean(notes.trim() || imageUrl || imagePreview);
+
+  const handleSafeClose = () => {
+    if (isDirty) {
+      const ok = window.confirm('Bạn có nội dung nhật ký chăm sóc chưa lưu. Bạn có chắc muốn đóng và hủy bỏ?');
+      if (!ok) return false;
+    }
+    onClose();
+    return true;
+  };
+
+  useEscapeOverlay('care-form-modal', true, handleSafeClose);
 
   const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -116,7 +131,12 @@ export const CareFormModal: React.FC<CareFormModalProps> = ({
               <p className="text-xs text-slate-500 dark:text-slate-400">Người thực hiện: {activeUser.fullName}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+          <button
+            type="button"
+            aria-label="Đóng form chăm sóc"
+            onClick={handleSafeClose}
+            className="p-2 min-h-[44px] min-w-[44px] -mr-2 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -322,7 +342,7 @@ export const CareFormModal: React.FC<CareFormModalProps> = ({
           <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleSafeClose}
               className="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium rounded-lg text-xs cursor-pointer transition-colors"
             >
               Hủy

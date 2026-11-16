@@ -558,14 +558,25 @@ export function isStormSeasonPruningNeeded(
   // Tra cứu O(1) từ pruningMap nếu được cung cấp
   let lastPruningDate: number | undefined;
   if (pruningMap) {
-    lastPruningDate = pruningMap.get(tree.id);
+    lastPruningDate =
+      pruningMap.get(tree.id) ??
+      pruningMap.get(tree.id.toLowerCase()) ??
+      (tree.publicCode ? pruningMap.get(tree.publicCode.toLowerCase()) : undefined) ??
+      (tree.streetCode ? pruningMap.get(tree.streetCode.toLowerCase()) : undefined);
   } else {
     // Fallback nếu không truyền pruningMap
+    const targetKeys = [tree.id?.toLowerCase(), tree.publicCode?.toLowerCase(), tree.streetCode?.toLowerCase()].filter(Boolean);
     const pruningRecords = careRecords
-      .filter((r) => r.treeId === tree.id && r.actionType === 'PRUNING')
-      .sort((a, b) => new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime());
+      .filter((r: any) => {
+        const action = r.actionType || r.action_type || '';
+        const isPrune = action === 'PRUNING' || action === 'Cắt tỉa' || action === 'PRUNE';
+        const rKey = (r.treeCode || r.tree_code || r.treeId || r.tree_id || '').toLowerCase();
+        return isPrune && targetKeys.includes(rKey);
+      })
+      .sort((a: any, b: any) => new Date(b.performedAt || b.action_date || 0).getTime() - new Date(a.performedAt || a.action_date || 0).getTime());
     if (pruningRecords.length > 0) {
-      lastPruningDate = new Date(pruningRecords[0].performedAt).getTime();
+      const topRec = pruningRecords[0] as any;
+      lastPruningDate = new Date(topRec.performedAt || topRec.action_date || 0).getTime();
     }
   }
 

@@ -25,8 +25,10 @@ import {
   ArrowRight,
   Sparkles,
   Link2,
+  Trash2,
 } from 'lucide-react';
 import { storage } from '../db/storage';
+import { RightSlideOverDrawer } from './common/RightSlideOverDrawer';
 import {
   Equipment,
   OperationalZone,
@@ -57,12 +59,26 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
   const [selectedZoneId, setSelectedZoneId] = useState<string>('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [quickFilterQueue, setQuickFilterQueue] = useState<'ALL' | 'WAITING_REVIEW' | 'STORM' | 'IN_PROGRESS' | 'COMPLETED'>('ALL');
 
   // Selected Order for Modal Detail & Checklist
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   // Order being manually assigned or dispatched
   const [assigningOrder, setAssigningOrder] = useState<WorkOrder | null>(null);
+
+  // Verification Dialog State
+  const [verifyingModalData, setVerifyingModalData] = useState<{
+    order: WorkOrder;
+    isApproved: boolean;
+  } | null>(null);
+  const [verificationNoteInput, setVerificationNoteInput] = useState<string>('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isBatchCompleting, setIsBatchCompleting] = useState(false);
+
+  // Drawer Tree List Filter & Search
+  const [drawerTreeFilter, setDrawerTreeFilter] = useState<'ALL' | 'PENDING' | 'COMPLETED' | 'SKIPPED'>('ALL');
+  const [drawerTreeSearch, setDrawerTreeSearch] = useState<string>('');
 
   // Toast notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -82,9 +98,50 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
   const workOrders = useMemo(() => storage.getWorkOrders(), [dataVersion]);
   const metrics = useMemo(() => storage.getOperationsDispatchMetrics(), [dataVersion]);
 
+  // Đếm nhanh số lượng theo phân khúc hàng đợi
+  const waitingVerificationCount = useMemo(
+    () => workOrders.filter((w) => w.status === 'SUBMITTED_FOR_REVIEW').length,
+    [workOrders]
+  );
+  const stormOrdersCount = useMemo(
+    () =>
+      workOrders.filter(
+        (w) =>
+          w.campaignId ||
+          (w.code && w.code.includes('STORM')) ||
+          (w.title && w.title.includes('MÙA BÃO')) ||
+          w.type === 'PRUNING'
+      ).length,
+    [workOrders]
+  );
+  const inProgressOrdersCount = useMemo(
+    () => workOrders.filter((w) => w.status === 'IN_PROGRESS' || w.status === 'ASSIGNED').length,
+    [workOrders]
+  );
+  const completedOrdersCount = useMemo(
+    () => workOrders.filter((w) => w.status === 'COMPLETED' || w.status === 'CLOSED').length,
+    [workOrders]
+  );
+
   // Lọc danh sách Work Orders
   const filteredOrders = useMemo(() => {
     return workOrders.filter((wo) => {
+      // Bộ lọc nhanh phân khúc (Quick Filter Pills)
+      if (quickFilterQueue === 'WAITING_REVIEW' && wo.status !== 'SUBMITTED_FOR_REVIEW') return false;
+      if (
+        quickFilterQueue === 'STORM' &&
+        !(
+          wo.campaignId ||
+          (wo.code && wo.code.includes('STORM')) ||
+          (wo.title && wo.title.includes('MÙA BÃO')) ||
+          wo.type === 'PRUNING'
+        )
+      ) {
+        return false;
+      }
+      if (quickFilterQueue === 'IN_PROGRESS' && wo.status !== 'IN_PROGRESS' && wo.status !== 'ASSIGNED') return false;
+      if (quickFilterQueue === 'COMPLETED' && wo.status !== 'COMPLETED' && wo.status !== 'CLOSED') return false;
+
       if (selectedZoneId !== 'ALL' && wo.zoneId !== selectedZoneId) return false;
       if (selectedStatus !== 'ALL' && wo.status !== selectedStatus) return false;
       if (searchQuery.trim()) {
@@ -97,7 +154,7 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
       }
       return true;
     });
-  }, [workOrders, selectedZoneId, selectedStatus, searchQuery]);
+  }, [workOrders, quickFilterQueue, selectedZoneId, selectedStatus, searchQuery]);
 
   // Chi tiết Work Order đang chọn
   const selectedOrderDetails = useMemo(() => {
@@ -105,14 +162,86 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
     return storage.getWorkOrderDetails(selectedOrderId);
   }, [selectedOrderId, dataVersion]);
 
+  // Danh sách cây hiển thị trong Drawer (có lọc & tìm kiếm)
+  const displayedDrawerItems = useMemo(() => {
+    if (!selectedOrderDetails) return [];
+    let items = selectedOrderDetails.items;
+    if (drawerTreeFilter === 'PENDING') items = items.filter((it) => it.status !== 'COMPLETED');
+    else if (drawerTreeFilter === 'COMPLETED') items = items.filter((it) => it.status === 'COMPLETED');
+    else if (drawerTreeFilter === 'SKIPPED') items = items.filter((it) => it.status === 'SKIPPED' || it.status === 'FAILED');
+
+    if (drawerTreeSearch.trim()) {
+      const q = drawerTreeSearch.toLowerCase();
+      items = items.filter(
+        (it) =>
+          (it.treeStreetCode || '').toLowerCase().includes(q) ||
+          (it.treeDisplayName || '').toLowerCase().includes(q) ||
+          (it.houseMilestone || '').toLowerCase().includes(q) ||
+          String(it.treeId).includes(q)
+      );
+    }
+    return items;
+  }, [selectedOrderDetails, drawerTreeFilter, drawerTreeSearch]);
+
+  // Đồng bộ với Backend SQLite khi mount và nhận sự kiện
+  useEffect(() => {
+    storage.syncRoutesFromBackend();
+    storage.syncOperationalZonesFromBackend();
+    storage.syncWorkOrdersFromBackend().then(() => {
+      setDataVersion((v) => v + 1);
+    });
+
+    const handleSync = () => setDataVersion((v) => v + 1);
+    window.addEventListener('urbantree:work-orders-synced', handleSync);
+    window.addEventListener('urbantree:routes-synced', handleSync);
+    return () => {
+      window.removeEventListener('urbantree:work-orders-synced', handleSync);
+      window.removeEventListener('urbantree:routes-synced', handleSync);
+    };
+  }, []);
+
+  // Tải chi tiết lệnh công tác và checklist từ SQLite Backend khi chọn lệnh
+  useEffect(() => {
+    if (selectedOrderId) {
+      storage.syncWorkOrderDetails(selectedOrderId).then((res) => {
+        if (res) setDataVersion((v) => v + 1);
+      });
+    }
+  }, [selectedOrderId]);
+
   // Xử lý chạy Bộ Quy Tắc Tự Động (Auto-Scheduler)
-  const handleRunAutoScheduler = () => {
-    const res = storage.evaluateMaintenanceRulesAndGenerateWorkOrders();
-    setDataVersion((v) => v + 1);
-    if (res.createdCount > 0) {
-      showToast(`⚡ Đã tự động lập và điều phối ${res.createdCount} Lệnh công tác theo tuyến!`);
-    } else {
-      showToast('ℹ️ Các tuyến trọng điểm hiện đã có Lệnh công tác đang hoạt động (Đảm bảo không sinh trùng lặp).');
+  const handleRunAutoScheduler = async () => {
+    try {
+      const res = await storage.evaluateMaintenanceRulesAndGenerateWorkOrdersAsync();
+      setDataVersion((v) => v + 1);
+      if (res.createdCount > 0) {
+        showToast(`⚡ Đã tự động lập và điều phối ${res.createdCount} Lệnh công tác theo tuyến! (Lên lịch ${res.totalTreesScheduled} cây)`);
+      } else {
+        showToast(`ℹ️ Các tuyến trọng điểm hiện đã có Lệnh công tác đang hoạt động (${res.skippedCount} tuyến được bảo vệ). Hệ thống không sinh trùng lặp!`);
+      }
+    } catch {
+      const res = storage.evaluateMaintenanceRulesAndGenerateWorkOrders();
+      setDataVersion((v) => v + 1);
+      if (res.createdCount > 0) {
+        showToast(`⚡ Đã tự động lập và điều phối ${res.createdCount} Lệnh công tác theo tuyến!`);
+      } else {
+        showToast('ℹ️ Các tuyến trọng điểm hiện đã có Lệnh công tác đang hoạt động (Đảm bảo không sinh trùng lặp).');
+      }
+    }
+  };
+
+  // Xử lý kích hoạt Chiến Dịch Cắt Tỉa Khẩn Cấp Mùa Bão
+  const handleTriggerEmergencyStorm = async () => {
+    try {
+      const res = await storage.triggerStormEmergencyDispatch();
+      setDataVersion((v) => v + 1);
+      if (res.createdCount > 0) {
+        showToast(`⛈️ ĐÃ KÍCH HOẠT CHIẾN DỊCH BÃO: Lập ${res.createdCount} Lệnh khẩn cấp & điều xe (${res.totalTreesScheduled} cây)!`);
+      } else {
+        showToast(`ℹ️ Toàn bộ ${res.skippedCount} tuyến nguy cơ bão hiện đã có Lệnh đang thi công. Hệ thống không sinh trùng lặp!`);
+      }
+    } catch (err: any) {
+      showToast(`Lỗi kích hoạt bão: ${err.message}`);
     }
   };
 
@@ -196,26 +325,131 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
     }
   };
 
-  // Giám sát nghiệm thu Lệnh công tác
-  const handleVerify = (orderId: string, isApproved: boolean) => {
-    const note = prompt(
+  // Giám sát nghiệm thu Lệnh công tác (In-App Modal Workflow)
+  const handleOpenVerifyModal = (order: WorkOrder, isApproved: boolean) => {
+    setVerifyingModalData({ order, isApproved });
+    setVerificationNoteInput(
       isApproved
-        ? 'Nhập ghi chú nghiệm thu đạt chuẩn kỹ thuật:'
-        : 'Nhập lý do TỪ CHỐI nghiệm thu (yêu cầu làm lại):',
-      isApproved ? 'Đạt chuẩn kỹ thuật đô thị Cần Thơ' : 'Cần hạ thêm độ cao cành sà thấp'
+        ? 'Đã nghiệm thu đạt chuẩn an toàn kỹ thuật phòng chống thiên tai TP. Cần Thơ'
+        : 'Cần hạ thêm độ cao cành sà thấp và thu dọn cành khô mặt đường'
     );
-    if (note === null) return;
+  };
 
+  const handleConfirmVerification = async () => {
+    if (!verifyingModalData || isVerifying) return;
+    const { order, isApproved } = verifyingModalData;
+    setIsVerifying(true);
     try {
-      storage.verifyWorkOrder(orderId, currentUser, isApproved, note);
+      await storage.verifyWorkOrder(order.id, currentUser, isApproved, verificationNoteInput.trim());
       setDataVersion((v) => v + 1);
+      setVerifyingModalData(null);
       showToast(
         isApproved
-          ? '🎉 Đã nghiệm thu ĐẠT CHUẨN, đóng lệnh và tự động neo lên Blockchain Ledger!'
-          : '⚠️ Đã TỪ CHỐI nghiệm thu và yêu cầu tổ làm lại!'
+          ? `🎉 Đã duyệt nghiệm thu ĐẠT CHUẨN lệnh [${order.code}] và neo sổ cái Blockchain!`
+          : `⚠️ Đã gửi yêu cầu làm lại cho tổ phụ trách lệnh [${order.code}]!`
       );
     } catch (err: any) {
-      alert(err.message);
+      alert(`Lỗi nghiệm thu: ${err.message}`);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // ⚡ Phê duyệt nhanh toàn tuyến (1-chạm): Dành cho Admin khi muốn duyệt trọn gói cả tuyến
+  const handleFastApproveEntireRoute = async (order: WorkOrder) => {
+    if (isVerifying) return;
+    setIsVerifying(true);
+    try {
+      // 1. Phê duyệt nghiệm thu chính thức (Backend SQLite tự động chuyển sang COMPLETED và hoàn tất toàn bộ cây)
+      await storage.verifyWorkOrder(
+        order.id,
+        currentUser,
+        true,
+        'Giám sát viên/Admin đã nghiệm thu đạt chuẩn kỹ thuật toàn tuyến đô thị Cần Thơ'
+      );
+
+      setDataVersion((v) => v + 1);
+      showToast(`⚡ Đã phê duyệt hoàn tất toàn tuyến [${order.code}] (${order.totalItems || 0} cây)!`);
+    } catch (err: any) {
+      alert(`Lỗi duyệt nhanh: ${err.message}`);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // ⚡ Phê duyệt 1-chạm TOÀN BỘ các lệnh đang chờ nghiệm thu (Batch Inspection)
+  const handleBatchApproveAllWaitingOrders = async () => {
+    const ordersToApprove = workOrders.filter((w) => w.status === 'SUBMITTED_FOR_REVIEW');
+    if (ordersToApprove.length === 0) {
+      showToast('Hiện không có lệnh nào đang chờ nghiệm thu!');
+      return;
+    }
+    setIsVerifying(true);
+    let successCount = 0;
+    try {
+      for (const wo of ordersToApprove) {
+        try {
+          await storage.verifyWorkOrder(
+            wo.id,
+            currentUser,
+            true,
+            'Giám sát viên/Admin đã nghiệm thu đạt chuẩn an toàn kỹ thuật hàng loạt'
+          );
+          successCount++;
+        } catch (err: any) {
+          console.warn(`Lỗi duyệt lệnh ${wo.code}:`, err.message);
+        }
+      }
+      setDataVersion((v) => v + 1);
+      showToast(`🎉 Đã duyệt nghiệm thu 1-chạm thành công ${successCount}/${ordersToApprove.length} Lệnh công tác!`);
+    } catch (err: any) {
+      alert(`Lỗi duyệt hàng loạt: ${err.message}`);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // 📋 Đánh dấu hoàn tất toàn bộ cây còn lại (không đóng lệnh)
+  const handleCompleteAllPendingTrees = async (orderId: string) => {
+    if (isBatchCompleting) return;
+    setIsBatchCompleting(true);
+    try {
+      const details = storage.getWorkOrderDetails(orderId);
+      const pendingItems = (details?.items || []).filter((it) => it.status !== 'COMPLETED');
+      if (pendingItems.length === 0) {
+        showToast('Tất cả các cây trên tuyến đã được hoàn tất!');
+        return;
+      }
+      const pendingIds = pendingItems.map((it) => it.id);
+      await storage.batchCompleteWorkOrderItems(
+        pendingIds,
+        'KTV / Admin đã hoàn tất cắt tỉa cành an toàn theo quy chuẩn kỹ thuật',
+        'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=800&q=80'
+      );
+      setDataVersion((v) => v + 1);
+      showToast(`✅ Đã hoàn tất ${pendingIds.length} cây trên tuyến!`);
+    } catch (err: any) {
+      alert(`Lỗi hoàn tất cây: ${err.message}`);
+    } finally {
+      setIsBatchCompleting(false);
+    }
+  };
+
+  // 🧹 Dọn sạch toàn bộ lệnh công tác cũ và tái lập 3 lệnh chuẩn mẫu trên SQLite
+  const [isPurging, setIsPurging] = useState(false);
+  const handlePurgeAllOrders = async () => {
+    if (!window.confirm('Bạn có chắc muốn dọn sạch các lệnh công tác cũ và tái lập 3 lệnh chuẩn mẫu trên máy chủ SQLite không?')) {
+      return;
+    }
+    setIsPurging(true);
+    try {
+      const res = await storage.purgeAllWorkOrders();
+      setDataVersion((v) => v + 1);
+      showToast(res.message || '🧹 Đã dọn dẹp và làm sạch danh sách lệnh công tác thành công!');
+    } catch (err: any) {
+      alert(`Lỗi dọn dẹp: ${err.message}`);
+    } finally {
+      setIsPurging(false);
     }
   };
 
@@ -294,6 +528,16 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
           <div className="flex items-center gap-2.5 flex-wrap">
             <button
               type="button"
+              onClick={handleTriggerEmergencyStorm}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-600 via-amber-600 to-orange-600 hover:from-rose-700 hover:to-orange-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-transform active:scale-95 cursor-pointer"
+              title="Kích hoạt Chiến dịch Cắt tỉa Mùa bão Khẩn cấp (Tạo lệnh & điều động xe thang)"
+            >
+              <AlertTriangle className="w-4 h-4 text-amber-200" />
+              <span>⛈️ Kích Hoạt Chiến Dịch Bão</span>
+            </button>
+
+            <button
+              type="button"
               onClick={handleRunAutoScheduler}
               className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-transform active:scale-95 cursor-pointer"
               title="Quét bộ quy tắc và tự động lập lệnh công tác theo tuyến"
@@ -309,6 +553,18 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
               <span>Xuất Báo Cáo Điều Xe</span>
+            </button>
+
+            {/* 🧹 Nút Dọn Dẹp / Reset Lệnh Công Tác Rác */}
+            <button
+              type="button"
+              disabled={isPurging}
+              onClick={handlePurgeAllOrders}
+              className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-700 dark:bg-slate-800 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Xóa sạch các lệnh thử nghiệm/rác và tái lập 3 lệnh chuẩn mẫu trên SQLite"
+            >
+              <Trash2 className="w-4 h-4 text-rose-500" />
+              <span>{isPurging ? 'Đang dọn...' : '🧹 Dọn Sạch Lệnh Cũ'}</span>
             </button>
           </div>
         </div>
@@ -613,6 +869,90 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
             </div>
           </div>
 
+          {/* 🧭 HÀNG ĐỢI NHANH CHO GIÁM SÁT VIÊN & ĐIỀU PHỐI (QUICK QUEUE PILLS) */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            <button
+              type="button"
+              onClick={() => setQuickFilterQueue('ALL')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                quickFilterQueue === 'ALL'
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
+                  : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+              }`}
+            >
+              <span>Tất Cả Lệnh ({workOrders.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setQuickFilterQueue('WAITING_REVIEW')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                quickFilterQueue === 'WAITING_REVIEW'
+                  ? 'bg-amber-600 text-white shadow-sm ring-2 ring-amber-500/30'
+                  : 'bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 hover:bg-amber-100'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>Chờ Nghiệm Thu ({waitingVerificationCount})</span>
+              {waitingVerificationCount > 0 && (
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setQuickFilterQueue('STORM')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                quickFilterQueue === 'STORM'
+                  ? 'bg-rose-600 text-white shadow-sm ring-2 ring-rose-500/30'
+                  : 'bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-300 hover:bg-rose-100'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>Khẩn Cấp Mùa Bão ({stormOrdersCount})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setQuickFilterQueue('IN_PROGRESS')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                quickFilterQueue === 'IN_PROGRESS'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-100'
+              }`}
+            >
+              <Play className="w-3.5 h-3.5" />
+              <span>Đang Tác Chiến ({inProgressOrdersCount})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setQuickFilterQueue('COMPLETED')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                quickFilterQueue === 'COMPLETED'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100'
+              }`}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Đã Nghiệm Thu ({completedOrdersCount})</span>
+            </button>
+
+            {/* ⚡ NÚT DUYỆT 1-CHẠM TOÀN BỘ CÁC LỆNH ĐANG CHỜ NGHIỆM THU */}
+            {waitingVerificationCount > 0 && (
+              <button
+                type="button"
+                disabled={isVerifying}
+                onClick={handleBatchApproveAllWaitingOrders}
+                className="ml-auto px-4 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white shadow-md transition-all flex items-center gap-2 cursor-pointer hover:scale-105 shrink-0"
+                title="Duyệt nghiệm thu toàn bộ tất cả các lệnh đang chờ nghiệm thu chỉ với 1 cú click"
+              >
+                <Zap className="w-4 h-4 text-amber-300" />
+                <span>{isVerifying ? 'Đang duyệt hàng loạt...' : `⚡ Duyệt 1-Chạm Toàn Bộ (${waitingVerificationCount} Lệnh Chờ)`}</span>
+              </button>
+            )}
+          </div>
+
           {/* Danh sách Thẻ Lệnh Công Tác */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {filteredOrders.map((wo) => {
@@ -623,9 +963,16 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
                 >
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
-                        {wo.code}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
+                          {wo.code}
+                        </span>
+                        {wo.incidentId && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                            🚨 Sự cố #{wo.incidentId}
+                          </span>
+                        )}
+                      </div>
                       {getStatusBadge(wo.status)}
                     </div>
 
@@ -682,7 +1029,20 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
                         : 'Chưa xuất phát'}
                     </span>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {/* Nút Nghiệm Thu Nhanh Nếu Đã SUBMITTED */}
+                      {wo.status === 'SUBMITTED_FOR_REVIEW' && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenVerifyModal(wo, true)}
+                          className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 shadow-xs transition-all cursor-pointer hover:scale-102"
+                          title="Duyệt nghiệm thu đạt chuẩn kỹ thuật ngay lập tức"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Duyệt Ngay</span>
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => setAssigningOrder(wo)}
@@ -696,9 +1056,9 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
                       <button
                         type="button"
                         onClick={() => setSelectedOrderId(wo.id)}
-                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                        className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
                       >
-                        <span>Checklist</span>
+                        <span>Soi Cây ({wo.completedItems || 0}/{wo.totalItems || 0})</span>
                         <ChevronRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -871,40 +1231,103 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
       )}
 
       {/* ===================================================================== */}
-      {/* MODAL CHI TIẾT LỆNH CÔNG TÁC & CHECKLIST CÂY HIỆN TRƯỜNG */}
+      {/* DRAWER CHI TIẾT LỆNH CÔNG TÁC & CHECKLIST CÂY HIỆN TRƯỜNG */}
       {/* ===================================================================== */}
-      {selectedOrderDetails && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-4xl max-h-[90vh] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden">
-            
-            {/* Header Modal */}
-            <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/40">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/20">
-                  <Wrench className="w-5 h-5" />
-                </div>
-                <div>
+      <RightSlideOverDrawer
+        isOpen={!!selectedOrderDetails}
+        onClose={() => setSelectedOrderId(null)}
+        widthClass="max-w-2xl sm:max-w-3xl lg:max-w-4xl"
+        title={
+          selectedOrderDetails ? (
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                {selectedOrderDetails.workOrder.code}
+              </span>
+              <span className="text-base font-bold text-slate-900 dark:text-white truncate">
+                {selectedOrderDetails.workOrder.title}
+              </span>
+            </div>
+          ) : undefined
+        }
+        subtitle={
+          selectedOrderDetails ? (
+            <span>
+              Tổ: <strong className="text-slate-800 dark:text-slate-200">{selectedOrderDetails.team?.name || 'Chưa giao'}</strong> · Tuyến: <strong className="text-slate-800 dark:text-slate-200">{selectedOrderDetails.route?.name}</strong>
+            </span>
+          ) : undefined
+        }
+        headerBadge={
+          selectedOrderDetails ? (
+            <div className="flex items-center gap-1.5">
+              {getStatusBadge(selectedOrderDetails.workOrder.status)}
+              {getPriorityBadge(selectedOrderDetails.workOrder.priority)}
+            </div>
+          ) : undefined
+        }
+        footer={
+          selectedOrderDetails ? (
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                {selectedOrderDetails.workOrder.status === 'ASSIGNED' && (
+                  <button
+                    type="button"
+                    onClick={() => handleTransition(selectedOrderDetails.workOrder.id, 'IN_PROGRESS', 'Đội đã xuất phát ra hiện trường')}
+                    className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Play className="w-3.5 h-3.5" />
+                    <span>Bắt Đầu Thực Hiện (Ra Hiện Trường)</span>
+                  </button>
+                )}
+
+                {selectedOrderDetails.workOrder.status === 'IN_PROGRESS' && (
+                  <button
+                    type="button"
+                    onClick={() => handleTransition(selectedOrderDetails.workOrder.id, 'SUBMITTED_FOR_REVIEW', 'Hoàn tất ca làm việc, nộp báo cáo nghiệm thu')}
+                    className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Nộp Báo Cáo Chờ Nghiệm Thu</span>
+                  </button>
+                )}
+
+                {selectedOrderDetails.workOrder.status === 'SUBMITTED_FOR_REVIEW' && (
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                      {selectedOrderDetails.workOrder.code}
-                    </span>
-                    {getStatusBadge(selectedOrderDetails.workOrder.status)}
-                    {getPriorityBadge(selectedOrderDetails.workOrder.priority)}
+                    <button
+                      type="button"
+                      disabled={isVerifying}
+                      onClick={() => handleOpenVerifyModal(selectedOrderDetails.workOrder, true)}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>{isVerifying ? 'Đang duyệt...' : 'Duyệt Nghiệm Thu & Đóng Lệnh (Neo On-Chain)'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isVerifying}
+                      onClick={() => handleOpenVerifyModal(selectedOrderDetails.workOrder, false)}
+                      className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>{isVerifying ? 'Đang xử lý...' : 'Từ Chối (Yêu Cầu Làm Lại)'}</span>
+                    </button>
                   </div>
-                  <h3 className="font-black text-sm sm:text-base text-slate-900 dark:text-white mt-0.5">
-                    {selectedOrderDetails.workOrder.title}
-                  </h3>
-                </div>
+                )}
               </div>
 
               <button
                 type="button"
                 onClick={() => setSelectedOrderId(null)}
-                className="p-2 rounded-xl text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                Đóng
               </button>
             </div>
+          ) : undefined
+        }
+      >
+        {selectedOrderDetails && (
+          <div className="space-y-4">
 
             {/* Thông tin điều xe & Tổ phụ trách */}
             <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-800 bg-emerald-50/30 dark:bg-emerald-950/20 flex items-center justify-between flex-wrap gap-2 text-xs">
@@ -922,6 +1345,14 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
                 </span>
               </div>
 
+              {/* Sự cố liên kết nếu có */}
+              {selectedOrderDetails.workOrder.incidentId && (
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Lệnh công tác này được tạo để xử lý <strong>Sự cố #{selectedOrderDetails.workOrder.incidentId}</strong></span>
+                </div>
+              )}
+
               {/* Blockchain info nếu có */}
               {selectedOrderDetails.workOrder.anchorStatus === 'CONFIRMED' && (
                 <div className="flex items-center gap-1.5 text-emerald-600 font-bold">
@@ -931,9 +1362,123 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
               )}
             </div>
 
+            {/* 🌟 BẢNG ĐIỀU HÀNH NGHIỆM THU DÀNH CHO ADMIN / GIÁM SÁT VIÊN */}
+            <div className="mx-4 sm:mx-5 p-4 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-900/60 to-slate-900 border border-emerald-500/40 shadow-lg space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-black uppercase text-emerald-400 flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                      <span>Bảng Nghiệm Thu Giám Sát Tuyến</span>
+                    </span>
+                    <span className="text-xs text-slate-400">·</span>
+                    <span className="font-mono text-xs font-bold text-slate-200">
+                      {selectedOrderDetails.items.filter((it) => it.status === 'COMPLETED').length}/{selectedOrderDetails.items.length} Cây ({Math.round((selectedOrderDetails.items.filter((it) => it.status === 'COMPLETED').length / (selectedOrderDetails.items.length || 1)) * 100)}%)
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    {selectedOrderDetails.workOrder.status === 'SUBMITTED_FOR_REVIEW'
+                      ? '👉 Lệnh đã được tổ hiện trường nộp báo cáo. Giám sát viên kiểm tra và chốt nghiệm thu.'
+                      : selectedOrderDetails.workOrder.status === 'COMPLETED'
+                      ? '✅ Lệnh đã được nghiệm thu ĐẠT CHUẨN và bảo chứng On-Chain.'
+                      : '⚡ Lệnh đang tác chiến. Giám sát viên có thể duyệt nhanh toàn tuyến hoặc hoàn tất danh sách cây 1-chạm.'}
+                  </div>
+                </div>
+
+                {/* Các nút hành động nghiệp vụ cấp cao */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Nút 1: Nếu đã SUBMITTED_FOR_REVIEW -> Duyệt Nhanh 1-Chạm, Đánh Giá Nghiệm Thu hoặc Từ Chối */}
+                  {selectedOrderDetails.workOrder.status === 'SUBMITTED_FOR_REVIEW' && (
+                    <>
+                      <button
+                        type="button"
+                        disabled={isVerifying}
+                        onClick={() => handleFastApproveEntireRoute(selectedOrderDetails.workOrder)}
+                        className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-black text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition-all hover:scale-102"
+                        title="Duyệt hoàn tất nghiệm thu toàn tuyến 1-chạm không cần qua form trung gian"
+                      >
+                        <Zap className="w-4 h-4 text-amber-300" />
+                        <span>{isVerifying ? 'Đang duyệt...' : '⚡ Duyệt Nhanh Toàn Tuyến (1-Chạm)'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isVerifying}
+                        onClick={() => handleOpenVerifyModal(selectedOrderDetails.workOrder, true)}
+                        className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+                        title="Mở bảng đánh giá chi tiết có ghi chú và tiêu chuẩn an toàn"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Đánh Giá Chi Tiết</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isVerifying}
+                        onClick={() => handleOpenVerifyModal(selectedOrderDetails.workOrder, false)}
+                        className="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Yêu Cầu Làm Lại</span>
+                      </button>
+                    </>
+                  )}
+
+                  {/* Nút 2: Nếu lệnh ASSIGNED hoặc IN_PROGRESS -> Nút Duyệt Nhanh Toàn Tuyến 1-Chạm */}
+                  {(selectedOrderDetails.workOrder.status === 'ASSIGNED' || selectedOrderDetails.workOrder.status === 'IN_PROGRESS' || selectedOrderDetails.workOrder.status === 'REJECTED') && (
+                    <>
+                      <button
+                        type="button"
+                        disabled={isVerifying}
+                        onClick={() => handleFastApproveEntireRoute(selectedOrderDetails.workOrder)}
+                        className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition-all hover:scale-102"
+                        title="Tự động hoàn tất tất cả cây trên tuyến và phê duyệt nghiệm thu chốt sổ cái ngay tức khắc"
+                      >
+                        <Zap className="w-4 h-4 text-amber-300" />
+                        <span>{isVerifying ? 'Đang duyệt...' : '⚡ Phê Duyệt Nhanh Toàn Tuyến (1-Chạm)'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isBatchCompleting}
+                        onClick={() => handleCompleteAllPendingTrees(selectedOrderDetails.workOrder.id)}
+                        className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+                        title="Đánh dấu tất cả cây còn lại đã xong mà chưa đóng lệnh"
+                      >
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>{isBatchCompleting ? 'Đang lưu...' : 'Hoàn Tất 100% Cây'}</span>
+                      </button>
+                    </>
+                  )}
+
+                  {/* Nút 3: Nếu COMPLETED -> Xem chứng nhận On-Chain */}
+                  {(selectedOrderDetails.workOrder.status === 'COMPLETED' || selectedOrderDetails.workOrder.status === 'CLOSED') && (
+                    <div className="px-3 py-1.5 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 font-bold text-xs flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                      <span>Đã Nghiệm Thu Đạt Chuẩn</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Thanh tiến độ */}
+              <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300"
+                  style={{
+                    width: `${Math.round(
+                      (selectedOrderDetails.items.filter((it) => it.status === 'COMPLETED').length /
+                        (selectedOrderDetails.items.length || 1)) *
+                        100
+                    )}%`,
+                  }}
+                />
+              </div>
+            </div>
+
             {/* Thân Modal: Danh sách checklist từng cây trên tuyến */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h4 className="font-black text-xs sm:text-sm text-slate-900 dark:text-white uppercase">
                     Danh Sách Kiểm Tra & Thực Thi Từng Cây ({selectedOrderDetails.items.length} cây)
@@ -945,13 +1490,87 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
 
                 <div className="text-right">
                   <div className="text-sm font-black text-emerald-600">
-                    {selectedOrderDetails.workOrder.completedItems}/{selectedOrderDetails.workOrder.totalItems} Hoàn Thành ({selectedOrderDetails.workOrder.progressPercent}%)
+                    {selectedOrderDetails.items.length > 0 ? (
+                      `${selectedOrderDetails.items.filter((it) => it.status === 'COMPLETED').length}/${selectedOrderDetails.items.length} Hoàn Thành (${Math.round((selectedOrderDetails.items.filter((it) => it.status === 'COMPLETED').length / selectedOrderDetails.items.length) * 100)}%)`
+                    ) : selectedOrderDetails.workOrder.totalItems > 0 ? (
+                      `0/${selectedOrderDetails.workOrder.totalItems} Hoàn Thành (0%)`
+                    ) : (
+                      '0 Cây'
+                    )}
                   </div>
                 </div>
               </div>
 
+              {/* Bộ Lọc Cây & Tìm Kiếm Trong Sổ */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                  <button
+                    type="button"
+                    onClick={() => setDrawerTreeFilter('ALL')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                      drawerTreeFilter === 'ALL'
+                        ? 'bg-slate-800 text-white'
+                        : 'bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    Tất Cả ({selectedOrderDetails.items.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDrawerTreeFilter('PENDING')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                      drawerTreeFilter === 'PENDING'
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300'
+                    }`}
+                  >
+                    Chưa Xử Lý ({selectedOrderDetails.items.filter((it) => it.status !== 'COMPLETED').length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDrawerTreeFilter('COMPLETED')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                      drawerTreeFilter === 'COMPLETED'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                    }`}
+                  >
+                    Đã Xong ({selectedOrderDetails.items.filter((it) => it.status === 'COMPLETED').length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDrawerTreeFilter('SKIPPED')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                      drawerTreeFilter === 'SKIPPED'
+                        ? 'bg-rose-600 text-white'
+                        : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300'
+                    }`}
+                  >
+                    Bỏ Qua ({selectedOrderDetails.items.filter((it) => it.status === 'SKIPPED' || it.status === 'FAILED').length})
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={drawerTreeSearch}
+                    onChange={(e) => setDrawerTreeSearch(e.target.value)}
+                    placeholder="Tìm mã số cây, số nhà..."
+                    className="pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 w-full sm:w-48"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
-                {selectedOrderDetails.items.map((item, idx) => {
+                {displayedDrawerItems.length === 0 ? (
+                  <div className="p-8 text-center bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-slate-400 text-xs">
+                    {selectedOrderDetails.items.length === 0
+                      ? 'Chưa có danh sách checklist từng cây cho lệnh công tác này hoặc dữ liệu đang đồng bộ từ máy chủ.'
+                      : 'Không tìm thấy cây nào phù hợp với bộ lọc hiện tại.'}
+                  </div>
+                ) : (
+                  displayedDrawerItems.map((item, idx) => {
                   return (
                     <div
                       key={item.id}
@@ -1020,70 +1639,12 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
                       </div>
                     </div>
                   );
-                })}
+                }))}
               </div>
-            </div>
-
-            {/* Footer Modal: Nghiệm thu & Chuyển trạng thái */}
-            <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                {selectedOrderDetails.workOrder.status === 'ASSIGNED' && (
-                  <button
-                    type="button"
-                    onClick={() => handleTransition(selectedOrderDetails.workOrder.id, 'IN_PROGRESS', 'Đội đã xuất phát ra hiện trường')}
-                    className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    <Play className="w-3.5 h-3.5" />
-                    <span>Xuất Xe Ra Hiện Trường</span>
-                  </button>
-                )}
-
-                {selectedOrderDetails.workOrder.status === 'IN_PROGRESS' && (
-                  <button
-                    type="button"
-                    onClick={() => handleTransition(selectedOrderDetails.workOrder.id, 'SUBMITTED_FOR_REVIEW', 'Hoàn tất ca làm việc, nộp báo cáo nghiệm thu')}
-                    className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>Nộp Báo Cáo Chờ Nghiệm Thu</span>
-                  </button>
-                )}
-
-                {/* Supervisor Nghiệm thu */}
-                {selectedOrderDetails.workOrder.status === 'SUBMITTED_FOR_REVIEW' && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleVerify(selectedOrderDetails.workOrder.id, true)}
-                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Duyệt Nghiệm Thu & Đóng Lệnh (Neo On-Chain)</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleVerify(selectedOrderDetails.workOrder.id, false)}
-                      className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      <span>Từ Chối (Yêu Cầu Làm Lại)</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setSelectedOrderId(null)}
-                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-              >
-                Đóng
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </RightSlideOverDrawer>
 
       {/* ===================================================================== */}
       {/* MODAL PHÂN BỔ TỔ ĐỘI & ĐIỀU ĐỘNG XE CƠ GIỚI THÔNG MINH */}
@@ -1218,6 +1779,160 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
                 className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs cursor-pointer transition-colors"
               >
                 Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🏛️ IN-APP VERIFICATION MODAL (Không dùng window.prompt / confirm) */}
+      {verifyingModalData && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white dark:bg-[#0c1812] border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                    verifyingModalData.isApproved ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+                  }`}
+                >
+                  {verifyingModalData.isApproved ? (
+                    <CheckCircle2 className="w-5 h-5" />
+                  ) : (
+                    <RotateCcw className="w-5 h-5" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-slate-900 dark:text-white">
+                    {verifyingModalData.isApproved
+                      ? 'Phê Duyệt Nghiệm Thu Kỹ Thuật'
+                      : 'Yêu Cầu Thi Công Lại (Từ Chối)'}
+                  </h3>
+                  <div className="text-xs text-slate-500">
+                    Mã Lệnh:{' '}
+                    <span className="font-mono font-bold text-emerald-600">
+                      {verifyingModalData.order.code}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setVerifyingModalData(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Thông tin tóm tắt */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs space-y-1.5">
+              <div className="font-bold text-slate-900 dark:text-white">
+                {verifyingModalData.order.title}
+              </div>
+              <div className="flex items-center justify-between text-slate-500">
+                <span>
+                  Tuyến:{' '}
+                  <strong>{verifyingModalData.order.routeCorridorName || 'Tuyến Đô Thị'}</strong>
+                </span>
+                <span>
+                  Tổ: <strong>{verifyingModalData.order.assignedTeamName || 'Chưa giao'}</strong>
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-slate-500">
+                <span>
+                  Khối lượng:{' '}
+                  <strong>
+                    {verifyingModalData.order.completedItems || 0}/
+                    {verifyingModalData.order.totalItems || 0} cây
+                  </strong>
+                </span>
+                <span>
+                  Phương tiện:{' '}
+                  <strong className="font-mono text-amber-600">
+                    {verifyingModalData.order.assignedVehiclePlate || 'N/A'}
+                  </strong>
+                </span>
+              </div>
+            </div>
+
+            {/* Mẫu ý kiến nhanh (Quick Chips) */}
+            <div className="space-y-1.5">
+              <div className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                {verifyingModalData.isApproved
+                  ? 'Mẫu đánh giá chuẩn kỹ thuật:'
+                  : 'Chọn lý do chưa đạt chuẩn:'}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {(verifyingModalData.isApproved
+                  ? [
+                      'Đã nghiệm thu đạt độ cao tĩnh không an toàn (>4.5m)',
+                      'Đã kiểm tra hạ tán, dọn dẹp cành nhánh sạch sẽ',
+                      'Đạt chuẩn kỹ thuật phòng chống thiên tai TP. Cần Thơ',
+                    ]
+                  : [
+                      'Chưa đạt độ cao tĩnh không an toàn (>4.5m)',
+                      'Cành cây vẫn vướng vào lưới điện trung thế',
+                      'Chưa thu dọn cành rụng trên vỉa hè gây cản trở giao thông',
+                    ]
+                ).map((chip) => (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => setVerificationNoteInput(chip)}
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-medium transition-colors cursor-pointer text-left"
+                  >
+                    + {chip}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Ô nhập ghi chú */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Ghi chú của Giám sát viên:
+              </label>
+              <textarea
+                value={verificationNoteInput}
+                onChange={(e) => setVerificationNoteInput(e.target.value)}
+                rows={3}
+                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                placeholder="Nhập ghi chú chi tiết kết quả kiểm tra hiện trường..."
+              />
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setVerifyingModalData(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={isVerifying}
+                onClick={handleConfirmVerification}
+                className={`px-5 py-2 rounded-xl text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer ${
+                  verifyingModalData.isApproved
+                    ? 'bg-emerald-600 hover:bg-emerald-500'
+                    : 'bg-rose-600 hover:bg-rose-500'
+                }`}
+              >
+                {verifyingModalData.isApproved ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>{isVerifying ? 'Đang duyệt...' : 'Xác Nhận Nghiệm Thu & Khóa Sổ'}</span>
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="w-4 h-4" />
+                    <span>{isVerifying ? 'Đang gửi...' : 'Gửi Yêu Cầu Làm Lại'}</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

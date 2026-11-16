@@ -31,7 +31,8 @@ const otpVerifyLimiter = rateLimit({
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 phút
-  max: 15, // Tối đa 15 lần đăng nhập sai
+  max: process.env.NODE_ENV === 'production' ? 50 : 2000,
+  skipSuccessfulRequests: true,
   message: {
     success: false,
     message: 'Tạm khóa thử đăng nhập do nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút.'

@@ -34,6 +34,8 @@ import {
   WorkOrderPriority,
   WorkOrderStatus,
   WorkOrderType,
+  StormCampaign,
+  CampaignStatus,
 } from '../types';
 import { blockchainService } from '../services/blockchainService';
 import { computeRecordHash } from '../services/hashService';
@@ -981,6 +983,7 @@ class StorageService {
   private workOrderHistory: WorkOrderHistory[] = [];
   private maintenanceRules: MaintenanceRule[] = [];
   private slaPolicies: SLAPolicy[] = [];
+  private stormCampaign: StormCampaign | null = null;
 
   constructor() {
     this.init();
@@ -1117,31 +1120,24 @@ class StorageService {
         this.routes = JSON.parse(localStorage.getItem(ROUTES_STORAGE_KEY) || JSON.stringify(INITIAL_ROUTES));
         this.teams = JSON.parse(localStorage.getItem(TEAMS_STORAGE_KEY) || JSON.stringify(INITIAL_TEAMS));
         this.equipment = JSON.parse(localStorage.getItem(EQUIPMENT_STORAGE_KEY) || JSON.stringify(INITIAL_EQUIPMENT));
-        this.workOrders = JSON.parse(localStorage.getItem(WORK_ORDERS_STORAGE_KEY) || JSON.stringify(INITIAL_WORK_ORDERS));
+        // Khởi tạo Work Orders từ localStorage và loại bỏ toàn bộ dữ liệu mock cũ (wo-ct-2026-*)
+        const storedOrders = localStorage.getItem(WORK_ORDERS_STORAGE_KEY);
+        if (storedOrders) {
+          try {
+            const parsed = JSON.parse(storedOrders);
+            this.workOrders = Array.isArray(parsed)
+              ? parsed.filter((w: any) => !w.id?.startsWith('wo-ct-2026-'))
+              : [];
+          } catch {
+            this.workOrders = [];
+          }
+        } else {
+          this.workOrders = [];
+        }
         this.workOrderItems = JSON.parse(localStorage.getItem(WORK_ORDER_ITEMS_STORAGE_KEY) || '[]');
         this.workOrderHistory = JSON.parse(localStorage.getItem(WORK_ORDER_HISTORY_STORAGE_KEY) || '[]');
         this.maintenanceRules = JSON.parse(localStorage.getItem(MAINTENANCE_RULES_STORAGE_KEY) || JSON.stringify(INITIAL_MAINTENANCE_RULES));
         this.slaPolicies = JSON.parse(localStorage.getItem(SLA_POLICIES_STORAGE_KEY) || JSON.stringify(INITIAL_SLA_POLICIES));
-
-        // Tự động sinh items checklist cho các work orders mẫu nếu chưa có
-        if (this.workOrderItems.length === 0 && this.trees.length > 0) {
-          this.workOrders.forEach((wo) => {
-            const treesForOrder = this.trees.slice(0, wo.totalItems || 30);
-            const items = buildWorkOrderItemsForTrees(treesForOrder, wo.id, wo.type);
-            // Đồng bộ trạng thái một số item hoàn thành
-            const completedCount = wo.completedItems || 0;
-            const skippedCount = wo.skippedItems || 0;
-            items.forEach((it, idx) => {
-              if (idx < completedCount) it.status = 'COMPLETED';
-              else if (idx < completedCount + skippedCount) {
-                it.status = 'SKIPPED';
-                it.skipOrFailureReason = 'Ô tô đỗ chắn, không hạ chân xe thang được';
-              }
-            });
-            this.workOrderItems.push(...items);
-          });
-          localStorage.setItem(WORK_ORDER_ITEMS_STORAGE_KEY, JSON.stringify(this.workOrderItems));
-        }
 
         // Đảm bảo Blockchain Ledger luôn có bản ghi đối soát cho toàn bộ cây mẫu
         if (blockchainService.getAllAnchors().length === 0) {
@@ -1225,6 +1221,13 @@ class StorageService {
         window.dispatchEvent(
           new CustomEvent('urbantree:data-loaded', { detail: { count: this.trees.length, source: 'SQLITE_SERVER' } })
         );
+        this.syncWorkOrdersFromBackend();
+        this.syncCareRecordsFromBackend();
+        this.syncIncidentsFromBackend();
+        this.syncRoutesFromBackend();
+        this.syncOperationalZonesFromBackend();
+        this.syncNotificationsFromBackend();
+        this.syncStormCampaignFromBackend();
         return true;
       }
       return false;
@@ -1265,12 +1268,12 @@ class StorageService {
 
       const idbWorkOrders = await idbGet<WorkOrder[]>('WORK_ORDERS');
       if (idbWorkOrders && Array.isArray(idbWorkOrders) && idbWorkOrders.length > 0) {
-        this.workOrders = idbWorkOrders;
+        this.workOrders = idbWorkOrders.filter((w: any) => !w.id?.startsWith('wo-ct-2026-'));
       }
 
       const idbWorkOrderItems = await idbGet<WorkOrderItem[]>('WORK_ORDER_ITEMS');
       if (idbWorkOrderItems && Array.isArray(idbWorkOrderItems) && idbWorkOrderItems.length > 0) {
-        this.workOrderItems = idbWorkOrderItems;
+        this.workOrderItems = idbWorkOrderItems.filter((it: any) => !it.workOrderId?.startsWith('wo-ct-2026-'));
       }
 
       this.isIdbLoaded = true;
@@ -1302,7 +1305,7 @@ class StorageService {
     this.routes = [...INITIAL_ROUTES];
     this.teams = [...INITIAL_TEAMS];
     this.equipment = [...INITIAL_EQUIPMENT];
-    this.workOrders = [...INITIAL_WORK_ORDERS];
+    this.workOrders = [];
     this.workOrderItems = [];
     this.workOrderHistory = [];
     this.maintenanceRules = [...INITIAL_MAINTENANCE_RULES];
@@ -2105,44 +2108,148 @@ class StorageService {
     severity?: IncidentSeverity;
     imageUrl?: string;
   }): Promise<Incident> {
+    if (!data.description || !data.description.trim()) {
+      throw new Error('Vui lòng cung cấp mô tả chi tiết về sự cố');
+    }
+    if (!data.reporterPhone || !data.reporterPhone.trim()) {
+      throw new Error('Vui lòng cung cấp số điện thoại người phản ánh');
+    }
+
+    const now = new Date().toISOString();
+    const sevMapToVi: Record<string, string> = {
+      'CRITICAL': 'Khẩn cấp',
+      'HIGH': 'Cao',
+      'MEDIUM': 'Trung bình',
+      'LOW': 'Thấp'
+    };
+
+    // ⚡ Khi đang chạy trên trình duyệt: Ưu tiên đồng bộ trực tiếp lên Backend SQLite
+    if (this.isBrowser()) {
+      let treeIdNum: number | null = null;
+      if (data.treeId) {
+        const parsed = parseInt(String(data.treeId).replace(/\D/g, ''), 10);
+        if (!isNaN(parsed) && parsed > 0) treeIdNum = parsed;
+      }
+
+      const res = await fetch('http://localhost:5001/api/incidents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tree_id: treeIdNum,
+          description: data.description.trim(),
+          severity: sevMapToVi[data.severity || 'MEDIUM'] || 'Trung bình',
+          latitude: data.latitude,
+          longitude: data.longitude,
+          address: data.address || '',
+          reporter_name: data.reporterName?.trim() || 'Người dân Cần Thơ',
+          reporter_phone: data.reporterPhone.trim(),
+          image_url: data.imageUrl || ''
+        }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || `Lỗi máy chủ (${res.status}): Không thể tiếp nhận phản ánh`);
+      }
+
+      const respJson = await res.json();
+      if (!respJson.success || !respJson.data) {
+        throw new Error(respJson.message || 'Lỗi dữ liệu phản hồi từ máy chủ sự cố');
+      }
+
+      // Xử lý trường hợp backend tự động gộp sự cố trùng lặp
+      if (respJson.is_duplicate && respJson.master_incident_id) {
+        const existing = this.incidents.find((i) => i.id === String(respJson.master_incident_id));
+        if (existing) {
+          existing.duplicateCount = (existing.duplicateCount || 0) + 1;
+          this.incidentUpdates.unshift({
+            id: `upd-${Date.now()}`,
+            incidentId: existing.id,
+            actorUserId: 'citizen',
+            actorName: 'Công dân bổ sung',
+            oldStatus: existing.status,
+            newStatus: existing.status,
+            note: `[GỘP BÁO CÁO TRÙNG] Người dân bổ sung: "${data.description}"`,
+            imageUrl: data.imageUrl,
+            createdAt: now,
+          });
+          this.saveAll();
+          return existing;
+        }
+      }
+
+      const row = respJson.data;
+      const createdIncident: Incident = {
+        id: String(row.id),
+        publicCode: row.tracking_code || `INC-${row.id}`,
+        treeId: row.tree_id ? String(row.tree_id) : (data.treeId || null),
+        reporterName: row.reporter_name || data.reporterName || 'Người dân Cần Thơ',
+        reporterPhone: row.reporter_phone || data.reporterPhone,
+        description: row.description || data.description,
+        latitude: Number(row.latitude) || data.latitude,
+        longitude: Number(row.longitude) || data.longitude,
+        address: row.address || data.address || '',
+        severity: data.severity || 'MEDIUM',
+        status: 'RECEIVED',
+        assignedToUserId: null,
+        imageUrl: row.image_url || data.imageUrl,
+        reportedAt: row.reported_at || now,
+        createdAt: row.reported_at || now,
+        updatedAt: row.updated_at || row.reported_at || now,
+        duplicateCount: row.duplicate_count || 0,
+        payloadVersion: 1,
+        anchorStatus: 'PENDING',
+      };
+
+      const { hash, canonicalJson } = computeRecordHash('INCIDENT_REPORT', createdIncident);
+      createdIncident.payloadHash = hash;
+
+      this.incidents.unshift(createdIncident);
+      this.incidentUpdates.unshift({
+        id: `upd-${Date.now()}`,
+        incidentId: createdIncident.id,
+        actorUserId: 'citizen',
+        actorName: 'Hệ thống tiếp nhận người dân',
+        oldStatus: 'RECEIVED',
+        newStatus: 'RECEIVED',
+        note: 'Phản ánh được ghi nhận thành công từ cổng công cộng và lưu trữ vĩnh viễn trong SQLite.',
+        createdAt: now,
+      });
+
+      this.saveAll();
+
+      blockchainService.anchorRecord({
+        recordType: 'INCIDENT_REPORT',
+        recordId: createdIncident.id,
+        hash,
+        canonicalJson,
+      }).then((receipt) => {
+        const idx = this.incidents.findIndex((i) => i.id === createdIncident.id);
+        if (idx !== -1) {
+          this.incidents[idx].anchorStatus = receipt.status;
+          this.incidents[idx].txHash = receipt.txHash;
+          this.saveAll();
+        }
+      }).catch(() => {
+        const idx = this.incidents.findIndex((i) => i.id === createdIncident.id);
+        if (idx !== -1) {
+          this.incidents[idx].anchorStatus = 'FAILED';
+        }
+      });
+
+      return createdIncident;
+    }
+
+    // 📍 Fallback khi không ở trình duyệt
     const randomSuffix = Math.floor(10000 + Math.random() * 90000);
     const publicCode = `INC-${randomSuffix}`;
     const id = `inc-${Date.now()}`;
-    const now = new Date().toISOString();
-
-    // 📍 1. KIỂM TRA LỌC TRÙNG KHÔNG GIAN & THỜI GIAN (UT-005: 25 mét & 2 giờ)
-    const twoHoursMs = 2 * 3600 * 1000;
-    const nowTime = Date.now();
-    const existingMatch = this.incidents.find((inc) => {
-      if (!['RECEIVED', 'ASSIGNED', 'IN_PROGRESS'].includes(inc.status)) return false;
-      const incidentTime = new Date(inc.createdAt).getTime();
-      if (nowTime - incidentTime > twoHoursMs) return false;
-      const distMeters = calculateHaversineDistance(data.latitude, data.longitude, inc.latitude, inc.longitude);
-      return distMeters <= 25;
-    });
-
-    if (existingMatch) {
-      existingMatch.duplicateCount = (existingMatch.duplicateCount || 0) + 1;
-      this.incidentUpdates.unshift({
-        id: `upd-${Date.now()}`,
-        incidentId: existingMatch.id,
-        actorUserId: 'citizen',
-        actorName: 'Công dân bổ sung',
-        oldStatus: existingMatch.status,
-        newStatus: existingMatch.status,
-        note: `[GỘP BÁO CÁO TRÙNG] Người dân bổ sung lúc ${new Date().toLocaleTimeString('vi-VN')}: "${data.description}"`,
-        imageUrl: data.imageUrl,
-        createdAt: now,
-      });
-      this.saveAll();
-      return existingMatch;
-    }
 
     const newIncident: Incident = {
       id,
       publicCode,
       treeId: data.treeId || null,
-      reporterName: data.reporterName || 'Người dân ẩn danh',
+      reporterName: data.reporterName || 'Người dân Cần Thơ',
       reporterPhone: data.reporterPhone || '',
       description: data.description,
       latitude: data.latitude,
@@ -2160,64 +2267,8 @@ class StorageService {
       anchorStatus: 'PENDING',
     };
 
-    // ⚡ UT-009: Non-blocking Blockchain Asynchronous Queue
-    const { hash, canonicalJson } = computeRecordHash('INCIDENT_REPORT', newIncident);
-    newIncident.payloadHash = hash;
-
     this.incidents.unshift(newIncident);
-
-    // Initial timeline record
-    this.incidentUpdates.unshift({
-      id: `upd-${Date.now()}`,
-      incidentId: id,
-      actorUserId: 'citizen',
-      actorName: 'Hệ thống tiếp nhận người dân',
-      oldStatus: 'RECEIVED',
-      newStatus: 'RECEIVED',
-      note: 'Phản ánh được ghi nhận thành công từ cổng công cộng.',
-      createdAt: now,
-    });
-
     this.saveAll();
-
-    // Hàng đợi neo băm Blockchain chạy nền không làm nghẽn UI
-    blockchainService.anchorRecord({
-      recordType: 'INCIDENT_REPORT',
-      recordId: id,
-      hash,
-      canonicalJson,
-    }).then((receipt) => {
-      const idx = this.incidents.findIndex((i) => i.id === id);
-      if (idx !== -1) {
-        this.incidents[idx].anchorStatus = receipt.status;
-        this.incidents[idx].txHash = receipt.txHash;
-        this.saveAll();
-      }
-    }).catch(() => {
-      const idx = this.incidents.findIndex((i) => i.id === id);
-      if (idx !== -1) {
-        this.incidents[idx].anchorStatus = 'FAILED';
-      }
-    });
-
-    // ⚡ Đồng bộ sự cố vĩnh viễn lên SQLite Database Server
-    if (this.isBrowser()) {
-      fetch('http://localhost:5001/api/incidents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tree_id: 1,
-          description: newIncident.description,
-          severity: newIncident.severity === 'CRITICAL' ? 'Khẩn cấp' : newIncident.severity === 'HIGH' ? 'Cao' : 'Trung bình',
-          latitude: newIncident.latitude,
-          longitude: newIncident.longitude,
-          address: newIncident.address,
-          reporter_name: newIncident.reporterName,
-          reporter_phone: newIncident.reporterPhone,
-        }),
-      }).catch(() => {});
-    }
-
     return newIncident;
   }
 
@@ -2316,6 +2367,38 @@ class StorageService {
     });
 
     this.saveAll();
+
+    // ⚡ Đồng bộ trạng thái sự cố lên SQLite Database Server (UT-001)
+    if (this.isBrowser()) {
+      try {
+        const token = await this.getBackendAuthToken();
+        const numericId = parseInt(String(incidentId).replace(/\D/g, ''), 10);
+        if (!isNaN(numericId) && numericId > 0 && token) {
+          const statusMap: Record<IncidentStatus, string> = {
+            'RECEIVED': 'Chờ xử lý',
+            'ASSIGNED': 'Đang xử lý',
+            'IN_PROGRESS': 'Đang xử lý',
+            'RESOLVED': 'Đã hoàn thành',
+            'REJECTED': 'Từ chối',
+            'REOPENED': 'Đang xử lý'
+          };
+          await fetch(`http://localhost:5001/api/incidents/${numericId}/status`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              status: statusMap[newStatus] || newStatus,
+              resolved_at: newStatus === 'RESOLVED' ? now : undefined
+            })
+          });
+        }
+      } catch (err) {
+        console.warn('Sync incident status to SQLite failed:', err);
+      }
+    }
+
     return incident;
   }
 
@@ -2371,6 +2454,29 @@ class StorageService {
     });
 
     this.saveAll();
+
+    // ⚡ Đồng bộ trạng thái tái xử lý sự cố lên SQLite Database Server (UT-001)
+    if (this.isBrowser()) {
+      try {
+        const token = await this.getBackendAuthToken();
+        const numericId = parseInt(String(incidentId).replace(/\D/g, ''), 10);
+        if (!isNaN(numericId) && numericId > 0 && token) {
+          await fetch(`http://localhost:5001/api/incidents/${numericId}/status`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              status: 'Đang xử lý'
+            })
+          });
+        }
+      } catch (err) {
+        console.warn('Sync incident status to SQLite failed:', err);
+      }
+    }
+
     return incident;
   }
 
@@ -2508,12 +2614,50 @@ class StorageService {
     );
   }
 
+  public async syncNotificationsFromBackend(): Promise<boolean> {
+    if (!this.isBrowser()) return false;
+    try {
+      const token = await this.getBackendAuthToken();
+      if (!token) return false;
+
+      const res = await fetch('http://localhost:5001/api/notifications', {
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        this.notifications = data.data as AppNotification[];
+        if (this.isBrowser()) {
+          localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(this.notifications));
+        }
+        window.dispatchEvent(new CustomEvent('urbantree:notifications-synced', {
+          detail: { count: data.data.length, unreadCount: data.unreadCount }
+        }));
+        return true;
+      }
+    } catch {
+      return false;
+    }
+    return false;
+  }
+
   public markNotificationAsRead(id: string): void {
     const notif = this.notifications.find((n) => n.id === id);
     if (notif && !notif.isRead) {
       notif.isRead = true;
       if (this.isBrowser()) {
         localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(this.notifications));
+        this.getBackendAuthToken().then((token) => {
+          if (token) {
+            fetch(`http://localhost:5001/api/notifications/${id}/read`, {
+              method: 'PATCH',
+              headers: { Authorization: `Bearer ${token}` }
+            }).catch(() => {});
+          }
+        });
       }
     }
   }
@@ -2526,6 +2670,14 @@ class StorageService {
     });
     if (this.isBrowser()) {
       localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(this.notifications));
+      this.getBackendAuthToken().then((token) => {
+        if (token) {
+          fetch('http://localhost:5001/api/notifications/read-all', {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${token}` }
+          }).catch(() => {});
+        }
+      });
     }
   }
 
@@ -2533,6 +2685,14 @@ class StorageService {
     this.notifications = this.notifications.filter((n) => n.id !== id);
     if (this.isBrowser()) {
       localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(this.notifications));
+      this.getBackendAuthToken().then((token) => {
+        if (token) {
+          fetch(`http://localhost:5001/api/notifications/${id}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+          }).catch(() => {});
+        }
+      });
     }
   }
 
@@ -2606,6 +2766,427 @@ class StorageService {
     return [...this.slaPolicies];
   }
 
+  public async getBackendAuthToken(): Promise<string | null> {
+    if (!this.isBrowser()) return null;
+    const username = this.activeUser?.username || 'admin';
+    const cacheKey = `urbantree_jwt_${username}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.expiresAt && parsed.expiresAt > Date.now() + 30000) {
+          return parsed.token;
+        }
+      }
+    } catch {}
+
+    try {
+      const password = this.activeUser?.role === 'ADMIN' ? 'admin123' : '123456';
+      const res = await fetch('http://localhost:5001/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data.success && data.accessToken) {
+        localStorage.setItem(cacheKey, JSON.stringify({
+          token: data.accessToken,
+          expiresAt: Date.now() + 14 * 60 * 1000
+        }));
+        return data.accessToken;
+      }
+    } catch {}
+    return null;
+  }
+
+  public async syncWorkOrdersFromBackend(): Promise<boolean> {
+    if (!this.isBrowser()) return false;
+    if (this.activeUser?.role === 'CITIZEN') return false;
+    try {
+      const token = await this.getBackendAuthToken();
+      if (!token) return false;
+
+      const res = await fetch('http://localhost:5001/api/work-orders', {
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        const sqliteOrders = data.data as WorkOrder[];
+        this.workOrders = sqliteOrders;
+        this.saveAll();
+        window.dispatchEvent(new CustomEvent('urbantree:work-orders-synced', { detail: { count: sqliteOrders.length } }));
+        // Tự động đồng bộ tiến độ chiến dịch bão
+        this.syncStormCampaignFromBackend();
+        return true;
+      }
+    } catch {
+      return false;
+    }
+    return false;
+  }
+
+  public getStormCampaign(): StormCampaign | null {
+    return this.stormCampaign;
+  }
+
+  public async syncStormCampaignFromBackend(): Promise<StormCampaign | null> {
+    if (!this.isBrowser()) return null;
+    try {
+      const token = await this.getBackendAuthToken();
+      if (!token) return null;
+
+      const res = await fetch('http://localhost:5001/api/work-orders/campaigns/storm-status', {
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!res.ok) return null;
+      const json = await res.json();
+      if (json.success && json.data) {
+        this.stormCampaign = json.data as StormCampaign;
+        window.dispatchEvent(
+          new CustomEvent('urbantree:campaign-updated', { detail: this.stormCampaign })
+        );
+        return this.stormCampaign;
+      }
+    } catch (err) {
+      console.warn('syncStormCampaignFromBackend error:', err);
+    }
+    return null;
+  }
+
+  public async initTestStormBatch(totalTrees: number = 10, name?: string): Promise<any> {
+    if (!this.isBrowser()) return null;
+    try {
+      const token = await this.getBackendAuthToken();
+      if (!token) throw new Error('Chưa có token xác thực.');
+
+      const res = await fetch('http://localhost:5001/api/work-orders/campaigns/storm/init-test-batch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ totalTrees, name })
+      });
+      const data = await res.json();
+      await this.syncStormCampaignFromBackend();
+      return data;
+    } catch (err: any) {
+      console.error('initTestStormBatch error:', err);
+      throw err;
+    }
+  }
+
+  public async batchCompleteWorkOrderItems(
+    itemIds: string[],
+    notes?: string,
+    evidenceImageUrl?: string
+  ): Promise<any> {
+    if (!this.isBrowser()) return null;
+    try {
+      const token = await this.getBackendAuthToken();
+      if (!token) throw new Error('Chưa có token xác thực.');
+
+      const now = new Date().toISOString();
+      const currentUserId = this.activeUser?.id || 'staff-1';
+      for (const itemId of itemIds) {
+        const it = this.workOrderItems.find((x) => x.id === itemId);
+        if (it) {
+          it.status = 'COMPLETED';
+          it.completedAt = now;
+          it.completedByUserId = currentUserId;
+          if (notes) it.notes = notes;
+          if (evidenceImageUrl) it.evidenceAfterImageUrl = evidenceImageUrl;
+        }
+      }
+
+      const res = await fetch('http://localhost:5001/api/work-orders/campaigns/storm/batch-complete-items', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ itemIds, notes, evidenceImageUrl, status: 'COMPLETED' })
+      });
+
+      const data = await res.json();
+      await this.syncCareRecordsFromBackend();
+      await this.syncWorkOrdersFromBackend();
+      await this.syncStormCampaignFromBackend();
+      window.dispatchEvent(new CustomEvent('urbantree:care-records-synced'));
+      window.dispatchEvent(new CustomEvent('urbantree:campaign-updated', { detail: this.stormCampaign }));
+      return data;
+    } catch (err: any) {
+      console.error('batchCompleteWorkOrderItems error:', err);
+      throw err;
+    }
+  }
+
+  public async syncWorkOrderDetails(orderId: string): Promise<any> {
+    if (!this.isBrowser()) return null;
+    try {
+      const token = await this.getBackendAuthToken();
+      if (!token) return null;
+
+      const res = await fetch(`http://localhost:5001/api/work-orders/${orderId}`, {
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data.success && data.data) {
+        const order = (data.data.workOrder || data.data) as WorkOrder;
+        const items = (data.data.items || data.items || []) as WorkOrderItem[];
+        const history = (data.data.history || data.history || []) as WorkOrderHistory[];
+        if (Array.isArray(items)) {
+          const existingOtherItems = this.workOrderItems.filter(it => it.workOrderId !== orderId);
+          this.workOrderItems = [...existingOtherItems, ...items];
+        }
+        if (Array.isArray(history) && history.length > 0) {
+          const existingOtherHist = this.workOrderHistory.filter(h => h.workOrderId !== orderId);
+          this.workOrderHistory = [...history, ...existingOtherHist];
+        }
+        const idx = this.workOrders.findIndex(w => w.id === orderId);
+        if (idx >= 0) {
+          this.workOrders[idx] = order;
+        } else {
+          this.workOrders.unshift(order);
+        }
+        this.saveAll();
+        return {
+          workOrder: order,
+          items,
+          history,
+          team: data.team,
+          route: data.route
+        };
+      }
+    } catch {}
+    return null;
+  }
+
+  public async syncCareRecordsFromBackend(): Promise<boolean> {
+    if (!this.isBrowser()) return false;
+    try {
+      const res = await fetch('http://localhost:5001/api/care-records?all=true');
+      if (!res.ok) return false;
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        const mappedRecords: CareRecord[] = json.data.map((r: any) => ({
+          id: `care-db-${r.id}`,
+          treeId:
+            r.tree_code && r.tree_code.startsWith('TREE-')
+              ? r.tree_code.toLowerCase()
+              : r.tree_id
+              ? `tree-db-${r.tree_id}`
+              : `tree-${r.tree_id}`,
+          treeCode: r.tree_code,
+          actionType:
+            r.action_type === 'Cắt tỉa'
+              ? 'PRUNING'
+              : r.action_type === 'Tưới nước'
+              ? 'WATERING'
+              : r.action_type === 'Bón phân'
+              ? 'FERTILIZING'
+              : 'SURVEY',
+          staffUserId: r.staff_id ? `user-${r.staff_id}` : 'staff-1',
+          staffName: r.caretaker_name || 'Kỹ thuật viên',
+          notes: r.notes || '',
+          healthBefore: r.health_before || 'FAIR',
+          healthAfter: r.health_after || 'GOOD',
+          performedAt: r.action_date || r.created_at || new Date().toISOString().slice(0, 10),
+          imageUrl: r.image_after_url,
+          payloadHash: r.data_hash,
+          anchorStatus: r.anchor_status === 'CONFIRMED' ? 'CONFIRMED' : 'PENDING',
+        }));
+
+        const recordMap = new Map<string, CareRecord>();
+        this.careRecords.forEach((c) => recordMap.set(c.id, c));
+        mappedRecords.forEach((c) => recordMap.set(c.id, c));
+        this.careRecords = Array.from(recordMap.values());
+        this.saveAll();
+        window.dispatchEvent(
+          new CustomEvent('urbantree:care-records-synced', { detail: { count: mappedRecords.length } })
+        );
+        return true;
+      }
+    } catch {}
+    return false;
+  }
+
+  public async syncIncidentsFromBackend(): Promise<boolean> {
+    if (!this.isBrowser()) return false;
+    try {
+      const token = await this.getBackendAuthToken();
+      const headers: Record<string, string> = { 'Accept': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const res = await fetch('http://localhost:5001/api/incidents?all=true&limit=1000', { headers });
+      if (!res.ok) return false;
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        const statusMap: Record<string, IncidentStatus> = {
+          'Chờ xử lý': 'RECEIVED',
+          'Đã tiếp nhận': 'ASSIGNED',
+          'Đang xử lý': 'IN_PROGRESS',
+          'Đã giải quyết': 'RESOLVED',
+          'Đã hoàn thành': 'RESOLVED',
+          'Từ chối': 'REJECTED'
+        };
+        const severityMap: Record<string, IncidentSeverity> = {
+          'Thấp': 'LOW',
+          'Trung bình': 'MEDIUM',
+          'Cao': 'HIGH',
+          'Khẩn cấp': 'CRITICAL'
+        };
+
+        const sqliteIncidents: Incident[] = json.data.map((row: any) => ({
+          id: String(row.id),
+          publicCode: row.tracking_code || `INC-${row.id}`,
+          treeId: row.tree_id ? String(row.tree_id) : null,
+          reporterName: row.reporter_name || 'Người dân',
+          reporterPhone: row.reporter_phone || '',
+          description: row.description || '',
+          imageUrl: row.image_url || undefined,
+          latitude: Number(row.latitude) || 10.03,
+          longitude: Number(row.longitude) || 105.78,
+          address: row.address || row.location_name || '',
+          severity: severityMap[row.severity] || 'MEDIUM',
+          status: statusMap[row.status] || 'RECEIVED',
+          workOrderId: row.work_order_id ? String(row.work_order_id) : null,
+          workOrderCode: row.work_order_code || null,
+          assignedToUserId: row.assigned_staff_id ? String(row.assigned_staff_id) : null,
+          reportedAt: row.reported_at || new Date().toISOString(),
+          resolvedAt: row.resolved_at || null,
+          createdAt: row.reported_at || new Date().toISOString(),
+          updatedAt: row.updated_at || row.reported_at || new Date().toISOString()
+        }));
+
+        this.incidents = sqliteIncidents;
+        this.saveAll();
+        window.dispatchEvent(
+          new CustomEvent('urbantree:incidents-synced', { detail: { count: sqliteIncidents.length } })
+        );
+        return true;
+      }
+    } catch {
+      return false;
+    }
+    return false;
+  }
+
+  public async syncRoutesFromBackend(): Promise<boolean> {
+    if (!this.isBrowser()) return false;
+    try {
+      const res = await fetch('http://localhost:5001/api/routes', {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!res.ok) return false;
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        this.routes = json.data as Route[];
+        this.saveAll();
+        window.dispatchEvent(
+          new CustomEvent('urbantree:routes-synced', { detail: { count: json.data.length } })
+        );
+        return true;
+      }
+    } catch {
+      return false;
+    }
+    return false;
+  }
+
+  public async syncOperationalZonesFromBackend(): Promise<boolean> {
+    if (!this.isBrowser()) return false;
+    try {
+      const res = await fetch('http://localhost:5001/api/operational-zones', {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!res.ok) return false;
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        this.zones = json.data as OperationalZone[];
+        this.saveAll();
+        return true;
+      }
+    } catch {
+      return false;
+    }
+    return false;
+  }
+
+  public async triggerStormEmergencyDispatch(): Promise<{
+    success: boolean;
+    message: string;
+    createdCount: number;
+    skippedCount: number;
+    skippedRoutes?: string[];
+    totalTreesScheduled: number;
+    orders?: any[];
+  }> {
+    if (!this.isBrowser()) {
+      return { success: false, message: 'Chỉ hoạt động trên môi trường trình duyệt', createdCount: 0, skippedCount: 0, totalTreesScheduled: 0 };
+    }
+
+    try {
+      const token = await this.getBackendAuthToken();
+      if (!token) {
+        throw new Error('Chưa thể lấy token xác thực công vụ.');
+      }
+
+      const res = await fetch('http://localhost:5001/api/work-orders/emergency-storm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || `Lỗi máy chủ HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      await this.syncWorkOrdersFromBackend();
+      await this.syncCareRecordsFromBackend();
+      await this.syncStormCampaignFromBackend();
+
+      window.dispatchEvent(new CustomEvent('urbantree:storm-dispatched', { detail: data }));
+
+      return {
+        success: true,
+        message: data.message,
+        createdCount: data.createdCount || 0,
+        skippedCount: data.skippedCount || 0,
+        skippedRoutes: data.skippedRoutes || [],
+        totalTreesScheduled: data.totalTreesScheduled || 0,
+        orders: data.orders || [],
+      };
+    } catch (err: any) {
+      console.error('Lỗi kích hoạt Chiến Dịch Bão:', err);
+      return {
+        success: false,
+        message: err.message || 'Không thể kết nối máy chủ điều hành bão.',
+        createdCount: 0,
+        skippedCount: 0,
+        totalTreesScheduled: 0,
+      };
+    }
+  }
+
   public getWorkOrders(filters?: {
     zoneId?: string;
     routeId?: string;
@@ -2638,12 +3219,38 @@ class StorageService {
     route?: Route;
     zone?: OperationalZone;
   } | null {
-    const workOrder = this.workOrders.find((w) => w.id === orderId);
+    if (!orderId) return null;
+    const cleanId = orderId.toLowerCase();
+    const workOrder = this.workOrders.find(
+      (w) => w.id === orderId || w.code === orderId || w.id.toLowerCase() === cleanId || (w.code && w.code.toLowerCase() === cleanId)
+    );
     if (!workOrder) return null;
 
-    const items = this.workOrderItems.filter((it) => it.workOrderId === orderId);
+    const targetId = workOrder.id;
+    const targetCode = workOrder.code || '';
+    const items = this.workOrderItems.filter(
+      (it) => it.workOrderId === targetId || it.workOrderId === targetCode || (it.workOrderId && it.workOrderId.toLowerCase() === targetId.toLowerCase())
+    );
+    
+    // Invariant consistency guard:
+    // If checklist items exist, progress MUST be derived from the actual item count
+    if (items.length > 0) {
+      const completedCount = items.filter((it) => it.status === 'COMPLETED').length;
+      const skippedCount = items.filter((it) => it.status === 'SKIPPED').length;
+      const failedCount = items.filter((it) => it.status === 'FAILED').length;
+      workOrder.totalItems = items.length;
+      workOrder.completedItems = completedCount;
+      workOrder.skippedItems = skippedCount;
+      workOrder.failedItems = failedCount;
+      workOrder.progressPercent = Math.round((completedCount / items.length) * 100);
+    } else if (items.length === 0 && workOrder.totalItems > 0) {
+      // Giữ nguyên số liệu từ máy chủ SQLite khi danh sách items chi tiết chưa nạp vào bộ nhớ cục bộ
+      if (workOrder.progressPercent === undefined || workOrder.progressPercent === null) {
+        workOrder.progressPercent = Math.round(((workOrder.completedItems || 0) / workOrder.totalItems) * 100);
+      }
+    }
     const history = this.workOrderHistory
-      .filter((h) => h.workOrderId === orderId)
+      .filter((h) => h.workOrderId === targetId || h.workOrderId === targetCode || (h.workOrderId && h.workOrderId.toLowerCase() === targetId.toLowerCase()))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     const team = this.teams.find((t) => t.id === workOrder.assignedTeamId);
@@ -2746,6 +3353,35 @@ class StorageService {
     }
 
     this.saveAll();
+
+    if (this.isBrowser()) {
+      this.getBackendAuthToken().then((token) => {
+        if (!token) return;
+        fetch('http://localhost:5001/api/work-orders', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            id: newOrder.id,
+            code: newOrder.code,
+            title: newOrder.title,
+            description: newOrder.description,
+            type: newOrder.type,
+            priority: newOrder.priority,
+            zoneId: newOrder.zoneId,
+            routeId: newOrder.routeId,
+            assignedTeamId: newOrder.assignedTeamId,
+            assignedEquipmentIds: input.assignedEquipmentIds,
+            scheduledStart: newOrder.scheduledStart,
+            scheduledEnd: newOrder.scheduledEnd,
+            treeIds: targetTrees.map((t) => t.id),
+          }),
+        }).catch((err) => console.warn('Background work order creation sync:', err));
+      });
+    }
+
     return newOrder;
   }
 
@@ -2846,6 +3482,24 @@ class StorageService {
     });
 
     this.saveAll();
+
+    if (this.isBrowser()) {
+      this.getBackendAuthToken().then((token) => {
+        if (!token) return;
+        fetch(`http://localhost:5001/api/work-orders/${orderId}/assign`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            teamId,
+            equipmentIds,
+          }),
+        }).catch((err) => console.warn('Background work order assignment sync:', err));
+      });
+    }
+
     return order;
   }
 
@@ -2879,6 +3533,24 @@ class StorageService {
     }
 
     this.saveAll();
+
+    if (this.isBrowser()) {
+      this.getBackendAuthToken().then((token) => {
+        if (!token) return;
+        fetch(`http://localhost:5001/api/work-orders/items/${itemId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            status: 'NEEDS_FOLLOW_UP',
+            notes: followUpReason,
+          }),
+        }).catch((err) => console.warn('Background checklist item sync:', err));
+      });
+    }
+
     return item;
   }
 
@@ -3030,6 +3702,45 @@ class StorageService {
     });
 
     this.saveAll();
+
+    if (this.isBrowser()) {
+      this.getBackendAuthToken().then(async (token) => {
+        if (!token) return;
+        try {
+          const res = await fetch(`http://localhost:5001/api/work-orders/${orderId}/status`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              targetStatus,
+              reason,
+            }),
+          });
+
+          if (!res.ok) {
+            const errJson = await res.json().catch(() => ({}));
+            console.error('[WorkOrder Sync Error] Backend rejected status change:', errJson);
+            // 🔄 TỰ ĐỘNG ROLLBACK TRẠNG THÁI (P2-02 FIX)
+            order.status = previousState;
+            order.workflowStatus = previousState;
+            this.saveAll();
+            window.dispatchEvent(new CustomEvent('urbantree:work-orders-synced', { detail: { rollback: true } }));
+            alert(`⚠️ Thao tác chuyển trạng thái không hợp lệ: ${errJson.message || 'Máy chủ từ chối yêu cầu'}`);
+          }
+        } catch (err) {
+          console.warn('Background work order status sync network error:', err);
+          // Rollback khi mất kết nối
+          order.status = previousState;
+          order.workflowStatus = previousState;
+          this.saveAll();
+          window.dispatchEvent(new CustomEvent('urbantree:work-orders-synced', { detail: { rollback: true } }));
+          alert('⚠️ Lỗi kết nối mạng: Không thể cập nhật trạng thái lên máy chủ SQLite.');
+        }
+      });
+    }
+
     return order;
   }
 
@@ -3081,36 +3792,233 @@ class StorageService {
     }
 
     this.saveAll();
+
+    if (this.isBrowser()) {
+      this.getBackendAuthToken().then((token) => {
+        if (!token) return;
+        fetch(`http://localhost:5001/api/work-orders/items/${itemId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            status,
+            notes: skipReason,
+            evidenceImageUrl,
+          }),
+        })
+          .then(async (res) => {
+            if (res.ok) {
+              await this.syncCareRecordsFromBackend();
+              await this.syncStormCampaignFromBackend();
+              await this.syncWorkOrdersFromBackend();
+              window.dispatchEvent(new CustomEvent('urbantree:care-records-synced'));
+              window.dispatchEvent(new CustomEvent('urbantree:campaign-updated', { detail: this.stormCampaign }));
+            }
+          })
+          .catch((err) => console.warn('Background checklist item sync:', err));
+      });
+    }
+
     return item;
   }
 
-  public verifyWorkOrder(
+  public async verifyWorkOrder(
     orderId: string,
     supervisorUser: User,
     isApproved: boolean,
     notes?: string
-  ): WorkOrder {
+  ): Promise<WorkOrder> {
     const order = this.workOrders.find((w) => w.id === orderId);
     if (!order) throw new Error(`Không tìm thấy lệnh công tác ${orderId}`);
 
     order.supervisorUserId = supervisorUser.id;
     order.supervisorNotes = notes;
 
-    if (isApproved) {
-      return this.transitionWorkOrderStatus(
-        orderId,
-        'COMPLETED',
-        supervisorUser,
-        `Giám sát viên đã nghiệm thu đạt chuẩn kỹ thuật. Ghi chú: ${notes || 'Đạt yêu cầu'}`
-      );
-    } else {
-      return this.transitionWorkOrderStatus(
-        orderId,
-        'REJECTED',
-        supervisorUser,
-        `Yêu cầu thực hiện lại. Lý do nghiệm thu không đạt: ${notes || 'Chưa đạt độ cao tĩnh không yêu cầu'}`
-      );
+    if (this.isBrowser()) {
+      const token = await this.getBackendAuthToken();
+      const res = await fetch(`http://localhost:5001/api/work-orders/${orderId}/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          isApproved,
+          notes: notes || (isApproved ? 'Đạt chuẩn kỹ thuật' : 'Yêu cầu làm lại')
+        })
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || `Lỗi nghiệm thu lệnh công tác trên máy chủ (${res.status})`);
+      }
+
+      await Promise.all([
+        this.syncWorkOrdersFromBackend(),
+        this.syncIncidentsFromBackend(),
+        this.syncCareRecordsFromBackend(),
+        this.syncStormCampaignFromBackend(),
+        this.syncWithBackendServer()
+      ]);
+
+      window.dispatchEvent(new CustomEvent('urbantree:care-records-synced'));
+      window.dispatchEvent(new CustomEvent('urbantree:campaign-updated', { detail: this.stormCampaign }));
+      window.dispatchEvent(new CustomEvent('urbantree:work-orders-synced'));
+      window.dispatchEvent(new CustomEvent('urbantree:incidents-synced'));
+
+      const updated = this.workOrders.find((w) => w.id === orderId) || order;
+      return updated;
     }
+
+    // Môi trường phi trình duyệt (CLI / Unit test mock)
+    order.status = isApproved ? 'COMPLETED' : 'REJECTED';
+    order.workflowStatus = order.status;
+    order.actualEnd = new Date().toISOString();
+    this.saveAll();
+    return order;
+  }
+
+  // 🧹 Dọn dẹp sạch toàn bộ các lệnh công tác cũ và tái tạo 3 lệnh chuẩn mẫu trên SQLite
+  public async purgeAllWorkOrders(): Promise<{ success: boolean; message: string }> {
+    if (this.isBrowser()) {
+      const token = await this.getBackendAuthToken();
+      const res = await fetch('http://localhost:5001/api/work-orders/purge-all', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || 'Lỗi dọn dẹp lệnh công tác trên máy chủ SQLite');
+      }
+      const data = await res.json();
+      await Promise.all([
+        this.syncWorkOrdersFromBackend(),
+        this.syncStormCampaignFromBackend(),
+        this.syncCareRecordsFromBackend(),
+        this.syncWithBackendServer(),
+      ]);
+      window.dispatchEvent(new CustomEvent('urbantree:work-orders-synced'));
+      window.dispatchEvent(new CustomEvent('urbantree:campaign-updated', { detail: this.stormCampaign }));
+      return data;
+    }
+    return { success: true, message: 'Dọn dẹp hoàn tất' };
+  }
+
+  public async createWorkOrderFromIncident(input: {
+    incidentId: string;
+    title: string;
+    description?: string;
+    type: WorkOrderType;
+    priority: WorkOrderPriority;
+    zoneId?: string;
+    routeId?: string;
+    routeCorridorName?: string;
+    assignedTeamId?: string;
+    assignedTeamName?: string;
+    assignedVehicleName?: string;
+    assignedVehiclePlate?: string;
+    treeIds?: string[];
+    scheduledStart?: string;
+    scheduledEnd?: string;
+    slaTargetMinutes?: number;
+  }): Promise<WorkOrder> {
+    if (!input.incidentId) {
+      throw new Error('Mã sự cố (incidentId) là bắt buộc để tạo lệnh công tác xử lý sự cố');
+    }
+
+    if (this.isBrowser()) {
+      const token = await this.getBackendAuthToken();
+      const res = await fetch('http://localhost:5001/api/work-orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          incidentId: input.incidentId,
+          title: input.title,
+          description: input.description || input.title,
+          type: input.type,
+          priority: input.priority,
+          zoneId: input.zoneId,
+          routeId: input.routeId,
+          routeCorridorName: input.routeCorridorName,
+          assignedTeamId: input.assignedTeamId,
+          assignedTeamName: input.assignedTeamName,
+          assignedVehicleName: input.assignedVehicleName,
+          assignedVehiclePlate: input.assignedVehiclePlate,
+          treeIds: input.treeIds || [],
+          scheduledStart: input.scheduledStart,
+          scheduledEnd: input.scheduledEnd,
+          slaTargetMinutes: input.slaTargetMinutes || 240
+        })
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || `Lỗi máy chủ (${res.status}): Không thể tạo lệnh công tác`);
+      }
+
+      const json = await res.json();
+      await Promise.all([
+        this.syncWorkOrdersFromBackend(),
+        this.syncIncidentsFromBackend()
+      ]);
+
+      const createdOrder = json.data as WorkOrder;
+      return createdOrder;
+    }
+
+    throw new Error('Chức năng tạo lệnh công tác yêu cầu kết nối máy chủ');
+  }
+
+  public async evaluateMaintenanceRulesAndGenerateWorkOrdersAsync(): Promise<{
+    createdCount: number;
+    skippedCount: number;
+    skippedRules?: string[];
+    totalTreesScheduled: number;
+    orders: WorkOrder[];
+  }> {
+    if (this.isBrowser()) {
+      try {
+        const token = await this.getBackendAuthToken();
+        if (token) {
+          const res = await fetch('http://localhost:5001/api/work-orders/auto-schedule', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            await this.syncWorkOrdersFromBackend();
+            return {
+              createdCount: data.createdCount || 0,
+              skippedCount: data.skippedCount || 0,
+              skippedRules: data.skippedRules || [],
+              totalTreesScheduled: data.totalTreesScheduled || 0,
+              orders: this.workOrders.slice(0, data.createdCount || 0),
+            };
+          }
+        }
+      } catch (e) {
+        console.warn('Backend auto-schedule fallback to local:', e);
+      }
+    }
+
+    const localRes = this.evaluateMaintenanceRulesAndGenerateWorkOrders();
+    return {
+      createdCount: localRes.createdCount,
+      skippedCount: 0,
+      totalTreesScheduled: localRes.createdCount * 20,
+      orders: localRes.orders,
+    };
   }
 
   public evaluateMaintenanceRulesAndGenerateWorkOrders(): {

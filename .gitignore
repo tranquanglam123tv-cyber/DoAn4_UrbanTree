@@ -52,3 +52,7 @@ qa-pilot/
 
 # Google Cloud OAuth Credentials
 client_secret*.json
+
+# Archives & Temporary Snapshots
+*.rar
+*.zip

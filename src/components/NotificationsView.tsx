@@ -35,6 +35,7 @@ export const NotificationsView: React.FC<NotificationsViewProps> = ({
   const [notifications, setNotifications] = useState<AppNotification[]>(() =>
     storage.getNotifications()
   );
+  const [isLoading, setIsLoading] = useState(false);
 
   // Filters state
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,6 +43,23 @@ export const NotificationsView: React.FC<NotificationsViewProps> = ({
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'UNREAD' | 'READ'>('ALL');
   const [severityFilter, setSeverityFilter] = useState<string>('ALL');
+
+  React.useEffect(() => {
+    setIsLoading(true);
+    storage.syncNotificationsFromBackend().finally(() => {
+      setIsLoading(false);
+      setNotifications(storage.getNotifications());
+    });
+
+    const handleSync = () => {
+      setNotifications(storage.getNotifications());
+    };
+
+    window.addEventListener('urbantree:notifications-synced', handleSync);
+    return () => {
+      window.removeEventListener('urbantree:notifications-synced', handleSync);
+    };
+  }, [currentUser.id, currentUser.role]);
 
   const refreshList = () => {
     setNotifications(storage.getNotifications());
@@ -77,7 +95,7 @@ export const NotificationsView: React.FC<NotificationsViewProps> = ({
       refreshList();
     }
     if (notif.type === 'STORM_ALERT' || notif.linkId === 'storm-audit') {
-      onNavigate('storm_action', 'storm-audit');
+      onNavigate('work_orders', 'storm-audit');
       return;
     }
     if (notif.linkTab) {

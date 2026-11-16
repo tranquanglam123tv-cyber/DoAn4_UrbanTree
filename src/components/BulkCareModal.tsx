@@ -26,6 +26,7 @@ import {
 } from '../utils/treeUtils';
 import { NATIONAL_PROVINCES, getTreeProvinceId } from '../utils/zoneUtils';
 import { assertPermission } from '../utils/permissionUtils';
+import { useEscapeOverlay } from '../hooks/useEscapeOverlay';
 
 interface BulkCareModalProps {
   initialCorridor?: string;
@@ -59,6 +60,20 @@ export const BulkCareModal: React.FC<BulkCareModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // 🛡️ BẢO VỆ DỮ LIỆU CHƯA LƯU: Kiểm tra form dirty khi bấm ESC hoặc đóng modal
+  const isDirty = selectedTreeIds.size > 0;
+
+  const handleSafeClose = () => {
+    if (isDirty) {
+      const ok = window.confirm(`Bạn đang chọn ${selectedTreeIds.size} cây cần chăm sóc. Bạn có chắc muốn đóng và hủy bỏ?`);
+      if (!ok) return false;
+    }
+    onClose();
+    return true;
+  };
+
+  useEscapeOverlay('bulk-care-modal', true, handleSafeClose);
 
   // Filter trees by province, area, corridor
   const availableTrees = useMemo(() => {
@@ -202,7 +217,7 @@ export const BulkCareModal: React.FC<BulkCareModalProps> = ({
           </div>
 
           <button
-            onClick={onClose}
+            onClick={handleSafeClose}
             className="p-1.5 text-white/70 hover:text-white rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -485,8 +500,8 @@ export const BulkCareModal: React.FC<BulkCareModalProps> = ({
           <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800">
             <button
               type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 rounded-xl"
+              onClick={handleSafeClose}
+              className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 rounded-xl cursor-pointer"
             >
               Hủy bỏ
             </button>

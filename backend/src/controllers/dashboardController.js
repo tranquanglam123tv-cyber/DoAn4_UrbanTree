@@ -197,3 +197,150 @@ exports.getDashboardStats = async (req, res) => {
     });
   }
 };
+
+/**
+ * Lấy số liệu Telemetry chăm sóc & bảo dưỡng thực địa 7 ngày gần nhất từ SQLite
+ * Endpoint: GET /api/dashboard/maintenance-telemetry
+ */
+exports.getMaintenanceTelemetry = async (req, res) => {
+  try {
+    // 1. Xác định mốc ngày cuối cùng có dữ liệu hoặc hôm nay
+    const latestDateRow = await queryGet(`
+      SELECT MAX(SUBSTR(COALESCE(action_date, created_at), 1, 10)) as max_d 
+      FROM care_records
+    `);
+    const endDateStr = latestDateRow?.max_d || '2026-11-15';
+    const endDate = new Date(endDateStr + 'T00:00:00Z');
+
+    // Tạo danh sách 7 ngày liên tiếp lùi về trước
+    const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    const fullDayLabels = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+
+    const dates = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(endDate.getTime() - i * 86400000);
+      const iso = d.toISOString().split('T')[0];
+      const dayIdx = d.getUTCDay();
+      dates.push({
+        isoDate: iso,
+        day: dayNames[dayIdx],
+        label: fullDayLabels[dayIdx],
+        dateStr: `${d.getUTCDate()}/${d.getUTCMonth() + 1}`
+      });
+    }
+
+    // 2. Truy vấn SQLite cho từng ngày
+    const timeline = [];
+    let weeklyTotal = 0;
+    let totalWatering = 0;
+    let totalPruning = 0;
+    let totalFertilizing = 0;
+    let totalTreatment = 0;
+
+    for (const d of dates) {
+      const rows = await queryAll(`
+        SELECT action_type, COUNT(*) as c
+        FROM care_records
+        WHERE SUBSTR(COALESCE(action_date, created_at), 1, 10) = ?
+        GROUP BY action_type
+      `, [d.isoDate]);
+
+      let watering = 0;
+      let pruning = 0;
+      let fertilizing = 0;
+      let treatment = 0;
+
+      rows.forEach(r => {
+        const t = (r.action_type || '').toLowerCase();
+        if (t.includes('tưới') || t.includes('water')) watering += r.c;
+        else if (t.includes('cắt') || t.includes('tỉa') || t.includes('prun')) pruning += r.c;
+        else if (t.includes('bón') || t.includes('fertil')) fertilizing += r.c;
+        else treatment += r.c;
+      });
+
+      const dayCount = watering + pruning + fertilizing + treatment;
+      weeklyTotal += dayCount;
+      totalWatering += watering;
+      totalPruning += pruning;
+      totalFertilizing += fertilizing;
+      totalTreatment += treatment;
+
+      // Tìm tuyến đường có nhiều lượt thực hiện nhất trong ngày
+      const streetRow = await queryGet(`
+        SELECT t.location_name, COUNT(*) as c
+        FROM care_records cr
+        JOIN trees t ON cr.tree_id = t.id
+        WHERE SUBSTR(COALESCE(cr.action_date, cr.created_at), 1, 10) = ?
+        GROUP BY t.location_name
+        ORDER BY c DESC LIMIT 1
+      `, [d.isoDate]);
+
+      timeline.push({
+        date: d.isoDate,
+        day: d.day,
+        label: d.label,
+        dateStr: d.dateStr,
+        count: dayCount,
+        watering,
+        pruning,
+        fertilizing,
+        treatment,
+        mainStreet: streetRow?.location_name || 'Khu vực Trung tâm Quận Ninh Kiều'
+      });
+    }
+
+    // 3. Tính đỉnh điểm tuần (Peak Day)
+    const peakDay = timeline.reduce((max, curr) => (curr.count > max.count ? curr : max), timeline[0]);
+
+    // 4. Phân bổ phần trăm nghiệp vụ
+    const totalOps = Math.max(1, weeklyTotal);
+    const wateringPct = Number(((totalWatering / totalOps) * 100).toFixed(1));
+    const pruningPct = Number(((totalPruning / totalOps) * 100).toFixed(1));
+    const fertilizingPct = Number(((totalFertilizing / totalOps) * 100).toFixed(1));
+    const treatmentPct = Math.max(0, Number((100 - (wateringPct + pruningPct + fertilizingPct)).toFixed(1)));
+
+    // 5. Thống kê tỷ lệ hoàn thành thực tế từ các lệnh công tác
+    const woStats = await queryGet(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END) as completed
+      FROM work_orders
+      WHERE status NOT IN ('CANCELLED', 'DRAFT')
+    `);
+    const totalWos = woStats?.total || 1;
+    const completedWos = woStats?.completed || 0;
+    const completionRate = Number(((completedWos / totalWos) * 100).toFixed(1));
+
+    res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      data: {
+        timeline,
+        totalWeeklyCare: weeklyTotal,
+        averageDailyCare: Number((weeklyTotal / 7).toFixed(1)),
+        peakDay: {
+          day: peakDay.day,
+          label: peakDay.label,
+          date: peakDay.date,
+          count: peakDay.count,
+          mainStreet: peakDay.mainStreet
+        },
+        actionDistribution: {
+          watering: { count: totalWatering, percent: wateringPct },
+          pruning: { count: totalPruning, percent: pruningPct },
+          fertilizing: { count: totalFertilizing, percent: fertilizingPct },
+          treatment: { count: totalTreatment, percent: treatmentPct }
+        },
+        completionRate,
+        slaStatus: completionRate >= 90 ? 'Đạt chuẩn SLA vận hành (Không tồn đọng)' : 'Đang xử lý theo tiến độ SLA'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi tổng hợp số liệu Telemetry bảo dưỡng',
+      error: error.message
+    });
+  }
+};
+

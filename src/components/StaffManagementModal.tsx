@@ -40,6 +40,7 @@ import { storage } from '../db/storage';
 import { Role, StaffWorkStatus, User } from '../types';
 import { CAN_THO_ZONES, NATIONAL_PROVINCES, getZonesByProvince } from '../utils/zoneUtils';
 import { ALL_PERMISSIONS, PermissionKey, hasPermission } from '../utils/permissionUtils';
+import { useEscapeOverlay } from '../hooks/useEscapeOverlay';
 
 interface StaffManagementModalProps {
   isOpen: boolean;
@@ -147,6 +148,36 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
 
   // Transfer modal state
   const [transferProvince, setTransferProvince] = useState<string>('can-tho');
+
+  // 🛡️ BẢO VỆ DỮ LIỆU & ESC PHÂN TẦNG: Thoát sub-modal trước, sau đó mới đóng modal cha
+  const isFormDirty = isEditing && Boolean(fullName.trim() || username.trim());
+
+  const handleCloseWholeModal = () => {
+    if (selectedUserForDetail) {
+      setSelectedUserForDetail(null);
+      return false;
+    }
+    if (transferModalUser) {
+      setTransferModalUser(null);
+      return false;
+    }
+    if (permissionsModalUser) {
+      setPermissionsModalUser(null);
+      return false;
+    }
+    if (isEditing) {
+      if (isFormDirty) {
+        const ok = window.confirm('Bạn có thông tin nhân sự chưa lưu. Bạn có chắc muốn đóng form?');
+        if (!ok) return false;
+      }
+      setIsEditing(false);
+      return false;
+    }
+    onClose();
+    return true;
+  };
+
+  useEscapeOverlay('staff-management-modal', isOpen, handleCloseWholeModal);
 
   const refreshList = () => {
     const list = storage.getUsers();

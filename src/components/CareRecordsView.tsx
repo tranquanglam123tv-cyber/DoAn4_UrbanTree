@@ -303,7 +303,7 @@ export const CareRecordsView: React.FC<CareRecordsViewProps> = ({
             <span>Nhật ký Chăm sóc &amp; Bảo dưỡng Cơ giới Tuyến Phố</span>
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Quản lý tiến trình cắt tỉa, tưới bồn, cơ giới hóa thực địa gom nhóm thông minh theo Tuyến Phố. Neo dữ liệu bất biến EVM Blockchain.
+            Sổ cái nhật ký cắt tỉa, tưới bồn và chăm sóc thực địa theo từng tuyến phố, neo dữ liệu Smart Contract. Đối với kế hoạch phân công ca trực và điều xe cơ giới cho Tổ đội, vui lòng quản trị tại phân hệ <strong>Điều hành &amp; Xe</strong>.
           </p>
         </div>
 

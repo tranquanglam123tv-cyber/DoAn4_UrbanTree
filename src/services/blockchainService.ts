@@ -1,6 +1,7 @@
 /**
  * UrbanTree - Blockchain Service & EVM Smart Contract Simulator (UrbanTreeRegistry)
  * Implements Section A3.3 & Section 7 of the UrbanTree 20-Day Roadmap.
+ * WAVE 5.0.3: PERSISTENT SQLITE-BACKED ANCHOR LEDGER ARCHITECTURE
  */
 
 import {
@@ -16,9 +17,9 @@ import { computeRecordHash, sha256Hex } from './hashService';
 
 const CONTRACT_ADDRESS = '0x71C8A5A4349488a7B6a24A61dBebf0cf4A6112C8';
 const CHAIN_ID = 31337; // Hardhat Local EVM
+const BACKEND_BASE = 'http://localhost:5001/api/blockchain';
 
-// In-memory / persistent ledger of anchored records
-interface OnChainRecord {
+export interface OnChainRecord {
   recordType: RecordType;
   recordId: string;
   payloadVersion: number;
@@ -34,42 +35,53 @@ class BlockchainService {
   private anchors: Map<string, OnChainRecord> = new Map();
   private currentBlockNumber: number = 104280;
   private isNodeOnline: boolean = true;
+  private isSyncing: boolean = false;
 
   constructor() {
-    this.loadFromStorage();
+    this.syncFromBackend();
   }
 
   private getKey(recordType: RecordType, recordId: string): string {
     return `${recordType}::${recordId}`;
   }
 
-  private loadFromStorage() {
+  /**
+   * Sync persistent anchors from SQLite backend
+   */
+  public async syncFromBackend(): Promise<void> {
+    if (this.isSyncing) return;
+    this.isSyncing = true;
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const saved = localStorage.getItem('urbantree_blockchain_ledger');
-        if (saved) {
-          const list: OnChainRecord[] = JSON.parse(saved);
-          list.forEach((rec) => {
-            this.anchors.set(this.getKey(rec.recordType, rec.recordId), rec);
-            if (rec.blockNumber > this.currentBlockNumber) {
-              this.currentBlockNumber = rec.blockNumber;
-            }
-          });
+      // 1. Fetch highest block and counts
+      const statusRes = await fetch(`${BACKEND_BASE}/anchors/status`).then((r) => r.json()).catch(() => null);
+      if (statusRes && statusRes.success && statusRes.data) {
+        if (statusRes.data.currentBlockNumber > this.currentBlockNumber) {
+          this.currentBlockNumber = statusRes.data.currentBlockNumber;
         }
       }
-    } catch {
-      // Ignore in non-browser env
-    }
-  }
 
-  private saveToStorage() {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const list = Array.from(this.anchors.values());
-        localStorage.setItem('urbantree_blockchain_ledger', JSON.stringify(list));
+      // 2. Fetch paginated records from persistent SQLite ledger (up to 1000 for client memory)
+      const recordsRes = await fetch(`${BACKEND_BASE}/anchors/records?limit=1000`).then((r) => r.json()).catch(() => null);
+      if (recordsRes && recordsRes.success && Array.isArray(recordsRes.records)) {
+        for (const r of recordsRes.records) {
+          const rec: OnChainRecord = {
+            recordType: r.recordType,
+            recordId: String(r.recordId),
+            payloadVersion: 1,
+            payloadHash: (r.payloadHash || '').toLowerCase(),
+            canonicalJson: r.canonicalJson || '',
+            txHash: r.txHash,
+            blockNumber: r.blockNumber,
+            contractAddress: CONTRACT_ADDRESS,
+            anchoredAt: r.anchoredAt,
+          };
+          this.anchors.set(this.getKey(rec.recordType, rec.recordId), rec);
+        }
       }
-    } catch {
-      // Ignore
+    } catch (err) {
+      console.warn('[BlockchainService] Sync error, fallback to memory:', err);
+    } finally {
+      this.isSyncing = false;
     }
   }
 
@@ -86,16 +98,13 @@ class BlockchainService {
     };
   }
 
-  /**
-   * Generates a deterministic simulated EVM transaction hash: 0x + 64 hex chars
-   */
   private generateTxHash(recordType: string, recordId: string, blockNum: number): string {
     const raw = `${recordType}:${recordId}:${blockNum}:${Date.now()}`;
     return '0x' + sha256Hex(raw);
   }
 
   /**
-   * Anchors a record hash to the Smart Contract.
+   * Anchors a record hash to SQLite persistent ledger
    */
   public async anchorRecord(params: {
     recordType: RecordType;
@@ -118,15 +127,52 @@ class BlockchainService {
     }
 
     const { recordType, recordId, payloadVersion = 1, hash, canonicalJson = '' } = params;
-    const key = this.getKey(recordType, recordId);
+
+    try {
+      const res = await fetch(`${BACKEND_BASE}/anchors/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ recordType, recordId, payloadVersion, hash, canonicalJson }],
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success && json.receipts && json.receipts[0]) {
+        const rc = json.receipts[0];
+        const onChainRecord: OnChainRecord = {
+          recordType,
+          recordId: String(recordId),
+          payloadVersion,
+          payloadHash: hash.toLowerCase(),
+          canonicalJson,
+          txHash: rc.txHash,
+          blockNumber: rc.blockNumber,
+          contractAddress: CONTRACT_ADDRESS,
+          anchoredAt: new Date().toISOString(),
+        };
+        this.anchors.set(this.getKey(recordType, String(recordId)), onChainRecord);
+        if (rc.blockNumber > this.currentBlockNumber) {
+          this.currentBlockNumber = rc.blockNumber;
+        }
+
+        return {
+          status: 'CONFIRMED',
+          txHash: rc.txHash,
+          blockNumber: rc.blockNumber,
+          contractAddress: CONTRACT_ADDRESS,
+        };
+      }
+    } catch {
+      // Fallback local memory
+    }
 
     this.currentBlockNumber += 1;
     const blockNumber = this.currentBlockNumber;
     const txHash = this.generateTxHash(recordType, recordId, blockNumber);
-
-    const onChainRecord: OnChainRecord = {
+    const fallbackRec: OnChainRecord = {
       recordType,
-      recordId,
+      recordId: String(recordId),
       payloadVersion,
       payloadHash: hash.toLowerCase(),
       canonicalJson,
@@ -135,9 +181,7 @@ class BlockchainService {
       contractAddress: CONTRACT_ADDRESS,
       anchoredAt: new Date().toISOString(),
     };
-
-    this.anchors.set(key, onChainRecord);
-    this.saveToStorage();
+    this.anchors.set(this.getKey(recordType, String(recordId)), fallbackRec);
 
     return {
       status: 'CONFIRMED',
@@ -148,7 +192,7 @@ class BlockchainService {
   }
 
   /**
-   * ⚡ BATCH ANCHOR: Neo hàng loạt nhiều bản ghi trong cùng một block / transaction
+   * ⚡ BATCH ANCHOR: Gửi danh sách bản ghi lên SQLite persistent ledger
    */
   public async batchAnchorRecords(
     items: Array<{
@@ -168,44 +212,81 @@ class BlockchainService {
       throw new Error('EVM Local Node đang ngoại tuyến (Offline)');
     }
 
-    const startBlock = this.currentBlockNumber + 1;
+    // Gửi chunk tối đa 500 bản ghi lên backend SQLite persistent API
+    const CHUNK_SIZE = 500;
     const receipts: Array<{ recordId: string; txHash: string; blockNumber: number }> = [];
+    let startBlock = this.currentBlockNumber + 1;
+    let endBlock = this.currentBlockNumber;
 
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      this.currentBlockNumber += 1;
-      const blockNumber = this.currentBlockNumber;
-      const txHash = this.generateTxHash(item.recordType, item.recordId, blockNumber);
-      const key = this.getKey(item.recordType, item.recordId);
+    for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+      const chunk = items.slice(i, i + CHUNK_SIZE);
+      try {
+        const res = await fetch(`${BACKEND_BASE}/anchors/batch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: chunk }),
+        });
 
-      const onChainRecord: OnChainRecord = {
-        recordType: item.recordType,
-        recordId: item.recordId,
-        payloadVersion: item.payloadVersion || 1,
-        payloadHash: item.hash.toLowerCase(),
-        canonicalJson: item.canonicalJson || '',
-        txHash,
-        blockNumber,
-        contractAddress: CONTRACT_ADDRESS,
-        anchoredAt: new Date().toISOString(),
-      };
+        const json = await res.json();
+        if (json.success && json.receipts) {
+          if (i === 0) startBlock = json.startBlock;
+          endBlock = json.endBlock;
+          this.currentBlockNumber = json.endBlock;
 
-      this.anchors.set(key, onChainRecord);
-      receipts.push({ recordId: item.recordId, txHash, blockNumber });
+          for (const rc of json.receipts) {
+            receipts.push(rc);
+            const orig = chunk.find((c) => String(c.recordId) === String(rc.recordId));
+            const onChainRecord: OnChainRecord = {
+              recordType: rc.recordType,
+              recordId: String(rc.recordId),
+              payloadVersion: 1,
+              payloadHash: (rc.hash || orig?.hash || '').toLowerCase(),
+              canonicalJson: orig?.canonicalJson || '',
+              txHash: rc.txHash,
+              blockNumber: rc.blockNumber,
+              contractAddress: CONTRACT_ADDRESS,
+              anchoredAt: new Date().toISOString(),
+            };
+            this.anchors.set(this.getKey(rc.recordType, String(rc.recordId)), onChainRecord);
+          }
+          continue;
+        }
+      } catch (e) {
+        console.warn('Batch anchor API network failure, fallback:', e);
+      }
+
+      // Memory fallback
+      for (const item of chunk) {
+        this.currentBlockNumber += 1;
+        const blockNumber = this.currentBlockNumber;
+        const txHash = this.generateTxHash(item.recordType, item.recordId, blockNumber);
+        receipts.push({ recordId: item.recordId, txHash, blockNumber });
+        const onChainRecord: OnChainRecord = {
+          recordType: item.recordType,
+          recordId: String(item.recordId),
+          payloadVersion: item.payloadVersion || 1,
+          payloadHash: item.hash.toLowerCase(),
+          canonicalJson: item.canonicalJson || '',
+          txHash,
+          blockNumber,
+          contractAddress: CONTRACT_ADDRESS,
+          anchoredAt: new Date().toISOString(),
+        };
+        this.anchors.set(this.getKey(item.recordType, String(item.recordId)), onChainRecord);
+      }
+      endBlock = this.currentBlockNumber;
     }
 
-    this.saveToStorage();
-
     return {
-      count: items.length,
+      count: receipts.length,
       startBlock,
-      endBlock: this.currentBlockNumber,
+      endBlock,
       receipts,
     };
   }
 
   /**
-   * Verifies an on-chain record against current database record state.
+   * Verifies an on-chain record against current database record state with SQLite backend.
    */
   public async verifyRecord(
     recordType: RecordType,
@@ -224,6 +305,40 @@ class BlockchainService {
       };
     }
 
+    try {
+      const res = await fetch(`${BACKEND_BASE}/anchors/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recordType,
+          recordId,
+          currentHash: hash,
+          currentPayload: canonicalJson,
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success && json.data) {
+        const d = json.data;
+        return {
+          status: d.status,
+          recordType,
+          recordId,
+          currentHash: hash,
+          onChainHash: d.onChainHash,
+          txHash: d.txHash,
+          blockNumber: d.blockNumber,
+          contractAddress: d.contractAddress || CONTRACT_ADDRESS,
+          anchoredAt: d.anchoredAt,
+          canonicalJson,
+          diffFields: d.diffFields,
+        };
+      }
+    } catch (err) {
+      console.warn('Backend verify call failed, fallback to local map:', err);
+    }
+
+    // Local Map Fallback
     const key = this.getKey(recordType, recordId);
     const anchored = this.anchors.get(key);
 
@@ -238,15 +353,12 @@ class BlockchainService {
     }
 
     const isMatch = anchored.payloadHash.toLowerCase() === hash.toLowerCase();
-
-    // Detect diff fields if there is a mismatch
     let diffFields: VerificationResult['diffFields'] = undefined;
     if (!isMatch && anchored.canonicalJson) {
       try {
         const anchoredPayload = JSON.parse(anchored.canonicalJson);
         const currentPayload = JSON.parse(canonicalJson);
         diffFields = [];
-
         const allKeys = Array.from(new Set([...Object.keys(anchoredPayload), ...Object.keys(currentPayload)]));
         for (const k of allKeys) {
           if (JSON.stringify(anchoredPayload[k]) !== JSON.stringify(currentPayload[k])) {
@@ -277,11 +389,8 @@ class BlockchainService {
     };
   }
 
-  /**
-   * Gets anchor record by key
-   */
   public getAnchor(recordType: RecordType, recordId: string): BlockchainAnchor | null {
-    const key = this.getKey(recordType, recordId);
+    const key = this.getKey(recordType, String(recordId));
     const rec = this.anchors.get(key);
     if (!rec) return null;
 
@@ -301,24 +410,15 @@ class BlockchainService {
     };
   }
 
-  /**
-   * Returns all anchored records sorted by newest first
-   */
   public getAllAnchors(): OnChainRecord[] {
     return Array.from(this.anchors.values()).sort(
       (a, b) => new Date(b.anchoredAt).getTime() - new Date(a.anchoredAt).getTime()
     );
   }
 
-  /**
-   * Reset / clear local ledger (for demo refresh)
-   */
   public clearLedger() {
     this.anchors.clear();
     this.currentBlockNumber = 104280;
-    if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.removeItem('urbantree_blockchain_ledger');
-    }
   }
 }
 

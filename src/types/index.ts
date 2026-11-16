@@ -169,6 +169,8 @@ export interface Incident {
   address?: string;
   severity: IncidentSeverity;
   status: IncidentStatus;
+  workOrderId?: string | null;
+  workOrderCode?: string | null;
   assignedToUserId?: string | null;
   assignedToName?: string;
   reportedAt: string; // ISO-8601 UTC
@@ -451,6 +453,12 @@ export interface WorkOrderItem {
   evidenceBeforeImageUrl?: string;
   evidenceAfterImageUrl?: string;
   notes?: string;
+  species?: string;
+  heightMeter?: number;
+  diameterCm?: number;
+  healthStatus?: string;
+  address?: string;
+  locationName?: string;
 }
 
 export interface WorkOrder {
@@ -465,6 +473,8 @@ export interface WorkOrder {
   routeId?: string;
   routeCorridorName?: string;
   incidentId?: string | null;
+  incidentCode?: string | null;
+  campaignId?: string | null;
   status: WorkOrderWorkflowStatus;
   workflowStatus?: WorkOrderWorkflowStatus;
   slaStatus: WorkOrderSLAStatus;
@@ -562,4 +572,31 @@ export interface SLAPolicy {
   responseTargetMinutes: number; // Thời gian tối đa xe phải xuất phát tới nơi
   resolutionTargetMinutes: number; // Thời gian tối đa hoàn thành xử lý
   description: string;
+}
+
+// ==============================================================
+// 15. CHIẾN DỊCH VẬN HÀNH ĐÔ THỊ (STORM CAMPAIGN - WAVE 4.9)
+// ==============================================================
+export type CampaignStatus = 'DETECTED' | 'ACTIVE' | 'IN_PROGRESS' | 'NEAR_COMPLETION' | 'RESOLVED' | 'CLOSED';
+
+export interface StormCampaign {
+  id: string;
+  code: string;
+  name: string;
+  type: 'STORM_PREPARATION';
+  status: CampaignStatus;
+  targetScope?: string;
+  totalDetectedTrees: number;
+  assignedTrees: number;
+  inProgressTrees: number;
+  fieldCompletedTrees: number;
+  verifiedTrees: number;
+  resolvedTrees: number;
+  remainingTrees: number;
+  resolvedAt?: string | null;
+  history?: Array<{
+    timestamp: string;
+    event: string;
+    details: string;
+  }>;
 }

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Trees,
   Search,
@@ -25,6 +25,7 @@ import {
   Scissors,
   Ruler,
   RefreshCw,
+  X,
 } from 'lucide-react';
 import { Tree, TreeHealthStatus } from '../types';
 import { storage } from '../db/storage';
@@ -54,6 +55,8 @@ interface TreeListViewProps {
   onOpenEditTree: (tree: Tree) => void;
   onOpenCareModal: (treeId: string) => void;
   onOpenPublicView: (tree: Tree) => void;
+  initialHealthFilter?: string;
+  onOpenMapView?: () => void;
 }
 
 export const TreeListView: React.FC<TreeListViewProps> = ({
@@ -63,6 +66,8 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
   onOpenEditTree,
   onOpenCareModal,
   onOpenPublicView,
+  initialHealthFilter,
+  onOpenMapView,
 }) => {
   const trees = storage.getTrees();
   const treeTypes = storage.getTreeTypes();
@@ -73,7 +78,13 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
   const [selectedProvince, setSelectedProvince] = useState<string>('all');
   const [selectedArea, setSelectedArea] = useState<string>('ALL');
   const [selectedType, setSelectedType] = useState<string>('ALL');
-  const [selectedHealth, setSelectedHealth] = useState<string>('ALL');
+  const [selectedHealth, setSelectedHealth] = useState<string>(initialHealthFilter || 'ALL');
+
+  useEffect(() => {
+    if (initialHealthFilter) {
+      setSelectedHealth(initialHealthFilter);
+    }
+  }, [initialHealthFilter]);
   const [selectedCorridorFilter, setSelectedCorridorFilter] = useState<string>('ALL');
   // 📏🌲✂️ Bộ lọc lâm sinh & kỹ thuật cây xanh
   const [selectedHeight, setSelectedHeight] = useState<string>('ALL');
@@ -85,29 +96,87 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
   const [selectedHollow, setSelectedHollow] = useState<string>('ALL');
   const [workOrderCorridor, setWorkOrderCorridor] = useState<string | null>(null);
   const currentUser = storage.getActiveUser();
-  const [viewMode, setViewMode] = useState<'grid' | 'table' | 'corridor'>('corridor');
+
+  // 📱 Mobile-First Responsive View Mode (FIX-03)
+  const [viewMode, setViewMode] = useState<'grid' | 'table' | 'corridor'>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return 'grid';
+    }
+    return 'table';
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setViewMode((current) => (current === 'table' ? 'grid' : current));
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // 🔄 Quản lý phiên bản lịch sử chăm sóc và phản hồi Realtime
+  const [careRecordsVersion, setCareRecordsVersion] = useState(0);
+  useEffect(() => {
+    const onSynced = () => setCareRecordsVersion((v) => v + 1);
+    window.addEventListener('urbantree:care-records-synced', onSynced);
+    window.addEventListener('urbantree:work-orders-synced', onSynced);
+    window.addEventListener('urbantree:data-loaded', onSynced);
+    return () => {
+      window.removeEventListener('urbantree:care-records-synced', onSynced);
+      window.removeEventListener('urbantree:work-orders-synced', onSynced);
+      window.removeEventListener('urbantree:data-loaded', onSynced);
+    };
+  }, []);
 
   // Lấy danh sách lịch sử chăm sóc để xác định ngày chưa cắt tỉa
-  const careRecords = useMemo(() => storage.getCareRecords(), []);
+  const careRecords = useMemo(() => storage.getCareRecords(), [careRecordsVersion]);
 
   // Map treeId -> số ngày trôi qua kể từ lần cắt tỉa cành (PRUNING) gần nhất
   const treePruningDaysMap = useMemo(() => {
     const map = new Map<string, number>();
     const now = Date.now();
-    careRecords.forEach((c) => {
-      if (c.actionType === 'PRUNING' && c.performedAt) {
-        const time = new Date(c.performedAt).getTime();
+    careRecords.forEach((c: any) => {
+      const action = c.actionType || c.action_type || '';
+      const isPruning = action === 'PRUNING' || action === 'Cắt tỉa' || action === 'PRUNE';
+      const dateStr = c.performedAt || c.performed_at || c.action_date || c.created_at;
+      if (isPruning && dateStr) {
+        const time = new Date(dateStr).getTime();
         if (!isNaN(time)) {
           const days = Math.max(0, Math.floor((now - time) / (24 * 60 * 60 * 1000)));
-          const currentMinDays = map.get(c.treeId);
-          if (currentMinDays === undefined || days < currentMinDays) {
-            map.set(c.treeId, days);
-          }
+          const keys = [c.treeId, c.treeCode, c.tree_id, c.tree_code].filter(Boolean);
+          keys.forEach((k) => {
+            const strKey = String(k).toLowerCase();
+            const currentMinDays = map.get(strKey);
+            if (currentMinDays === undefined || days < currentMinDays) {
+              map.set(strKey, days);
+            }
+          });
         }
       }
     });
     return map;
   }, [careRecords]);
+
+  // Helper tra cứu số ngày chưa cắt tỉa theo nhiều khóa định danh
+  const getTreePruningDays = useCallback(
+    (tree: Tree): number | undefined => {
+      const keys = [
+        tree.id?.toLowerCase(),
+        tree.publicCode?.toLowerCase(),
+        tree.streetCode?.toLowerCase(),
+        tree.id?.replace('tree-db-', ''),
+        tree.id?.replace('tree-', ''),
+      ].filter(Boolean);
+      for (const k of keys) {
+        if (k && treePruningDaysMap.has(k)) {
+          return treePruningDaysMap.get(k);
+        }
+      }
+      return undefined;
+    },
+    [treePruningDaysMap]
+  );
 
   // ⚡ Debounce 300ms: Tối ưu chống đơ lag khi tìm kiếm trên tập 5,000+ cây
   useEffect(() => {
@@ -178,8 +247,14 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
     const searchLower = debouncedSearch.toLowerCase().trim();
 
     return provinceTrees.filter((tree) => {
-      // 1. Fast checks (Direct property match O(1))
-      if (selectedHealth !== 'ALL' && tree.healthStatus !== selectedHealth) return false;
+      // 1. Fast checks (Direct property match O(1) + Presets for Dashboard drill-down)
+      if (selectedHealth === 'HEALTHY') {
+        if (tree.healthStatus !== 'GOOD' && tree.healthStatus !== 'FAIR') return false;
+      } else if (selectedHealth === 'AT_RISK') {
+        if (tree.healthStatus !== 'POOR' && tree.healthStatus !== 'CRITICAL') return false;
+      } else if (selectedHealth !== 'ALL' && tree.healthStatus !== selectedHealth) {
+        return false;
+      }
       if (selectedType !== 'ALL' && tree.treeTypeId !== selectedType) return false;
 
       // 1.1 ISA TRAQ Risk Rating
@@ -224,7 +299,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
 
       // 4. Ngày chưa cắt tỉa (Pruning)
       if (selectedPruning !== 'ALL') {
-        const daysSince = treePruningDaysMap.get(tree.id); // undefined nếu chưa từng cắt tỉa
+        const daysSince = getTreePruningDays(tree); // undefined nếu chưa từng cắt tỉa
         if (selectedPruning === 'NEVER' && daysSince !== undefined) return false;
         if (selectedPruning === '>30' && (daysSince !== undefined && daysSince <= 30)) return false;
         if (selectedPruning === '>60' && (daysSince !== undefined && daysSince <= 60)) return false;
@@ -349,6 +424,27 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
 
   return (
     <div className="space-y-5 animate-fade-in pb-16">
+      {/* 📱 Mobile Workspace Segmented Switcher (List ↔ GIS Map) - FIX-01 */}
+      {onOpenMapView && (
+        <div className="lg:hidden flex items-center p-1 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
+          <button
+            type="button"
+            className="flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 min-h-[44px] bg-white dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-xs cursor-default"
+          >
+            <Trees className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span>📋 Danh Sách Cây</span>
+          </button>
+          <button
+            type="button"
+            onClick={onOpenMapView}
+            className="flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 min-h-[44px] text-slate-600 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-300 active:scale-98 cursor-pointer"
+          >
+            <MapPin className="w-4 h-4 text-rose-500" />
+            <span>🗺️ Bản Đồ GIS</span>
+          </button>
+        </div>
+      )}
+
       {/* 📡 Radar GPS Notification Banner */}
       {radarToast && (
         <div className="p-3.5 bg-gradient-to-r from-emerald-900 to-teal-900 text-white rounded-2xl border border-emerald-400/50 shadow-xl flex items-center justify-between gap-3 animate-in slide-in-from-top-3 duration-200">
@@ -446,6 +542,37 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
 
       {/* Filter & Search Bar */}
       <div className="p-3 bento-card space-y-2.5 dark:bg-[#0c1812] dark:border-slate-800">
+        {/* 🌟 KPI DRILL-DOWN ACTIVE CONTEXT BADGE */}
+        {(selectedHealth === 'AT_RISK' || selectedHealth === 'HEALTHY') && (
+          <div className="flex items-center justify-between p-2.5 rounded-xl border animate-in fade-in bg-slate-50 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 text-xs">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-slate-600 dark:text-slate-400">
+                Đang xem theo liên kết Dashboard:
+              </span>
+              {selectedHealth === 'AT_RISK' ? (
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1.5 shadow-2xs">
+                  <span>⚠️ Cây cần bảo dưỡng &amp; cắt tỉa (POOR &amp; CRITICAL)</span>
+                  <span className="font-mono font-black">({filteredTrees.length} cây)</span>
+                </span>
+              ) : (
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-[#00FF9D] border border-emerald-300 dark:border-emerald-700 flex items-center gap-1.5 shadow-2xs">
+                  <span>🌿 Nhóm cây sinh trưởng tốt (GOOD &amp; FAIR)</span>
+                  <span className="font-mono font-black">({filteredTrees.length} cây)</span>
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedHealth('ALL')}
+              className="px-2 py-0.5 rounded-lg text-xs font-bold text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer flex items-center gap-1 transition-colors shrink-0"
+              title="Xóa bộ lọc để xem tất cả cây"
+            >
+              <span>Xóa lọc</span>
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* HÀNG 1: TÌM KIẾM & ĐỊA BÀN TUYẾN ĐƯỜNG */}
         <div className="flex flex-wrap items-center gap-2.5">
           <div className="relative flex-1 min-w-[240px]">
@@ -593,9 +720,17 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
             <select
               value={selectedHealth}
               onChange={(e) => setSelectedHealth(e.target.value)}
-              className="px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700/80 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 shadow-2xs cursor-pointer"
+              className={`px-3 py-1.5 text-xs border rounded-xl shadow-2xs cursor-pointer font-semibold transition-all ${
+                selectedHealth === 'AT_RISK'
+                  ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300'
+                  : selectedHealth === 'HEALTHY'
+                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-[#00FF9D]'
+                  : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500'
+              }`}
             >
               <option value="ALL">Tất cả sức khỏe</option>
+              <option value="HEALTHY">🌿 Khỏe mạnh (GOOD &amp; FAIR)</option>
+              <option value="AT_RISK">⚠️ Cần bảo dưỡng (POOR &amp; CRITICAL)</option>
               <option value="GOOD">Tốt (GOOD)</option>
               <option value="FAIR">Bình thường (FAIR)</option>
               <option value="POOR">Kém (POOR)</option>
@@ -744,10 +879,10 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                     <button
                       onClick={() => setWorkOrderCorridor(corridorName)}
                       className="px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-transform active:scale-95 cursor-pointer"
-                      title="Xuất Lệnh Điều Động Công Tác Ca Trực Khổ A4 Cho Toàn Dãy Tuyến Này"
+                      title="Xuất Bảng Kê Danh Mục Cây Khổ A4 Cho Toàn Dãy Tuyến Này"
                     >
                       <ClipboardList className="w-3.5 h-3.5" />
-                      <span>Phiếu Lệnh Ca Trực (A4)</span>
+                      <span>Bảng Kê Tuyến (A4)</span>
                     </button>
                     <span className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold">
                       {corridorTrees.length} Cây Trên Dãy
@@ -847,7 +982,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
 
                           {/* Pruning Telemetry */}
                           {(() => {
-                            const daysSincePruned = treePruningDaysMap.get(tree.id);
+                            const daysSincePruned = getTreePruningDays(tree);
                             return (
                               <div className="flex items-center justify-between text-[10px] font-mono pt-1 border-t border-slate-200/50 dark:border-slate-800/60">
                                 <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
@@ -1052,7 +1187,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                       <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
                         <span className="text-[10px] text-slate-400 dark:text-slate-500 block">Kỳ cắt tỉa</span>
                         {(() => {
-                          const days = treePruningDaysMap.get(tree.id);
+                          const days = getTreePruningDays(tree);
                           return (
                             <span
                               className={`font-bold font-mono text-[11px] block truncate ${
@@ -1140,10 +1275,11 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                     <tr
                       key={tree.id}
                       id={`tree-card-${tree.id}`}
-                      className={`transition-colors ${
+                      onClick={() => onSelectTree(tree)}
+                      className={`transition-colors cursor-pointer ${
                         isRadarTarget
                           ? 'bg-emerald-100/70 dark:bg-emerald-950/50 font-semibold'
-                          : 'hover:bg-[#F8FAF8] dark:hover:bg-[#102017]/70'
+                          : 'hover:bg-emerald-50/60 dark:hover:bg-emerald-950/20'
                       }`}
                     >
                       <td className="py-3 px-4">
@@ -1152,8 +1288,12 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                             [{streetCode}]
                           </span>
                           <button
-                            onClick={() => onOpenQrModal(tree)}
-                            className="font-mono text-slate-500 hover:text-emerald-700 dark:text-slate-400 text-[10px]"
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenQrModal(tree);
+                            }}
+                            className="font-mono text-slate-500 hover:text-emerald-700 dark:text-slate-400 text-[10px] cursor-pointer"
                           >
                             {tree.publicCode}
                           </button>
@@ -1185,7 +1325,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                       <td className="py-3 px-4 font-mono text-[11px] text-slate-600 dark:text-slate-300">
                         <div>Đk: {tree.diameterCm || 28}cm · Cao: {tree.heightM || 7.5}m</div>
                         {(() => {
-                          const days = treePruningDaysMap.get(tree.id);
+                          const days = getTreePruningDays(tree);
                           return (
                             <div className={`text-[10px] flex items-center gap-1 ${days === undefined || days > 180 ? 'text-amber-600 dark:text-amber-400 font-bold' : 'text-slate-400'}`}>
                               <Scissors className="w-2.5 h-2.5" />
@@ -1202,13 +1342,21 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                       </td>
                       <td className="py-3 px-4 text-right space-x-1">
                         <button
-                          onClick={() => onSelectTree(tree)}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectTree(tree);
+                          }}
                           className="px-2.5 py-1 text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 rounded text-[11px] font-medium cursor-pointer"
                         >
                           Xem
                         </button>
                         <button
-                          onClick={() => onOpenCareModal(tree.id)}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenCareModal(tree.id);
+                          }}
                           className="px-2.5 py-1 bg-[#174B36] text-white hover:bg-[#347A50] dark:bg-emerald-600 dark:hover:bg-emerald-500 rounded text-[11px] font-medium cursor-pointer"
                         >
                           Chăm sóc

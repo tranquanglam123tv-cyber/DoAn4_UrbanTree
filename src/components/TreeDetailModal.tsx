@@ -27,6 +27,7 @@ import { storage } from '../db/storage';
 import { blockchainService } from '../services/blockchainService';
 import { DigitalAlloyTag } from './DigitalAlloyTag';
 import { calculateISATraqRating, getTreeCorridor, getTreeMilestone, getTreeStreetCode } from '../utils/treeUtils';
+import { RightSlideOverDrawer } from './common/RightSlideOverDrawer';
 
 interface TreeDetailModalProps {
   tree: Tree | null;
@@ -92,77 +93,63 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto"
-      data-lenis-prevent
-      onWheel={(e) => e.stopPropagation()}
-    >
-      <div
-        className="bg-white dark:bg-[#0c1812] rounded-3xl max-w-3xl w-full max-h-[92vh] shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex flex-col border border-slate-200 dark:border-emerald-500/30 dark:text-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto text-xs"
-        data-lenis-prevent
-        onWheel={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="px-6 py-3.5 bg-gradient-to-r from-emerald-800 via-[#174B36] to-emerald-950 dark:from-[#091b12] dark:to-[#040f09] dark:border-b dark:border-emerald-500/30 text-white flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-white/15 dark:bg-emerald-500/20 text-[#F3E8B2] dark:text-[#00FF9D] flex items-center justify-center border border-white/20 dark:border-emerald-500/40 shadow-xs shrink-0">
-              <Trees className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                <span className="px-2.5 py-0.5 rounded-lg bg-black/40 text-amber-300 font-mono text-xs font-black border border-amber-400/30 shadow-2xs whitespace-nowrap shrink-0">
-                  [{streetCode}]
-                </span>
-                <h2 className="text-base font-bold text-white tracking-tight truncate">
-                  {tree.displayName}
-                </h2>
-                <span
-                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full shrink-0 ${
-                    tree.healthStatus === 'GOOD'
-                      ? 'bg-emerald-500/30 text-emerald-200 border border-emerald-400/40'
-                      : tree.healthStatus === 'FAIR'
-                      ? 'bg-yellow-500/30 text-yellow-200 border border-yellow-400/40'
-                      : tree.healthStatus === 'POOR'
-                      ? 'bg-orange-500/30 text-orange-200 border border-orange-400/40'
-                      : 'bg-red-500/30 text-red-200 border border-red-400/40'
-                  }`}
-                >
-                  {tree.healthStatus}
-                </span>
-              </div>
-              <p className="text-xs text-white/80 mt-1 flex items-center gap-1.5 truncate">
-                <MapPin className="w-3.5 h-3.5 text-rose-300 shrink-0" />
-                <strong className="text-amber-200">{milestone}</strong> · <span className="opacity-90">{corridor}</span>
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0 ml-2">
-            <button
-              onClick={() => onOpenQrModal(tree)}
-              title="Xem & in mã QR"
-              className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors cursor-pointer"
-            >
-              <QrCode className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => onOpenEditModal(tree)}
-              title="Chỉnh sửa thông tin cây"
-              className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors cursor-pointer"
-            >
-              <Edit className="w-4 h-4" />
-            </button>
-            <button
-              onClick={onClose}
-              className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+    <RightSlideOverDrawer
+      isOpen={!!tree}
+      onClose={onClose}
+      widthClass="max-w-2xl sm:max-w-3xl"
+      title={
+        <div className="flex items-center gap-2">
+          <span className="px-2 py-0.5 rounded-md bg-slate-900 text-amber-300 dark:bg-black/60 font-mono text-xs font-bold border border-amber-400/30">
+            [{streetCode}]
+          </span>
+          <span className="text-base font-bold text-slate-900 dark:text-white truncate">
+            {tree.displayName}
+          </span>
         </div>
-
+      }
+      subtitle={
+        <span className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+          <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+          <strong className="text-slate-700 dark:text-slate-200">{milestone}</strong> · <span>{corridor}</span>
+        </span>
+      }
+      headerBadge={
+        <span
+          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+            tree.healthStatus === 'GOOD'
+              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40'
+              : tree.healthStatus === 'FAIR'
+              ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40'
+              : tree.healthStatus === 'POOR'
+              ? 'bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-300 border border-orange-300 dark:border-orange-500/40'
+              : 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40'
+          }`}
+        >
+          {tree.healthStatus}
+        </span>
+      }
+      headerActions={
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => onOpenQrModal(tree)}
+            title="Xem & in mã QR"
+            className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+          >
+            <QrCode className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => onOpenEditModal(tree)}
+            title="Chỉnh sửa thông tin cây"
+            className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+          >
+            <Edit className="w-4 h-4" />
+          </button>
+        </div>
+      }
+    >
+      <div className="flex flex-col -m-5">
         {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 px-6 bg-slate-50 dark:bg-slate-900/80 text-xs font-semibold shrink-0 overflow-x-auto scrollbar-none gap-1">
+        <div className="flex border-b border-slate-200 dark:border-slate-800 px-5 bg-slate-50 dark:bg-slate-900/80 text-xs font-semibold shrink-0 overflow-x-auto scrollbar-none gap-1 sticky top-0 z-10">
           <button
             onClick={() => setActiveTab('info')}
             className={`py-3 px-3.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
@@ -723,6 +710,6 @@ export const TreeDetailModal: React.FC<TreeDetailModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </RightSlideOverDrawer>
   );
 };

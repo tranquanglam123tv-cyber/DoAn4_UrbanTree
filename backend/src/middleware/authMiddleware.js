@@ -17,7 +17,8 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
  */
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  // Ưu tiên 1: Bearer Header (REST API). Ưu tiên 2: Query param (cho native EventSource SSE)
+  const token = (authHeader && authHeader.split(' ')[1]) || req.query.token;
 
   if (token) {
     return jwt.verify(token, JWT_SECRET, (err, userPayload) => {
@@ -63,6 +64,26 @@ function authenticateToken(req, res, next) {
 }
 
 /**
+ * Middleware xác thực tùy chọn (Optional Authentication)
+ * Dùng cho các endpoint public nhưng hiển thị dữ liệu chi tiết hơn (như PII) nếu caller có JWT hợp lệ.
+ * TUYỆT ĐỐI KHÔNG tin cậy header x-user-role từ client.
+ */
+function optionalAuthenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = (authHeader && authHeader.split(' ')[1]) || req.query.token;
+
+  if (token) {
+    return jwt.verify(token, JWT_SECRET, (err, userPayload) => {
+      if (!err && userPayload) {
+        req.user = userPayload;
+      }
+      next();
+    });
+  }
+  next();
+}
+
+/**
  * Middleware phân quyền (Role-based Access Control)
  * @param {string[]} allowedRoles Mảng các quyền được phép (['ADMIN', 'STAFF'])
  */
@@ -80,6 +101,7 @@ function requireRoles(...allowedRoles) {
 
 module.exports = {
   authenticateToken,
+  optionalAuthenticateToken,
   requireRoles
 };
 

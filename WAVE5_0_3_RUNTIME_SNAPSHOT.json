@@ -1,0 +1,242 @@
+{
+  "wave": "WAVE-5.0.3-FINAL-UI-TRUTH",
+  "timestamp": "2026-11-15T03:49:26.388Z",
+  "database": {
+    "path": "D:\\TQLCNTT2311074\\Nam4HK1\\UrbunTreeDoAn4\\backend\\urbantree.db",
+    "sizeBytes": 2764800,
+    "sizeMb": "2.637",
+    "sha256": "cbc730df4fb739454bf2a5bd0f3dcfdfcf7dcfce1cd7e2016f9959594c58937c"
+  },
+  "frozenBoundary": {
+    "path": "D:\\TQLCNTT2311074\\Nam4HK1\\UrbunTreeDoAn4\\src\\components\\HomeLandingView.tsx",
+    "gitHash": "09dcbe69957ab2f762ea6e4cf24854cf1ab2117e",
+    "baselineHash": "09dcbe69957ab2f762ea6e4cf24854cf1ab2117e",
+    "isValid": true,
+    "gitDiffLines": 0
+  },
+  "entityCounts": {
+    "totalTrees": 5425,
+    "totalWorkOrders": 148,
+    "totalItems": 542,
+    "totalCareRecords": 542,
+    "totalIncidents": 104,
+    "totalIntegrityAnchors": 184,
+    "careBreakdown": [
+      {
+        "anchor_status": "CONFIRMED",
+        "c": 377
+      },
+      {
+        "anchor_status": "PENDING_VERIFICATION",
+        "c": 165
+      }
+    ],
+    "anchorsBreakdown": [
+      {
+        "record_type": "CARE_RECORD",
+        "c": 163
+      },
+      {
+        "record_type": "INCIDENT_REPORT",
+        "c": 1
+      },
+      {
+        "record_type": "TREE_PROFILE",
+        "c": 20
+      }
+    ]
+  },
+  "telemetry": {
+    "timeline": [
+      {
+        "date": "2026-11-09",
+        "day": "T2",
+        "label": "Thứ 2",
+        "dateStr": "9/11",
+        "count": 0,
+        "watering": 0,
+        "pruning": 0,
+        "fertilizing": 0,
+        "treatment": 0,
+        "mainStreet": "Khu vực Trung tâm Quận Ninh Kiều"
+      },
+      {
+        "date": "2026-11-10",
+        "day": "T3",
+        "label": "Thứ 3",
+        "dateStr": "10/11",
+        "count": 0,
+        "watering": 0,
+        "pruning": 0,
+        "fertilizing": 0,
+        "treatment": 0,
+        "mainStreet": "Khu vực Trung tâm Quận Ninh Kiều"
+      },
+      {
+        "date": "2026-11-11",
+        "day": "T4",
+        "label": "Thứ 4",
+        "dateStr": "11/11",
+        "count": 0,
+        "watering": 0,
+        "pruning": 0,
+        "fertilizing": 0,
+        "treatment": 0,
+        "mainStreet": "Khu vực Trung tâm Quận Ninh Kiều"
+      },
+      {
+        "date": "2026-11-12",
+        "day": "T5",
+        "label": "Thứ 5",
+        "dateStr": "12/11",
+        "count": 0,
+        "watering": 0,
+        "pruning": 0,
+        "fertilizing": 0,
+        "treatment": 0,
+        "mainStreet": "Khu vực Trung tâm Quận Ninh Kiều"
+      },
+      {
+        "date": "2026-11-13",
+        "day": "T6",
+        "label": "Thứ 6",
+        "dateStr": "13/11",
+        "count": 93,
+        "watering": 90,
+        "pruning": 1,
+        "fertilizing": 1,
+        "treatment": 1,
+        "mainStreet": "Công viên 23/9, Q.1, TP.HCM"
+      },
+      {
+        "date": "2026-11-14",
+        "day": "T7",
+        "label": "Thứ 7",
+        "dateStr": "14/11",
+        "count": 181,
+        "watering": 75,
+        "pruning": 106,
+        "fertilizing": 0,
+        "treatment": 0,
+        "mainStreet": "Công viên 23/9, Q.1, TP.HCM"
+      },
+      {
+        "date": "2026-11-15",
+        "day": "CN",
+        "label": "Chủ Nhật",
+        "dateStr": "15/11",
+        "count": 268,
+        "watering": 0,
+        "pruning": 268,
+        "fertilizing": 0,
+        "treatment": 0,
+        "mainStreet": "Cần Thơ"
+      }
+    ],
+    "totalWeeklyCare": 542,
+    "averageDailyCare": 77.4,
+    "peakDay": {
+      "day": "CN",
+      "label": "Chủ Nhật",
+      "date": "2026-11-15",
+      "count": 268,
+      "mainStreet": "Cần Thơ"
+    },
+    "actionDistribution": {
+      "watering": {
+        "count": 165,
+        "percent": 30.4
+      },
+      "pruning": {
+        "count": 375,
+        "percent": 69.2
+      },
+      "fertilizing": {
+        "count": 1,
+        "percent": 0.2
+      },
+      "treatment": {
+        "count": 1,
+        "percent": 0.2
+      }
+    },
+    "completionRate": 80.6,
+    "slaStatus": "Đang xử lý theo tiến độ SLA"
+  },
+  "blockchainAnchorStatus": {
+    "trees": {
+      "total": 5425,
+      "anchored": 20,
+      "unanchored": 5405,
+      "coveragePercent": 0.4
+    },
+    "careRecords": {
+      "total": 542,
+      "anchored": 163,
+      "unanchored": 379,
+      "coveragePercent": 30.1
+    },
+    "incidents": {
+      "total": 104,
+      "anchored": 1,
+      "unanchored": 103,
+      "coveragePercent": 1
+    },
+    "totalAnchored": 184,
+    "currentBlockNumber": 104315,
+    "contractAddress": "0x71C8A5A4349488a7B6a24A61dBebf0cf4A6112C8",
+    "chainId": 31337,
+    "isOnline": true
+  },
+  "stormCampaign": {
+    "id": "campaign-storm-2026",
+    "code": "CAMP-STORM-2026",
+    "name": "Đợt diễn tập bão khép kín Wave 5.0",
+    "type": "STORM_PREPARATION",
+    "status": "IN_PROGRESS",
+    "totalDetectedTrees": 5424,
+    "assignedTrees": 70,
+    "inProgressTrees": 47,
+    "fieldCompletedTrees": 105,
+    "verifiedTrees": 126,
+    "resolvedTrees": 126,
+    "remainingTrees": 5298,
+    "unassignedTrees": 5181,
+    "blockedTrees": 0,
+    "reconciliationFormula": "5424 = 126 (VERIFIED) + 47 (IN_PROGRESS) + 70 (ASSIGNED) + 5181 (UNASSIGNED) + 0 (BLOCKED)",
+    "isReconciled": true,
+    "resolvedAt": "2026-11-15T02:07:51.876Z",
+    "history": [
+      {
+        "timestamp": "2026-11-15T02:07:51.766Z",
+        "event": "TEST_INIT",
+        "details": "Khởi tạo đợt kiểm chứng nghiệp vụ với số lượng kiểm soát 10 cây cảnh báo bão."
+      },
+      {
+        "timestamp": "2026-11-15T02:07:51.876Z",
+        "event": "RESOLVED",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-CT-471780-176]: +10 cây được xác nhận an toàn. Còn tồn: 0 cây."
+      },
+      {
+        "timestamp": "2026-11-15T02:41:54.222Z",
+        "event": "RESOLVED",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-CT-513814-273]: +9 cây được xác nhận an toàn. Còn tồn: 0 cây."
+      },
+      {
+        "timestamp": "2026-11-15T02:42:33.197Z",
+        "event": "VERIFIED_BATCH",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-CT-552816-376]: +9 cây được xác nhận an toàn. Còn tồn: 5365 cây."
+      },
+      {
+        "timestamp": "2026-11-15T02:56:33.309Z",
+        "event": "VERIFIED_BATCH",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-CT-392769-180]: +9 cây được xác nhận an toàn. Còn tồn: 5356 cây."
+      },
+      {
+        "timestamp": "2026-11-15T03:48:30.667Z",
+        "event": "VERIFIED_BATCH",
+        "details": "Nghiệm thu hoàn tất lệnh [WO-CT-510212-549]: +9 cây được xác nhận an toàn. Còn tồn: 5298 cây."
+      }
+    ]
+  }
+}

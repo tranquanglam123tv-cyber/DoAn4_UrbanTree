@@ -14,9 +14,10 @@ const Incident = {
     filters = filters || {};
 
     let query = `
-      SELECT incidents.*, trees.tree_code, trees.species, trees.location_name 
+      SELECT incidents.*, trees.tree_code, trees.species, trees.location_name, work_orders.code AS work_order_code 
       FROM incidents 
       LEFT JOIN trees ON incidents.tree_id = trees.id 
+      LEFT JOIN work_orders ON incidents.work_order_id = work_orders.id
       WHERE 1=1
     `;
     const params = [];
@@ -57,9 +58,10 @@ const Incident = {
    */
   getById: (id, callback) => {
     const query = `
-      SELECT incidents.*, trees.tree_code, trees.species, trees.location_name 
+      SELECT incidents.*, trees.tree_code, trees.species, trees.location_name, work_orders.code AS work_order_code 
       FROM incidents 
       LEFT JOIN trees ON incidents.tree_id = trees.id 
+      LEFT JOIN work_orders ON incidents.work_order_id = work_orders.id 
       WHERE incidents.id = ?
     `;
     db.get(query, [id], callback);
@@ -72,9 +74,10 @@ const Incident = {
    */
   getByTreeId: (tree_id, callback) => {
     const query = `
-      SELECT incidents.*, trees.tree_code, trees.species, trees.location_name 
+      SELECT incidents.*, trees.tree_code, trees.species, trees.location_name, work_orders.code AS work_order_code 
       FROM incidents 
       LEFT JOIN trees ON incidents.tree_id = trees.id 
+      LEFT JOIN work_orders ON incidents.work_order_id = work_orders.id 
       WHERE incidents.tree_id = ? 
       ORDER BY incidents.id DESC
     `;

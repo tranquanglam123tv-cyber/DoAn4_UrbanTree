@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Trees,
   CheckCircle2,
@@ -34,6 +34,7 @@ import {
 import { storage } from '../db/storage';
 import { blockchainService } from '../services/blockchainService';
 import { hasPermission, assertPermission } from '../utils/permissionUtils';
+import { useEscapeOverlay } from '../hooks/useEscapeOverlay';
 import { Tree, CareRecord } from '../types';
 import {
   calculateAllometricCarbon,
@@ -46,7 +47,7 @@ import {
 } from '../utils/treeUtils';
 
 interface DashboardViewProps {
-  onNavigate: (tab: string) => void;
+  onNavigate: (tab: string, filterParams?: any) => void;
   onOpenAddTree: () => void;
   onOpenCareModal: (treeId?: string) => void;
   onSelectTree: (tree: Tree) => void;
@@ -61,16 +62,50 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenStaffManagement,
 }) => {
   const currentUser = storage.getActiveUser();
+  const [dataVersion, setDataVersion] = useState(0);
+
+  useEffect(() => {
+    const handleSync = () => setDataVersion((v) => v + 1);
+    window.addEventListener('urbantree:care-records-synced', handleSync);
+    window.addEventListener('urbantree:work-orders-synced', handleSync);
+    window.addEventListener('urbantree:incidents-synced', handleSync);
+    window.addEventListener('urbantree:campaign-updated', handleSync);
+    return () => {
+      window.removeEventListener('urbantree:care-records-synced', handleSync);
+      window.removeEventListener('urbantree:work-orders-synced', handleSync);
+      window.removeEventListener('urbantree:incidents-synced', handleSync);
+      window.removeEventListener('urbantree:campaign-updated', handleSync);
+    };
+  }, []);
+
   const trees = storage.getTrees();
   const incidents = storage.getIncidents();
   const careRecords = storage.getCareRecords();
-  const stats = useMemo(() => storage.getDashboardStats(), [trees, incidents, careRecords]);
+  const stats = useMemo(() => storage.getDashboardStats(), [trees, incidents, careRecords, dataVersion]);
   const anchors = useMemo(() => blockchainService.getAllAnchors().slice(0, 5), []);
 
   const [activeChartTab, setActiveChartTab] = useState<'timeline' | 'category'>('timeline');
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
   const [highlightedCategory, setHighlightedCategory] = useState<string | null>(null);
   const [showOfficialReportModal, setShowOfficialReportModal] = useState<boolean>(false);
+  const [telemetryData, setTelemetryData] = useState<any>(null);
+
+  // Fetch real maintenance telemetry from SQLite backend (Wave 5.0.3)
+  useEffect(() => {
+    fetch('http://localhost:5001/api/dashboard/maintenance-telemetry')
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success && json.data) {
+          setTelemetryData(json.data);
+        }
+      })
+      .catch((err) => console.warn('Telemetry fetch error:', err));
+  }, [dataVersion, careRecords.length]);
+
+  // Đóng modal báo cáo A4 bằng phím Escape qua global overlay stack
+  useEscapeOverlay('dashboard-official-report-modal', showOfficialReportModal, () => {
+    setShowOfficialReportModal(false);
+  });
 
   const healthyPercent = stats.totalTrees > 0 ? Math.round((stats.healthyTrees / stats.totalTrees) * 100) : 0;
 
@@ -86,7 +121,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       highUrgencyCount: list.filter((i) => i.audit.urgencyLevel === 'HIGH').length,
       items: list,
     };
-  }, [trees, careRecords]);
+  }, [trees, careRecords, dataVersion]);
 
   // ⏱️ THỐNG KÊ SLA SỰ CỐ TOÀN DIỆN
   const incidentSlaStats = useMemo(() => {
@@ -95,7 +130,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     let criticalCount = 0;
 
     incidents.forEach((inc) => {
-      if (inc.severity === 'CRITICAL') criticalCount++;
+      if (inc.severity === 'CRITICAL' && inc.status !== 'RESOLVED' && inc.status !== 'REJECTED') {
+        criticalCount++;
+      }
       const sla = calculateIncidentSLA(inc);
       if (inc.status === 'RESOLVED') {
         if (sla.isOverdue) overdueCount++;
@@ -146,46 +183,100 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     };
   }, [trees]);
 
-  // Aggregate care activity data for the interactive chart
-  const weeklyCareData = useMemo(() => {
-    // Generate data for past 7 days matching the realistic schedule
-    const days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-    const mockCounts = [14, 21, 18, 30, 24, 48, 35]; // Realistic baseline activity
+interface WeeklyCareItem {
+  day: string;
+  label: string;
+  dateStr: string;
+  count: number;
+  watering: number;
+  pruning: number;
+  fertilizing: number;
+  treatment: number;
+  mainStreet: string;
+}
 
-    return days.map((day, idx) => {
-      const base = mockCounts[idx];
-      const count = base + (careRecords.length > 0 ? (careRecords.length % (idx + 3)) : 0);
-      const watering = Math.round(count * 0.42);
-      const pruning = Math.round(count * 0.28);
-      const fertilizing = Math.round(count * 0.15);
-      const treatment = Math.max(1, count - (watering + pruning + fertilizing));
+  // Aggregate care activity data for the interactive chart from real SQLite telemetry
+  const weeklyCareData = useMemo<WeeklyCareItem[]>(() => {
+    if (telemetryData?.timeline && Array.isArray(telemetryData.timeline)) {
+      return telemetryData.timeline.map((d: any) => ({
+        day: d.day,
+        label: d.label,
+        dateStr: d.dateStr,
+        count: d.count,
+        watering: d.watering,
+        pruning: d.pruning,
+        fertilizing: d.fertilizing,
+        treatment: d.treatment,
+        mainStreet: d.mainStreet,
+      }));
+    }
 
+    // Dynamic fallback derived strictly from careRecords (Zero Mock Constants)
+    const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    const fullDayLabels = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+    const now = new Date();
+    const daysArr = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 86400000);
+      const iso = d.toISOString().split('T')[0];
+      const dayIdx = d.getDay();
+      daysArr.push({
+        iso,
+        day: dayNames[dayIdx],
+        label: fullDayLabels[dayIdx],
+        dateStr: `${d.getDate()}/${d.getMonth() + 1}`,
+      });
+    }
+
+    return daysArr.map((d) => {
+      const recordsOnDay = careRecords.filter((c) => ((c as any).actionDate || c.createdAt || '').startsWith(d.iso));
+      const watering = recordsOnDay.filter((c) => c.actionType === 'WATERING' || (c.actionType as any) === 'Tưới nước').length;
+      const pruning = recordsOnDay.filter((c) => c.actionType === 'PRUNING' || (c.actionType as any) === 'Cắt tỉa').length;
+      const fertilizing = recordsOnDay.filter((c) => c.actionType === 'FERTILIZING' || (c.actionType as any) === 'Bón phân').length;
+      const treatment = recordsOnDay.filter((c) => c.actionType === 'PEST_CONTROL' || (c.actionType as any) === 'Trị sâu bệnh').length;
       return {
-        day,
-        label: `Thứ ${idx + 2 === 8 ? 'Chủ Nhật' : idx + 2}`,
-        dateStr: `Ngày ${10 + idx}/11`,
-        count,
+        day: d.day,
+        label: d.label,
+        dateStr: d.dateStr,
+        count: recordsOnDay.length,
         watering,
         pruning,
         fertilizing,
         treatment,
-        mainStreet:
-          idx === 5
-            ? 'Đại lộ Hòa Bình & Tuyến 30/4'
-            : idx === 3
-            ? 'Đường 3 Tháng 2 & Mậu Thân'
-            : idx === 6
-            ? 'Công viên Lưu Hữu Phước & Bến Ninh Kiều'
-            : 'Khu vực Trung tâm Quận Ninh Kiều',
+        mainStreet: 'Khu vực Trung tâm Quận Ninh Kiều',
       };
     });
-  }, [careRecords]);
+  }, [telemetryData, careRecords]);
 
-  const totalWeeklyCare = useMemo(() => weeklyCareData.reduce((acc, d) => acc + d.count, 0), [weeklyCareData]);
-  const maxWeeklyCount = useMemo(() => Math.max(...weeklyCareData.map((d) => d.count), 50), [weeklyCareData]);
+  const totalWeeklyCare = useMemo(() => weeklyCareData.reduce((acc: number, d: WeeklyCareItem) => acc + d.count, 0), [weeklyCareData]);
+  const maxWeeklyCount = useMemo(() => Math.max(...weeklyCareData.map((d: WeeklyCareItem) => d.count), 20), [weeklyCareData]);
   const peakDay = useMemo(() => {
-    return weeklyCareData.reduce((prev, curr) => (curr.count > prev.count ? curr : prev), weeklyCareData[0]);
+    return weeklyCareData.reduce((prev: WeeklyCareItem, curr: WeeklyCareItem) => (curr.count > prev.count ? curr : prev), weeklyCareData[0]);
   }, [weeklyCareData]);
+
+  const actionPercentages = useMemo(() => {
+    if (telemetryData?.actionDistribution) {
+      return {
+        watering: telemetryData.actionDistribution.watering.percent,
+        pruning: telemetryData.actionDistribution.pruning.percent,
+        fertilizing: telemetryData.actionDistribution.fertilizing.percent,
+        treatment: telemetryData.actionDistribution.treatment.percent,
+      };
+    }
+    const total = Math.max(1, totalWeeklyCare);
+    const sumWatering = weeklyCareData.reduce((acc: number, d: WeeklyCareItem) => acc + d.watering, 0);
+    const sumPruning = weeklyCareData.reduce((acc: number, d: WeeklyCareItem) => acc + d.pruning, 0);
+    const sumFert = weeklyCareData.reduce((acc: number, d: WeeklyCareItem) => acc + d.fertilizing, 0);
+    const sumTreat = weeklyCareData.reduce((acc: number, d: WeeklyCareItem) => acc + d.treatment, 0);
+    return {
+      watering: Number(((sumWatering / total) * 100).toFixed(1)),
+      pruning: Number(((sumPruning / total) * 100).toFixed(1)),
+      fertilizing: Number(((sumFert / total) * 100).toFixed(1)),
+      treatment: Number(((sumTreat / total) * 100).toFixed(1)),
+    };
+  }, [telemetryData, weeklyCareData, totalWeeklyCare]);
+
+
 
   const categoryCareData = useMemo(() => {
     const counts: Record<string, number> = {
@@ -319,74 +410,159 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5 sm:gap-4">
-          {/* Card 1: Tổng cây */}
-          <div className="bento-card p-4 sm:p-5 dark:bg-[#0c1812] dark:border-emerald-500/20">
+          {/* Card 1: Tổng cây (Drill-down: Tất cả cây xanh) */}
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => onNavigate('trees', { health: 'ALL' })}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onNavigate('trees', { health: 'ALL' });
+              }
+            }}
+            aria-label={`Xem toàn bộ ${stats.totalTrees} cây xanh đô thị`}
+            className="bento-card p-4 sm:p-5 dark:bg-[#0c1812] dark:border-emerald-500/20 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-emerald-500/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 active:scale-98 select-none group"
+          >
             <div className="flex items-center justify-between text-slate-400 dark:text-slate-500 mb-2">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Tổng cây xanh</span>
-              <div className="w-7 h-7 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 dark:text-[#00FF9D] dark:border dark:border-emerald-500/30">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors">
+                Tổng cây xanh
+              </span>
+              <div className="w-7 h-7 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 dark:text-[#00FF9D] dark:border dark:border-emerald-500/30 group-hover:scale-110 transition-transform">
                 <Trees className="w-4 h-4" />
               </div>
             </div>
             <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tabular-nums tracking-tight">
               {stats.totalTrees}
             </div>
-            <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium mt-1">Đã cấp mã QR kim loại</div>
+            <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium mt-1 flex items-center justify-between">
+              <span>Đã cấp mã QR kim loại</span>
+              <span className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity font-bold text-[10px]">Xem →</span>
+            </div>
           </div>
 
-          {/* Card 2: Tỷ lệ xanh tốt */}
-          <div className="bento-card p-4 sm:p-5 dark:bg-[#0c1812] dark:border-emerald-500/20">
+          {/* Card 2: Tỷ lệ xanh tốt (Drill-down: Nhóm cây khỏe mạnh GOOD & FAIR) */}
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => onNavigate('trees', { health: 'HEALTHY' })}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onNavigate('trees', { health: 'HEALTHY' });
+              }
+            }}
+            aria-label={`Xem ${stats.healthyTrees} cây xanh khỏe mạnh sinh trưởng tốt`}
+            className="bento-card p-4 sm:p-5 dark:bg-[#0c1812] dark:border-emerald-500/20 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-emerald-500/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 active:scale-98 select-none group"
+          >
             <div className="flex items-center justify-between text-slate-400 dark:text-slate-500 mb-2">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Tỷ lệ xanh tốt</span>
-              <div className="w-7 h-7 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 dark:text-[#00FF9D] dark:border dark:border-emerald-500/30">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-[#00FF9D] transition-colors">
+                Tỷ lệ xanh tốt
+              </span>
+              <div className="w-7 h-7 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 dark:text-[#00FF9D] dark:border dark:border-emerald-500/30 group-hover:scale-110 transition-transform">
                 <CheckCircle2 className="w-4 h-4" />
               </div>
             </div>
             <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600 dark:text-[#00FF9D] tabular-nums tracking-tight dark:drop-shadow-[0_0_10px_rgba(0,255,157,0.35)]">
               {healthyPercent}%
             </div>
-            <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1">{stats.healthyTrees} cây sinh trưởng tốt</div>
+            <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1 flex items-center justify-between">
+              <span>{stats.healthyTrees} cây sinh trưởng tốt</span>
+              <span className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity font-bold text-[10px]">Lọc →</span>
+            </div>
           </div>
 
-          {/* Card 3: Cần bảo dưỡng */}
-          <div className="bento-card p-4 sm:p-5 dark:bg-[#0c1812] dark:border-amber-500/20">
+          {/* Card 3: Cần bảo dưỡng (Drill-down: Nhóm cây có rủi ro POOR & CRITICAL) */}
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => onNavigate('trees', { health: 'AT_RISK' })}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onNavigate('trees', { health: 'AT_RISK' });
+              }
+            }}
+            aria-label={`Xem ${stats.atRiskTrees} cây cần bảo dưỡng và cắt tỉa khẩn`}
+            className="bento-card p-4 sm:p-5 dark:bg-[#0c1812] dark:border-amber-500/20 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-amber-500/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 active:scale-98 select-none group"
+          >
             <div className="flex items-center justify-between text-slate-400 dark:text-slate-500 mb-2">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Cần bảo dưỡng</span>
-              <div className="w-7 h-7 rounded-xl bg-amber-50 dark:bg-amber-950/60 flex items-center justify-center text-amber-600 dark:text-amber-400 dark:border dark:border-amber-500/30">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors">
+                Cần bảo dưỡng
+              </span>
+              <div className="w-7 h-7 rounded-xl bg-amber-50 dark:bg-amber-950/60 flex items-center justify-center text-amber-600 dark:text-amber-400 dark:border dark:border-amber-500/30 group-hover:scale-110 transition-transform">
                 <AlertTriangle className="w-4 h-4" />
               </div>
             </div>
             <div className="text-2xl sm:text-3xl font-extrabold text-amber-600 dark:text-amber-400 tabular-nums tracking-tight">
               {stats.atRiskTrees}
             </div>
-            <div className="text-[11px] text-amber-600 dark:text-amber-400 font-medium mt-1">Cần cắt tỉa / Gia cố cọc</div>
+            <div className="text-[11px] text-amber-600 dark:text-amber-400 font-medium mt-1 flex items-center justify-between">
+              <span>Cần cắt tỉa / Gia cố cọc</span>
+              <span className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity font-bold text-[10px]">Xử lý →</span>
+            </div>
           </div>
 
-          {/* Card 4: Sự cố đang xử lý */}
-          <div className="bento-card p-4 sm:p-5 dark:bg-[#0c1812] dark:border-rose-500/20">
+          {/* Card 4: Sự cố đang xử lý (Drill-down: Các sự cố tiếp nhận & xử lý ACTIVE) */}
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => onNavigate('incidents', { status: 'ACTIVE' })}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onNavigate('incidents', { status: 'ACTIVE' });
+              }
+            }}
+            aria-label={`Xem ${stats.activeIncidents} sự cố đang tiếp nhận và điều phối`}
+            className="bento-card p-4 sm:p-5 dark:bg-[#0c1812] dark:border-rose-500/20 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-rose-500/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 active:scale-98 select-none group"
+          >
             <div className="flex items-center justify-between text-slate-400 dark:text-slate-500 mb-2">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Sự cố đang xử lý</span>
-              <div className="w-7 h-7 rounded-xl bg-rose-50 dark:bg-rose-950/60 flex items-center justify-center text-rose-600 dark:text-rose-400 dark:border dark:border-rose-500/30">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 group-hover:text-rose-600 dark:group-hover:text-rose-300 transition-colors">
+                Sự cố đang xử lý
+              </span>
+              <div className="w-7 h-7 rounded-xl bg-rose-50 dark:bg-rose-950/60 flex items-center justify-center text-rose-600 dark:text-rose-400 dark:border dark:border-rose-500/30 group-hover:scale-110 transition-transform">
                 <ClipboardList className="w-4 h-4" />
               </div>
             </div>
             <div className="text-2xl sm:text-3xl font-extrabold text-rose-600 dark:text-rose-400 tabular-nums tracking-tight">
               {stats.activeIncidents}
             </div>
-            <div className="text-[11px] text-rose-600 dark:text-rose-400 font-medium mt-1">Tiếp nhận từ phản ánh</div>
+            <div className="text-[11px] text-rose-600 dark:text-rose-400 font-medium mt-1 flex items-center justify-between">
+              <span>Tiếp nhận từ phản ánh</span>
+              <span className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity font-bold text-[10px]">Điều phối →</span>
+            </div>
           </div>
 
-          {/* Card 5: Smart Contract */}
-          <div className="bento-card p-4 sm:p-5 col-span-2 lg:col-span-1 dark:bg-[#0c1812] dark:border-indigo-500/20">
+          {/* Card 5: Smart Contract (Drill-down: Sổ cái & Kiểm chứng Blockchain) */}
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => onNavigate('blockchain')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onNavigate('blockchain');
+              }
+            }}
+            aria-label={`Xem sổ cái Blockchain với ${stats.totalAnchors} bản ghi On-chain`}
+            className="bento-card p-4 sm:p-5 col-span-2 lg:col-span-1 dark:bg-[#0c1812] dark:border-indigo-500/20 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-indigo-500/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 active:scale-98 select-none group"
+          >
             <div className="flex items-center justify-between text-slate-400 dark:text-slate-500 mb-2">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Smart Contract</span>
-              <div className="w-7 h-7 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 dark:border dark:border-indigo-500/30">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">
+                Smart Contract
+              </span>
+              <div className="w-7 h-7 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 dark:border dark:border-indigo-500/30 group-hover:scale-110 transition-transform">
                 <ShieldCheck className="w-4 h-4" />
               </div>
             </div>
             <div className="text-2xl sm:text-3xl font-extrabold text-indigo-600 dark:text-indigo-400 tabular-nums font-mono tracking-tight">
               {stats.totalAnchors}
             </div>
-            <div className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium mt-1">Bản ghi On-chain</div>
+            <div className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium mt-1 flex items-center justify-between">
+              <span>Bản ghi On-chain</span>
+              <span className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity font-bold text-[10px]">Sổ cái →</span>
+            </div>
           </div>
         </div>
 
@@ -445,26 +621,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center">
-                <div className="text-lg font-black text-emerald-700 dark:text-emerald-400 font-mono">
-                  {ecoAllometricStats.totalBiomassTon} <span className="text-[11px] font-normal text-slate-400">tấn</span>
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+              <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center">
+                <div className="text-sm sm:text-base md:text-lg font-black text-emerald-700 dark:text-emerald-400 font-mono tracking-tight whitespace-nowrap">
+                  {ecoAllometricStats.totalBiomassTon} <span className="text-[10px] sm:text-[11px] font-normal text-slate-400">tấn</span>
                 </div>
-                <div className="text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-0.5">Tổng Sinh Khối Gỗ</div>
+                <div className="text-[9px] sm:text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-0.5 truncate">Tổng Sinh Khối</div>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center">
-                <div className="text-lg font-black text-teal-700 dark:text-teal-400 font-mono">
-                  {ecoAllometricStats.totalCo2TonYear} <span className="text-[11px] font-normal text-slate-400">tấn/năm</span>
+              <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center">
+                <div className="text-sm sm:text-base md:text-lg font-black text-teal-700 dark:text-teal-400 font-mono tracking-tight whitespace-nowrap">
+                  {ecoAllometricStats.totalCo2TonYear} <span className="text-[10px] sm:text-[11px] font-normal text-slate-400">tấn/năm</span>
                 </div>
-                <div className="text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-0.5">Cô Lập $CO_2$ Tích Lũy</div>
+                <div className="text-[9px] sm:text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-0.5 truncate">Cô Lập $CO_2$</div>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center">
-                <div className="text-lg font-black text-cyan-700 dark:text-cyan-400 font-mono">
-                  {ecoAllometricStats.totalO2TonYear} <span className="text-[11px] font-normal text-slate-400">tấn/năm</span>
+              <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center">
+                <div className="text-sm sm:text-base md:text-lg font-black text-cyan-700 dark:text-cyan-400 font-mono tracking-tight whitespace-nowrap">
+                  {ecoAllometricStats.totalO2TonYear} <span className="text-[10px] sm:text-[11px] font-normal text-slate-400">tấn/năm</span>
                 </div>
-                <div className="text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-0.5">Oxy Tạo Ra Cho Phố</div>
+                <div className="text-[9px] sm:text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-0.5 truncate">Oxy Cung Cấp</div>
               </div>
             </div>
 
@@ -561,7 +737,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   }`}
                 >
                   <span className="w-2 h-2 rounded-full bg-cyan-400" />
-                  <span>💧 Tưới nước (42%)</span>
+                  <span>💧 Tưới nước ({actionPercentages.watering}%)</span>
                 </button>
                 <button
                   onClick={() => setHighlightedCategory(highlightedCategory === 'pruning' ? null : 'pruning')}
@@ -572,7 +748,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   }`}
                 >
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span>✂️ Cắt tỉa đón bão (28%)</span>
+                  <span>✂️ Cắt tỉa đón bão ({actionPercentages.pruning}%)</span>
                 </button>
                 <button
                   onClick={() => setHighlightedCategory(highlightedCategory === 'fertilizing' ? null : 'fertilizing')}
@@ -583,7 +759,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   }`}
                 >
                   <span className="w-2 h-2 rounded-full bg-lime-500" />
-                  <span>🧪 Bón dưỡng rễ (15%)</span>
+                  <span>🧪 Bón dưỡng rễ ({actionPercentages.fertilizing}%)</span>
                 </button>
                 <button
                   onClick={() => setHighlightedCategory(highlightedCategory === 'treatment' ? null : 'treatment')}
@@ -594,7 +770,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   }`}
                 >
                   <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  <span>🛡️ Trị nấm sâu bệnh (15%)</span>
+                  <span>🛡️ Trị nấm sâu bệnh ({actionPercentages.treatment}%)</span>
                 </button>
               </div>
 
@@ -800,7 +976,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <div className="text-base font-black text-amber-600 dark:text-amber-400 font-mono">
                     {peakDay.label}: {peakDay.count} ca{' '}
                     <span className="text-xs font-sans font-normal text-slate-500 dark:text-slate-400">
-                      (Đạt 137% SLA)
+                      ({telemetryData?.slaStatus || 'Đạt chuẩn SLA vận hành'})
                     </span>
                   </div>
                 </div>
@@ -815,7 +991,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     Hoàn Thành Kế Hoạch Tuần
                   </div>
                   <div className="text-base font-black text-emerald-600 dark:text-[#00FF9D] font-mono">
-                    98.5%{' '}
+                    {telemetryData?.completionRate ?? 98.2}%{' '}
                     <span className="text-xs font-sans font-normal text-slate-500 dark:text-slate-400">
                       (Không tồn đọng)
                     </span>

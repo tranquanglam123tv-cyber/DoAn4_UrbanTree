@@ -1,0 +1,112 @@
+{
+  "gate0": [
+    {
+      "testId": "G0-01",
+      "claim": "SQLite database exists at expected path",
+      "verdict": "PASS",
+      "details": "D:\\TQLCNTT2311074\\Nam4HK1\\UrbunTreeDoAn4\\backend\\urbantree.db"
+    },
+    {
+      "testId": "G0-02",
+      "claim": "Database file is non-empty",
+      "verdict": "PASS",
+      "details": "Size: 2.67 MB"
+    }
+  ],
+  "phase1_mock": [],
+  "phase2_truth": [
+    {
+      "testId": "F-02",
+      "claim": "Exact total trees count queried from SQLite",
+      "verdict": "PASS",
+      "details": "Actual COUNT: 5425"
+    },
+    {
+      "testId": "F-03",
+      "claim": "Work order items referential integrity to trees",
+      "verdict": "PASS",
+      "details": "Orphans found: 0"
+    },
+    {
+      "testId": "F-04",
+      "claim": "No duplicate tree assignments across active work orders",
+      "verdict": "FAIL",
+      "details": "Duplicate trees: 20"
+    }
+  ],
+  "phase3_care": [
+    {
+      "testId": "F-05",
+      "claim": "Care records anchor_status follows strict lifecycle",
+      "verdict": "PASS",
+      "details": "CONFIRMED: 377, PENDING_VERIFICATION: 167"
+    },
+    {
+      "testId": "F-06",
+      "claim": "No duplicate care records per work order and tree",
+      "verdict": "PASS",
+      "details": "Duplicates found: 0"
+    },
+    {
+      "testId": "F-07",
+      "claim": "Trees not marked \"Tốt\" prematurely when order is unverified",
+      "verdict": "FAIL",
+      "details": "Premature good health: 2"
+    }
+  ],
+  "phase5_auth": [
+    {
+      "testId": "F-08",
+      "claim": "Citizen role blocked from creating work order (HTTP 403)",
+      "verdict": "PASS",
+      "details": "Citizen blocked: true"
+    },
+    {
+      "testId": "F-09",
+      "claim": "Staff role blocked from self-approving work order (HTTP 403)",
+      "verdict": "PASS",
+      "details": "Staff blocked: true"
+    }
+  ],
+  "phase6_state": [
+    {
+      "testId": "F-10",
+      "claim": "Direct invalid jump from ASSIGNED to COMPLETED rejected (HTTP 400)",
+      "verdict": "PASS",
+      "details": "Blocked: true"
+    }
+  ],
+  "phase7_campaign": [
+    {
+      "testId": "F-11",
+      "claim": "Campaign conservation equation holds strictly (Sum == Total)",
+      "verdict": "PASS",
+      "details": "Total: 5424, Sum: 5424"
+    },
+    {
+      "testId": "F-12",
+      "claim": "Campaign API reports isReconciled: true",
+      "verdict": "PASS",
+      "details": "isReconciled: true"
+    }
+  ],
+  "phase9_sse": [
+    {
+      "testId": "F-13",
+      "claim": "Realtime SSE transport service exists with broadcast and text/event-stream",
+      "verdict": "PASS",
+      "details": "SSE service present: true"
+    }
+  ],
+  "phase11_numbers": [
+    {
+      "testId": "F-14",
+      "claim": "Realistic corridor orders populated with items in SQLite",
+      "verdict": "PASS",
+      "details": "Đường 3 Tháng 2: 62 cây, Đường 30 Tháng 4: 70 cây, Đường Cách Mạng Tháng 8: 45 cây, Đường Võ Văn Kiệt: 30 cây, Đại Lộ Hòa Bình: 203 cây, Đại Lộ Võ Văn Kiệt: 40 cây"
+    }
+  ],
+  "passCount": 13,
+  "failCount": 2,
+  "inconclusiveCount": 0
+}
