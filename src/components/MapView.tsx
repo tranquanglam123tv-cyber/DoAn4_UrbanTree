@@ -1398,42 +1398,40 @@ export const MapView: React.FC<MapViewProps> = ({
         {/* Row 3: Lớp hiển thị GIS (Layer Toggles) + Sức khỏe + Thống kê */}
         <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
           <div className="flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-emerald-950/30 px-3 py-1 rounded-full border border-slate-200 dark:border-emerald-800/60">
+            <label className="h-8 min-w-[144px] px-3 inline-flex items-center justify-center gap-2 cursor-pointer text-xs font-semibold rounded-full border border-emerald-300/80 dark:border-emerald-700/60 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100/70 dark:hover:bg-emerald-900/50 transition-colors select-none">
               <input
                 type="checkbox"
                 checked={showTrees}
                 onChange={(e) => setShowTrees(e.target.checked)}
-                className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                className="w-3.5 h-3.5 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
               />
-              <span className="font-semibold text-emerald-800 dark:text-emerald-300">Cây xanh ({filteredTrees.length})</span>
+              <span>Cây xanh ({filteredTrees.length})</span>
             </label>
 
-            <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-200 bg-rose-50 dark:bg-rose-950/30 px-3 py-1 rounded-full border border-rose-200 dark:border-rose-800/60">
+            <label className="h-8 min-w-[144px] px-3 inline-flex items-center justify-center gap-2 cursor-pointer text-xs font-semibold rounded-full border border-rose-300/80 dark:border-rose-700/60 bg-rose-50/80 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 hover:bg-rose-100/70 dark:hover:bg-rose-900/50 transition-colors select-none">
               <input
                 type="checkbox"
                 checked={showIncidents}
                 onChange={(e) => setShowIncidents(e.target.checked)}
-                className="rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
+                className="w-3.5 h-3.5 rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
               />
-              <span className="font-semibold text-rose-800 dark:text-rose-300">
+              <span>
                 Sự cố ({incidents.filter((i) => i.status !== 'RESOLVED').length})
               </span>
             </label>
 
             <div className="relative inline-flex items-center">
               <label
-                className="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-200 bg-amber-50 dark:bg-amber-950/30 pl-3 pr-2 py-1 rounded-full border border-amber-300 dark:border-amber-700/60 shadow-2xs hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                className="h-8 min-w-[144px] px-3 inline-flex items-center justify-center gap-1.5 cursor-pointer text-xs font-semibold rounded-full border border-amber-300/80 dark:border-amber-700/60 bg-amber-50/80 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 hover:bg-amber-100/70 dark:hover:bg-amber-900/50 transition-colors select-none"
                 title="Quy chuẩn BS 5837: Hiển thị bán kính bảo vệ rễ cây an toàn khi thi công đào vỉa hè"
               >
                 <input
                   type="checkbox"
                   checked={showRootProtectionZone}
                   onChange={(e) => setShowRootProtectionZone(e.target.checked)}
-                  className="rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+                  className="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
                 />
-                <span className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1">
-                  <span>🛡️ Vùng rễ (RPZ)</span>
-                </span>
+                <span>Vùng rễ (RPZ)</span>
                 <button
                   type="button"
                   aria-label="Xem giải thích quy chuẩn vùng rễ BS 5837:2012"
@@ -1444,9 +1442,9 @@ export const MapView: React.FC<MapViewProps> = ({
                   }}
                   onMouseEnter={() => setShowRpzTooltip(true)}
                   onMouseLeave={() => setShowRpzTooltip(false)}
-                  className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-amber-200/80 dark:hover:bg-amber-800/80 text-amber-700 dark:text-amber-300 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                  className="p-0.5 rounded-full hover:bg-amber-200/80 dark:hover:bg-amber-800/80 text-amber-700 dark:text-amber-300 transition-colors cursor-pointer focus:outline-none shrink-0 inline-flex items-center justify-center"
                 >
-                  <HelpCircle className="w-4 h-4" />
+                  <HelpCircle className="w-3.5 h-3.5" />
                 </button>
               </label>
 

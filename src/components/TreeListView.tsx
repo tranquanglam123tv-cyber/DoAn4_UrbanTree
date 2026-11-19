@@ -574,7 +574,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
         )}
 
         {/* HÀNG 1: TÌM KIẾM & ĐỊA BÀN TUYẾN ĐƯỜNG */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
           <div className="relative flex-1 min-w-[240px]">
             <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-2.5" />
             <input
@@ -582,7 +582,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Tìm theo mã tuyến [HB-01], số nhà mốc, tên cây, đường phố..."
-              className="w-full pl-9 pr-8 py-2 text-xs border border-slate-200 dark:border-slate-700/80 rounded-xl focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-slate-50/50 dark:bg-slate-900/90 dark:text-slate-100 dark:placeholder-slate-500 transition-all shadow-2xs"
+              className="w-full pl-9 pr-8 h-9 text-xs border border-slate-200 dark:border-slate-700/80 rounded-xl focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-slate-50/50 dark:bg-slate-900/90 dark:text-slate-100 dark:placeholder-slate-500 transition-all shadow-2xs"
             />
             {searchInput && (
               <button
@@ -595,7 +595,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
             )}
           </div>
 
-          {/* 🏙️ Lọc theo Tỉnh / Thành phố (Toàn quốc, Cần Thơ, Đà Nẵng, TP.HCM, Hà Nội...) */}
+          {/* Lọc theo Tỉnh / Thành phố */}
           <select
             value={selectedProvince}
             onChange={(e) => {
@@ -603,25 +603,25 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
               setSelectedArea('ALL');
               setSelectedCorridorFilter('ALL');
             }}
-            className="px-3 py-2 text-xs font-bold border border-blue-300 dark:border-blue-700/80 rounded-xl bg-blue-50/80 dark:bg-blue-950/60 text-blue-900 dark:text-blue-300 focus:border-blue-500 shadow-2xs cursor-pointer"
+            className="h-9 px-3 text-xs font-semibold border border-slate-200 dark:border-slate-700/80 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 shadow-2xs cursor-pointer shrink-0"
           >
             {NATIONAL_PROVINCES.map((prov) => (
               <option key={prov.id} value={prov.id}>
-                {prov.shortName}
+                {prov.shortName.replace(/^[^\p{L}\p{N}]+/u, '').trim() || prov.shortName}
               </option>
             ))}
           </select>
 
-          {/* 📍 Lọc theo Khu Vực / Địa Phương Tổng Quát (Quận Ninh Kiều, Cái Răng, Bình Thủy, Đà Nẵng...) */}
+          {/* Lọc theo Khu Vực / Địa Phương */}
           <select
             value={selectedArea}
             onChange={(e) => {
               setSelectedArea(e.target.value);
               setSelectedCorridorFilter('ALL');
             }}
-            className="px-3 py-2 text-xs font-bold border border-emerald-300 dark:border-emerald-700/80 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/60 text-emerald-900 dark:text-[#00FF9D] focus:border-emerald-500 shadow-2xs cursor-pointer"
+            className="h-9 px-3 text-xs font-semibold border border-slate-200 dark:border-slate-700/80 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 shadow-2xs cursor-pointer shrink-0"
           >
-            <option value="ALL">📍 Tất cả địa phương ({availableAreas.length} khu vực)</option>
+            <option value="ALL">Tất cả địa phương ({availableAreas.length})</option>
             {availableAreas.map(([areaName, count]) => (
               <option key={areaName} value={areaName}>
                 {areaName} ({count} cây)
@@ -629,14 +629,14 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
             ))}
           </select>
 
-          {/* 🛣️ Lọc theo Tuyến Đường / Công Viên Đô Thị */}
+          {/* Lọc theo Tuyến Đường / Công Viên Đô Thị */}
           <select
             value={selectedCorridorFilter}
             onChange={(e) => setSelectedCorridorFilter(e.target.value)}
-            className="px-3 py-2 text-xs font-medium border border-slate-200 dark:border-slate-700/80 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 shadow-2xs cursor-pointer"
+            className="h-9 px-3 text-xs font-medium border border-slate-200 dark:border-slate-700/80 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 shadow-2xs cursor-pointer shrink-0 max-w-[220px] truncate"
           >
             <option value="ALL">
-              🛣️ {selectedArea !== 'ALL' ? `Tất cả tuyến ở ${selectedArea.split('(')[0].trim()}` : 'Tất cả tuyến đường'} ({availableCorridors.length})
+              {selectedArea !== 'ALL' ? `Tất cả tuyến (${selectedArea.split('(')[0].trim()})` : 'Tất cả tuyến đường'} ({availableCorridors.length})
             </option>
             {availableCorridors.map(([cName, count]) => (
               <option key={cName} value={cName}>
@@ -646,147 +646,163 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
           </select>
         </div>
 
-        {/* HÀNG 2: THÔNG SỐ LÂM SINH (CHIỀU CAO, ĐỘ TO THÂN, CẮT TỈA, LOÀI CÂY, SỨC KHỎE) */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-800/60">
-          <div className="flex flex-wrap items-center gap-2">
-            {/* 📏 LỌC THEO CHIỀU CAO CÂY */}
-            <select
-              value={selectedHeight}
-              onChange={(e) => setSelectedHeight(e.target.value)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer shadow-2xs ${
-                selectedHeight !== 'ALL'
-                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-[#00FF9D]'
-                  : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
-              }`}
-            >
-              <option value="ALL">📏 Tất cả chiều cao</option>
-              <option value="<6">&lt; 6m (Cây thấp / mới trồng)</option>
-              <option value="6-12">6m - 12m (Loại 1 - Trung bình)</option>
-              <option value="12-20">12m - 20m (Loại 2 - Cây cao)</option>
-              <option value=">20">&gt; 20m (Cây đại thụ / Tán lớn)</option>
-            </select>
+        {/* HÀNG 2: BỘ LỌC KỸ THUẬT LÂM SINH (LƯỚI 8 CỘT ĐỀU ĐẶN, KHÔNG CÓ ICON RỜM RÀ) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 pt-2.5 border-t border-slate-100 dark:border-slate-800/80">
+          {/* 1. Loài cây */}
+          <select
+            value={selectedType}
+            onChange={(e) => setSelectedType(e.target.value)}
+            className={`w-full h-8 text-xs rounded-xl border px-2.5 py-1 focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all truncate font-medium ${
+              selectedType !== 'ALL'
+                ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-[#00FF9D] font-bold shadow-2xs'
+                : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+            }`}
+            title="Lọc theo loài cây"
+          >
+            <option value="ALL">Tất cả loài cây</option>
+            {treeTypes.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
 
-            {/* 🌳 LỌC THEO ĐỘ TO THÂN CÂY (ĐƯỜNG KÍNH DBH) */}
-            <select
-              value={selectedDiameter}
-              onChange={(e) => setSelectedDiameter(e.target.value)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer shadow-2xs ${
-                selectedDiameter !== 'ALL'
-                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-[#00FF9D]'
-                  : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
-              }`}
-            >
-              <option value="ALL">🌳 Tất cả độ to thân (Đk)</option>
-              <option value="<20">&lt; 20cm (Thân mảnh / cây non)</option>
-              <option value="20-50">20cm - 50cm (Thân vừa)</option>
-              <option value="50-100">50cm - 100cm (Thân to)</option>
-              <option value=">100">&gt; 100cm (Cổ thụ &gt; 1m)</option>
-            </select>
+          {/* 2. Chiều cao */}
+          <select
+            value={selectedHeight}
+            onChange={(e) => setSelectedHeight(e.target.value)}
+            className={`w-full h-8 text-xs rounded-xl border px-2.5 py-1 focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all truncate font-medium ${
+              selectedHeight !== 'ALL'
+                ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-[#00FF9D] font-bold shadow-2xs'
+                : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+            }`}
+            title="Lọc theo chiều cao cây"
+          >
+            <option value="ALL">Tất cả chiều cao</option>
+            <option value="<6">&lt; 6m (Thấp)</option>
+            <option value="6-12">6m - 12m (Trung bình)</option>
+            <option value="12-20">12m - 20m (Cao)</option>
+            <option value=">20">&gt; 20m (Đại thụ)</option>
+          </select>
 
-            {/* ✂️ LỌC THEO NGÀY CHƯA CẮT TỈA */}
-            <select
-              value={selectedPruning}
-              onChange={(e) => setSelectedPruning(e.target.value)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer shadow-2xs ${
-                selectedPruning !== 'ALL'
-                  ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300'
-                  : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
-              }`}
-            >
-              <option value="ALL">✂️ Tất cả kỳ cắt tỉa</option>
-              <option value=">30">Chưa tỉa &gt; 30 ngày (1 tháng)</option>
-              <option value=">60">Chưa tỉa &gt; 60 ngày (2 tháng)</option>
-              <option value=">90">Chưa tỉa &gt; 90 ngày (1 quý)</option>
-              <option value=">180">Chưa tỉa &gt; 180 ngày (6 tháng - Cần tỉa)</option>
-              <option value="NEVER">Chưa từng có hồ sơ tỉa cành</option>
-              <option value="<=30">Đã tỉa gần đây (≤ 30 ngày)</option>
-            </select>
+          {/* 3. Đường kính thân (DBH) */}
+          <select
+            value={selectedDiameter}
+            onChange={(e) => setSelectedDiameter(e.target.value)}
+            className={`w-full h-8 text-xs rounded-xl border px-2.5 py-1 focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all truncate font-medium ${
+              selectedDiameter !== 'ALL'
+                ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-[#00FF9D] font-bold shadow-2xs'
+                : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+            }`}
+            title="Lọc theo đường kính thân cây"
+          >
+            <option value="ALL">Tất cả đường kính</option>
+            <option value="<20">&lt; 20cm (Mảnh)</option>
+            <option value="20-50">20cm - 50cm (Vừa)</option>
+            <option value="50-100">50cm - 100cm (Lớn)</option>
+            <option value=">100">&gt; 100cm (Cổ thụ)</option>
+          </select>
 
-            {/* Lọc loài cây */}
-            <select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
-              className="px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700/80 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 shadow-2xs cursor-pointer"
-            >
-              <option value="ALL">Tất cả loài cây</option>
-              {treeTypes.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+          {/* 4. Sức khỏe */}
+          <select
+            value={selectedHealth}
+            onChange={(e) => setSelectedHealth(e.target.value)}
+            className={`w-full h-8 text-xs rounded-xl border px-2.5 py-1 focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all truncate font-medium ${
+              selectedHealth === 'AT_RISK'
+                ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 font-bold shadow-2xs'
+                : selectedHealth === 'HEALTHY'
+                ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-[#00FF9D] font-bold shadow-2xs'
+                : selectedHealth !== 'ALL'
+                ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold shadow-2xs'
+                : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+            }`}
+            title="Lọc theo tình trạng sức khỏe"
+          >
+            <option value="ALL">Tất cả sức khỏe</option>
+            <option value="HEALTHY">Khỏe mạnh (Tốt &amp; Bình thường)</option>
+            <option value="AT_RISK">Cần bảo dưỡng (Kém &amp; Nguy cấp)</option>
+            <option value="GOOD">Tốt (GOOD)</option>
+            <option value="FAIR">Bình thường (FAIR)</option>
+            <option value="POOR">Kém (POOR)</option>
+            <option value="CRITICAL">Nguy cấp (CRITICAL)</option>
+          </select>
 
-            {/* Lọc sức khỏe */}
-            <select
-              value={selectedHealth}
-              onChange={(e) => setSelectedHealth(e.target.value)}
-              className={`px-3 py-1.5 text-xs border rounded-xl shadow-2xs cursor-pointer font-semibold transition-all ${
-                selectedHealth === 'AT_RISK'
-                  ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300'
-                  : selectedHealth === 'HEALTHY'
-                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-[#00FF9D]'
-                  : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500'
-              }`}
-            >
-              <option value="ALL">Tất cả sức khỏe</option>
-              <option value="HEALTHY">🌿 Khỏe mạnh (GOOD &amp; FAIR)</option>
-              <option value="AT_RISK">⚠️ Cần bảo dưỡng (POOR &amp; CRITICAL)</option>
-              <option value="GOOD">Tốt (GOOD)</option>
-              <option value="FAIR">Bình thường (FAIR)</option>
-              <option value="POOR">Kém (POOR)</option>
-              <option value="CRITICAL">Nguy cấp (CRITICAL)</option>
-            </select>
+          {/* 5. Kỳ cắt tỉa */}
+          <select
+            value={selectedPruning}
+            onChange={(e) => setSelectedPruning(e.target.value)}
+            className={`w-full h-8 text-xs rounded-xl border px-2.5 py-1 focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all truncate font-medium ${
+              selectedPruning !== 'ALL'
+                ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold shadow-2xs'
+                : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+            }`}
+            title="Lọc theo kỳ cắt tỉa"
+          >
+            <option value="ALL">Tất cả kỳ cắt tỉa</option>
+            <option value=">30">Chưa tỉa &gt; 30 ngày</option>
+            <option value=">60">Chưa tỉa &gt; 60 ngày</option>
+            <option value=">90">Chưa tỉa &gt; 90 ngày</option>
+            <option value=">180">Chưa tỉa &gt; 180 ngày (Cần tỉa)</option>
+            <option value="NEVER">Chưa từng có hồ sơ tỉa</option>
+            <option value="<=30">Đã tỉa gần đây (≤ 30 ngày)</option>
+          </select>
 
-            {/* ⚡ LỌC THEO MA TRẬN RỦI RO QUỐC TẾ ISA TRAQ */}
-            <select
-              value={selectedTraq}
-              onChange={(e) => setSelectedTraq(e.target.value)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer shadow-2xs ${
-                selectedTraq !== 'ALL'
-                  ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 font-bold'
-                  : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
-              }`}
-            >
-              <option value="ALL">🛡️ Rủi ro ISA TRAQ (Tất cả)</option>
-              <option value="EXTREME">🛑 EXTREME (Nguy hiểm tột cùng)</option>
-              <option value="HIGH">⚠️ HIGH (Rủi ro cao)</option>
-              <option value="MODERATE">🟡 MODERATE (Trung bình)</option>
-              <option value="LOW">🟢 LOW (An toàn)</option>
-            </select>
+          {/* 6. Rủi ro ISA TRAQ */}
+          <select
+            value={selectedTraq}
+            onChange={(e) => setSelectedTraq(e.target.value)}
+            className={`w-full h-8 text-xs rounded-xl border px-2.5 py-1 focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all truncate font-medium ${
+              selectedTraq !== 'ALL'
+                ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 font-bold shadow-2xs'
+                : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+            }`}
+            title="Lọc theo ma trận rủi ro ISA TRAQ"
+          >
+            <option value="ALL">Rủi ro ISA TRAQ</option>
+            <option value="EXTREME">Nguy hiểm tột cùng (EXTREME)</option>
+            <option value="HIGH">Rủi ro cao (HIGH)</option>
+            <option value="MODERATE">Trung bình (MODERATE)</option>
+            <option value="LOW">An toàn (LOW)</option>
+          </select>
 
-            {/* 📐 LỌC THEO GÓC NGHIÊNG THÂN CÂY */}
-            <select
-              value={selectedTilt}
-              onChange={(e) => setSelectedTilt(e.target.value)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer shadow-2xs ${
-                selectedTilt !== 'ALL'
-                  ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold'
-                  : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
-              }`}
-            >
-              <option value="ALL">📐 Góc nghiêng (Tất cả)</option>
-              <option value="DANGEROUS">⚠️ Nghiêng &ge; 15° (Nguy cơ bão)</option>
-              <option value="WARNING">Nghiêng 8° - 14° (Cần chú ý)</option>
-              <option value="SAFE">Thẳng đứng (&lt; 8°)</option>
-            </select>
+          {/* 7. Góc nghiêng thân cây */}
+          <select
+            value={selectedTilt}
+            onChange={(e) => setSelectedTilt(e.target.value)}
+            className={`w-full h-8 text-xs rounded-xl border px-2.5 py-1 focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all truncate font-medium ${
+              selectedTilt !== 'ALL'
+                ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold shadow-2xs'
+                : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+            }`}
+            title="Lọc theo góc nghiêng thân cây"
+          >
+            <option value="ALL">Góc nghiêng thân</option>
+            <option value="DANGEROUS">Nghiêng &ge; 15° (Nguy hiểm)</option>
+            <option value="WARNING">Nghiêng 8° - 14° (Cần chú ý)</option>
+            <option value="SAFE">Thẳng đứng (&lt; 8°)</option>
+          </select>
 
-            {/* 🪵 LỌC THEO ĐỘ RỖNG THÂN SIÊU ÂM ARBOTOM */}
-            <select
-              value={selectedHollow}
-              onChange={(e) => setSelectedHollow(e.target.value)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer shadow-2xs ${
-                selectedHollow !== 'ALL'
-                  ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 font-bold'
-                  : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
-              }`}
-            >
-              <option value="ALL">🪵 Rỗng ruột Arbotom (Tất cả)</option>
-              <option value="HOLLOW">⚠️ Rỗng ruột &ge; 40% (Mục rỗng)</option>
-              <option value="DECAY">Chớm thoái hóa (20% - 39%)</option>
-              <option value="SOLID">Thân đặc (&lt; 20%)</option>
-            </select>
+          {/* 8. Rỗng thân Arbotom */}
+          <select
+            value={selectedHollow}
+            onChange={(e) => setSelectedHollow(e.target.value)}
+            className={`w-full h-8 text-xs rounded-xl border px-2.5 py-1 focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all truncate font-medium ${
+              selectedHollow !== 'ALL'
+                ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 font-bold shadow-2xs'
+                : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+            }`}
+            title="Lọc theo độ rỗng thân siêu âm Arbotom"
+          >
+            <option value="ALL">Rỗng thân Arbotom</option>
+            <option value="HOLLOW">Rỗng ruột &ge; 40% (Mục rỗng)</option>
+            <option value="DECAY">Chớm thoái hóa (20% - 39%)</option>
+            <option value="SOLID">Thân đặc (&lt; 20%)</option>
+          </select>
+        </div>
 
-            {/* Nút Xóa bộ lọc nếu có điều kiện đang active */}
+        {/* HÀNG 3: THANH TRẠNG THÁI & NÚT ĐẶT LẠI */}
+        <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
+          <div className="flex items-center gap-2">
             {(searchInput ||
               selectedProvince !== 'all' ||
               selectedArea !== 'ALL' ||
@@ -798,7 +814,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
               selectedPruning !== 'ALL' ||
               selectedTraq !== 'ALL' ||
               selectedTilt !== 'ALL' ||
-              selectedHollow !== 'ALL') && (
+              selectedHollow !== 'ALL') ? (
               <button
                 type="button"
                 onClick={() => {
@@ -815,16 +831,20 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                   setSelectedTilt('ALL');
                   setSelectedHollow('ALL');
                 }}
-                className="px-2.5 py-1 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                className="px-2.5 py-1 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-rose-200/80 dark:border-rose-900/60 shadow-2xs"
                 title="Xóa toàn bộ bộ lọc về mặc định"
               >
                 <RefreshCw className="w-3 h-3" />
-                <span>Đặt lại</span>
+                <span>Đặt lại bộ lọc</span>
               </button>
+            ) : (
+              <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                Bộ lọc kỹ thuật lâm sinh &amp; an toàn cây
+              </span>
             )}
           </div>
 
-          <span className="text-xs text-emerald-700 dark:text-[#00FF9D] font-mono font-bold whitespace-nowrap pl-2">
+          <span className="text-xs text-emerald-700 dark:text-[#00FF9D] font-mono font-bold whitespace-nowrap">
             {filteredTrees.length}/{trees.length} cây
           </span>
         </div>

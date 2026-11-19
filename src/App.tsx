@@ -29,6 +29,7 @@ import { WorkOrderCenterView } from './components/WorkOrderCenterView';
 import { NotificationsView } from './components/NotificationsView';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { SporeBackground } from './components/common/SporeBackground';
+import { AmbientSunLeavesBackground } from './components/common/AmbientSunLeavesBackground';
 import { useRealtimeSync } from './hooks/useRealtimeSync';
 import { useEscapeOverlay } from './hooks/useEscapeOverlay';
 import { storage } from './db/storage';
@@ -293,6 +294,9 @@ export default function App() {
     <div className={`min-h-screen flex flex-col relative transition-colors duration-300 ${
       isDark ? 'dark bg-[#070e0a] text-slate-100' : 'bg-[#F8FAF9] text-slate-900'
     } selection:bg-emerald-500 selection:text-white`}>
+      {/* 🍃 Ambient Sunbeam & Drifting Leaves Background Layer (LA.png) */}
+      <AmbientSunLeavesBackground isDark={isDark} />
+
       {/* Ambient Botanical Spore Canvas Particles (Automark) */}
       <SporeBackground isDark={isDark} />
 
@@ -321,7 +325,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-24 lg:pb-8 overflow-x-hidden">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-24 lg:pb-8 overflow-x-hidden relative z-10">
         {/* Trang Chủ (Landing Page công cộng ai cũng xem được) */}
         {activeTab === 'home' && (
           <HomeLandingView

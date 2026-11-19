@@ -17,6 +17,7 @@ import {
   LogIn,
   Sliders,
   ChevronRight,
+  ChevronDown,
   Building2,
   PhoneCall,
   Clock,
@@ -68,6 +69,9 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
   const anchors = blockchainService.getAllAnchors().slice(0, 5);
 
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
+  const [isOrgDetailOpen, setIsOrgDetailOpen] = useState<boolean>(false);
+  const [isProcessOpen, setIsProcessOpen] = useState<boolean>(false);
 
   // 📍 GPS Live Radar States
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -178,51 +182,52 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         {/* Automark HUD Corner-dot Tagline Badge */}
         <HudBadge label="CỔNG THÔNG TIN CÂY XANH ĐÔ THỊ THÔNG MINH TP. CẦN THƠ" />
 
-        {/* Hero Headline */}
-        <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 dark:text-slate-50 leading-[1.15]">
-          Bảo Tồn &amp; Phát Triển{' '}
-          <span className="text-emerald-600 dark:text-emerald-400 bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-300 bg-clip-text text-transparent">
-            Sinh Quyển Đô Thị
-          </span>{' '}
-          Bằng AI &amp; Chuỗi Khối
-        </h1>
+          {/* Hero Headline */}
+          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold uppercase tracking-tight text-slate-900 dark:text-slate-50 leading-[1.2]">
+            SỐ HÓA CÂY XANH
+            <br />
+            KIẾN TẠO{' '}
+            <span className="text-emerald-600 dark:text-emerald-400 bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-300 bg-clip-text text-transparent">
+              ĐÔ THỊ XANH
+            </span>{' '}
+            BỀN VỮNG
+          </h1>
 
-        {/* Subtitle */}
-        <p className="text-sm sm:text-lg text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
-          Nền tảng số hóa không gian địa lý GIS bảo tồn từng cá thể cây xanh tại Cần Thơ. Hỗ trợ người dân tra cứu thông tin bằng mã QR, gửi phản ánh sự cố khẩn cấp <strong className="text-emerald-700 dark:text-emerald-400">không cần đăng nhập</strong> và bảo chứng nhật ký chăm sóc trên sổ cái Blockchain bất biến.
-        </p>
+          {/* Subtitle */}
+          <p className="text-sm sm:text-lg text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
+            Bản đồ cây xanh Cần Thơ: quét mã QR xem thông tin, <strong className="text-emerald-700 dark:text-emerald-400">báo sự cố nhanh</strong> và theo dõi chăm sóc minh bạch.
+          </p>
 
-        {/* Action Button Group cho Đại chúng / Người dân */}
-        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 pt-2">
-          {/* 1. Nút mở Bản đồ Cây xanh */}
-          <button
-            onClick={onOpenMap}
-            className="flex items-center gap-2 px-6 py-3.5 rounded-full bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white dark:text-slate-950 font-bold text-xs sm:text-sm transition-all shadow-lg shadow-emerald-600/30 dark:shadow-emerald-500/20 active:scale-95 group cursor-pointer"
-          >
-            <MapPin className="w-4 h-4 text-emerald-200 dark:text-slate-900" />
-            <span>Khám Phá Bản Đồ Cây GIS</span>
-            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-          </button>
+          {/* Action Button Group cho Đại chúng / Người dân */}
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 pt-2">
+            {/* 1. Nút mở Bản đồ Cây xanh */}
+            <button
+              onClick={onOpenMap}
+              className="flex items-center gap-2 px-6 py-3.5 rounded-full bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white dark:text-slate-950 font-bold text-xs sm:text-sm transition-all shadow-lg shadow-emerald-600/30 dark:shadow-emerald-500/20 active:scale-95 group cursor-pointer"
+            >
+              <MapPin className="w-4 h-4 text-emerald-200 dark:text-slate-900" />
+              <span>Khám Phá Bản Đồ</span>
+            </button>
 
-          {/* 2. Nút Báo cáo sự cố người dân (Không cần đăng nhập) */}
-          <button
-            onClick={onOpenReport}
-            className="flex items-center gap-2 px-5 py-3.5 rounded-full bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-800 dark:text-rose-200 font-bold text-xs sm:text-sm border border-rose-200 dark:border-rose-500/30 transition-all active:scale-95 cursor-pointer shadow-xs"
-          >
-            <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-            <span>Phản Ánh Sự Cố Cây (Dân Gửi)</span>
-          </button>
+            {/* 2. Nút Báo cáo sự cố người dân (Không cần đăng nhập) */}
+            <button
+              onClick={onOpenReport}
+              className="flex items-center gap-2 px-5 py-3.5 rounded-full bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-800 dark:text-rose-200 font-bold text-xs sm:text-sm border border-rose-200 dark:border-rose-500/30 transition-all active:scale-95 cursor-pointer shadow-xs"
+            >
+              <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+              <span>Phản Ánh Sự Cố Cây</span>
+            </button>
 
-          {/* 3. Nút Quét QR thân cây */}
-          <button
-            onClick={onOpenQrScanner}
-            className="flex items-center gap-2 px-5 py-3.5 rounded-full bg-white hover:bg-slate-50 dark:bg-[#0c1812] dark:hover:bg-slate-900 text-slate-800 dark:text-slate-200 font-semibold text-xs sm:text-sm border border-slate-200/90 dark:border-emerald-500/30 transition-all shadow-sm shadow-slate-900/5 active:scale-95 cursor-pointer"
-          >
-            <QrCode className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Quét Mã QR Cây</span>
-          </button>
+            {/* 3. Nút Quét QR thân cây */}
+            <button
+              onClick={onOpenQrScanner}
+              className="flex items-center gap-2 px-5 py-3.5 rounded-full bg-white hover:bg-slate-50 dark:bg-[#0c1812] dark:hover:bg-slate-900 text-slate-800 dark:text-slate-200 font-semibold text-xs sm:text-sm border border-slate-200/90 dark:border-emerald-500/30 transition-all shadow-sm shadow-slate-900/5 active:scale-95 cursor-pointer"
+            >
+              <QrCode className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Quét Mã QR</span>
+            </button>
+          </div>
         </div>
-      </div>
 
       {/* 🚀 2. AUTOMARK 3D PERSPECTIVE SCROLL TILT SHOWCASE (TỪ NẰM SANG ĐỨNG) */}
       <PerspectiveTiltShowcase
@@ -242,7 +247,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                 </span>
                 <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">
-                  Lưới GIS Cần Thơ
+                  BẢN ĐỒ CÂY
                 </span>
               </div>
 
@@ -264,7 +269,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               </div>
               <div className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
                 {stats.totalTrees}{' '}
-                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Cây số hóa</span>
+                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Cây đang theo dõi</span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-400">
                 Độ phủ xanh đạt <strong className="text-slate-900 dark:text-slate-200">{healthyPercent}%</strong> ở mức sinh trưởng tốt.
@@ -286,7 +291,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               onClick={onOpenMap}
               className="w-full py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 border border-emerald-100 dark:border-emerald-500/30 transition-colors cursor-pointer"
             >
-              <span>Xem Bản đồ chi tiết</span>
+              <span>Xem Bản đồ</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -332,177 +337,238 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 className="w-full py-2 text-center text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <span>Tra cứu chi tiết cây này</span>
-                <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
         </div>
       </PerspectiveTiltShowcase>
 
-      {/* 📢 3. HƯỚNG DẪN NGƯỜI DÂN BÁO CÁO SỰ CỐ (ĐẶT NGAY SAU RADAR ĐỂ DÂN DỄ THẤY) */}
-      <section className="bg-gradient-to-br from-emerald-900 via-emerald-950 to-teal-950 dark:from-[#05130b] dark:via-[#091b12] dark:to-[#041009] text-white rounded-3xl p-6 sm:p-12 relative overflow-hidden shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] border border-transparent dark:border-emerald-500/20">
+      {/* 📢 3. HƯỚNG DẪN NGƯỜI DÂN BÁO CÁO SỰ CỐ (DẠNG ACCORDION THU GỌN) */}
+      <section className="bg-gradient-to-br from-emerald-900 via-emerald-950 to-teal-950 dark:from-[#05130b] dark:via-[#091b12] dark:to-[#041009] text-white rounded-3xl p-6 sm:p-8 lg:p-10 relative overflow-hidden shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] border border-transparent dark:border-emerald-500/20 transition-all duration-300">
         {/* Glow decoration */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 space-y-8">
-          <div className="max-w-2xl space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-800/80 dark:bg-emerald-900/60 border border-emerald-600/50 dark:border-emerald-500/40 text-emerald-200 text-xs font-bold uppercase tracking-wider">
-              <Users className="w-3.5 h-3.5 text-emerald-400" />
-              <span>DÀNH CHO NGƯỜI DÂN &amp; CỘNG ĐỒNG</span>
-            </div>
-            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
-              Hướng Dẫn Gửi Phản Ánh Cây Nguy Hiểm
-            </h2>
-            <p className="text-sm sm:text-base text-emerald-100/80 leading-relaxed">
-              Bạn phát hiện cây nghiêng, cành khô vướng dây điện hoặc nứt rễ? Chỉ mất chưa đầy 30 giây để gửi thông tin cho đội cứu hộ - <strong className="text-emerald-300 underline underline-offset-4">hoàn toàn KHÔNG cần tạo tài khoản hay đăng nhập</strong>.
-            </p>
-          </div>
-
-          {/* 4 Bước trực quan */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Step 1 */}
-            <div className="bg-white/10 dark:bg-[#0c1812]/80 backdrop-blur-md p-5 rounded-2xl border border-white/10 dark:border-emerald-500/20 space-y-3 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white font-bold flex items-center justify-center text-sm shadow-md">
-                1
+        <div className="relative z-10">
+          {/* Header Row: Trạng thái mặc định trên 1 hàng (responsive xuống hàng trên mobile) */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6">
+            {/* Bên trái: Nhãn, Tiêu đề (không rớt chữ "Hiểm") và Mô tả */}
+            <div className="space-y-2 max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-800/80 dark:bg-emerald-900/60 border border-emerald-600/50 dark:border-emerald-500/40 text-emerald-200 text-xs font-bold uppercase tracking-wider">
+                <Users className="w-3.5 h-3.5 text-emerald-400" />
+                <span>DÀNH CHO NGƯỜI DÂN</span>
               </div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                <QrCode className="w-4 h-4 text-emerald-400" />
-                Quét QR Hoặc Bấm Nút
-              </h3>
-              <p className="text-xs text-emerald-100/70 leading-relaxed">
-                Đưa camera điện thoại quét mã QR đóng trên thân cây. Hệ thống sẽ tự nhận diện đúng cây đó. Hoặc bấm trực tiếp nút "Phản Ánh Sự Cố".
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white leading-snug">
+                Hướng Dẫn Gửi Phản Ánh <span className="whitespace-nowrap">Cây Nguy Hiểm</span>
+              </h2>
+              <p className="text-xs sm:text-sm text-emerald-100/80 leading-relaxed">
+                Thấy cây nghiêng, cành gãy hay vướng dây điện? Báo ngay trong 30 giây - <strong className="text-emerald-300 underline underline-offset-4">không cần đăng nhập</strong>.
               </p>
             </div>
 
-            {/* Step 2 */}
-            <div className="bg-white/10 dark:bg-[#0c1812]/80 backdrop-blur-md p-5 rounded-2xl border border-white/10 dark:border-emerald-500/20 space-y-3 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white font-bold flex items-center justify-center text-sm shadow-md">
-                2
-              </div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                <Camera className="w-4 h-4 text-emerald-400" />
-                Chụp Ảnh Hiện Trường
-              </h3>
-              <p className="text-xs text-emerald-100/70 leading-relaxed">
-                Chụp 1-2 bức ảnh rõ cành gãy, thân nghiêng hoặc vỏ cây bị mối mọt để cán bộ kỹ thuật đánh giá phương án xe nâng cắt tỉa.
-              </p>
-            </div>
+            {/* Bên phải: Cụm 2 nút (Nút phụ Xem hướng dẫn & Nút chính Gửi Phản Ánh Ngay) */}
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
+              {/* Nút phụ: Xem / Thu gọn hướng dẫn */}
+              <button
+                type="button"
+                onClick={() => setIsGuideOpen((prev) => !prev)}
+                className="px-4 py-2.5 rounded-full bg-white/10 hover:bg-white/15 dark:bg-white/5 dark:hover:bg-white/10 border border-white/20 text-white font-bold text-xs sm:text-sm flex items-center gap-2 cursor-pointer transition-all active:scale-95 shadow-sm"
+              >
+                <span>{isGuideOpen ? 'Thu gọn hướng dẫn' : 'Xem hướng dẫn'}</span>
+                <ChevronDown
+                  className={`w-4 h-4 text-emerald-300 transition-transform duration-300 ${isGuideOpen ? 'rotate-180' : ''
+                    }`}
+                />
+              </button>
 
-            {/* Step 3 */}
-            <div className="bg-white/10 dark:bg-[#0c1812]/80 backdrop-blur-md p-5 rounded-2xl border border-white/10 dark:border-emerald-500/20 space-y-3 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white font-bold flex items-center justify-center text-sm shadow-md">
-                3
-              </div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-emerald-400" />
-                Xác Nhận Vị Trí GPS
-              </h3>
-              <p className="text-xs text-emerald-100/70 leading-relaxed">
-                Hệ thống tự động điền địa chỉ và vị trí bản đồ Cần Thơ. Bạn có thể để lại số điện thoại (tùy chọn) để nhận SMS thông báo khi hoàn thành.
-              </p>
-            </div>
-
-            {/* Step 4 */}
-            <div className="bg-white/10 dark:bg-[#0c1812]/80 backdrop-blur-md p-5 rounded-2xl border border-white/10 dark:border-emerald-500/20 space-y-3 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white font-bold flex items-center justify-center text-sm shadow-md">
-                4
-              </div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                Nhận Mã &amp; Xử Lý
-              </h3>
-              <p className="text-xs text-emerald-100/70 leading-relaxed">
-                Nhận ngay Mã phản ánh (Ví dụ: <code className="bg-emerald-950 px-1 py-0.5 rounded text-emerald-300 font-mono">INC-71044</code>). Đội cứu hộ sẽ đến hiện trường xử lý.
-              </p>
+              {/* Nút chính: Gửi Phản Ánh Ngay */}
+              <button
+                type="button"
+                onClick={onOpenReport}
+                className="px-5 py-2.5 bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-extrabold text-xs sm:text-sm rounded-full shadow-lg transition-transform active:scale-95 flex items-center gap-2 cursor-pointer shrink-0"
+              >
+                <Send className="w-4 h-4" />
+                <span>Gửi Phản Ánh Ngay</span>
+              </button>
             </div>
           </div>
 
-          {/* Action CTA Box */}
-          <div className="p-6 bg-white/10 dark:bg-[#0c1812]/90 backdrop-blur-md rounded-2xl border border-white/20 dark:border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="space-y-1 text-center sm:text-left">
-              <div className="text-base font-bold text-white">Bạn đang ở gần một cây có nguy cơ mất an toàn?</div>
-              <div className="text-xs text-emerald-200">Gửi ngay thông tin để bảo vệ an toàn cho người tham gia giao thông.</div>
+          {/* Hiệu ứng đóng/mở xổ xuống mượt mà bằng CSS Grid transition */}
+          <div
+            className={`grid transition-[grid-template-rows,opacity] duration-500 ease-in-out ${isGuideOpen ? 'grid-rows-[1fr] opacity-100 mt-6 sm:mt-8' : 'grid-rows-[0fr] opacity-0'
+              }`}
+          >
+            <div className="overflow-hidden">
+              {/* 4 Bước trực quan */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
+                {/* Step 1 */}
+                <div className="bg-white/10 dark:bg-[#0c1812]/80 backdrop-blur-md p-5 rounded-2xl border border-white/10 dark:border-emerald-500/20 space-y-3 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white font-bold flex items-center justify-center text-sm shadow-md">
+                    1
+                  </div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                    <QrCode className="w-4 h-4 text-emerald-400" />
+                    Quét QR Hoặc Bấm Nút
+                  </h3>
+                  <p className="text-xs text-emerald-100/70 leading-relaxed">
+                    Quét mã QR trên thân cây hoặc bấm trực tiếp nút "Gửi Phản Ánh Ngay".
+                  </p>
+                </div>
+
+                {/* Step 2 */}
+                <div className="bg-white/10 dark:bg-[#0c1812]/80 backdrop-blur-md p-5 rounded-2xl border border-white/10 dark:border-emerald-500/20 space-y-3 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white font-bold flex items-center justify-center text-sm shadow-md">
+                    2
+                  </div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                    <Camera className="w-4 h-4 text-emerald-400" />
+                    Chụp Ảnh Hiện Trường
+                  </h3>
+                  <p className="text-xs text-emerald-100/70 leading-relaxed">
+                    Chụp 1–2 ảnh rõ tình trạng cây (gãy, nghiêng, mục ruỗng) để đội ngũ đánh giá.
+                  </p>
+                </div>
+
+                {/* Step 3 */}
+                <div className="bg-white/10 dark:bg-[#0c1812]/80 backdrop-blur-md p-5 rounded-2xl border border-white/10 dark:border-emerald-500/20 space-y-3 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white font-bold flex items-center justify-center text-sm shadow-md">
+                    3
+                  </div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-emerald-400" />
+                    Xác Nhận Vị Trí GPS
+                  </h3>
+                  <p className="text-xs text-emerald-100/70 leading-relaxed">
+                    Bản đồ tự động lấy vị trí của bạn. Có thể để lại SĐT để nhận tin báo khi xử lý xong.
+                  </p>
+                </div>
+
+                {/* Step 4 */}
+                <div className="bg-white/10 dark:bg-[#0c1812]/80 backdrop-blur-md p-5 rounded-2xl border border-white/10 dark:border-emerald-500/20 space-y-3 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white font-bold flex items-center justify-center text-sm shadow-md">
+                    4
+                  </div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    Nhận Mã &amp; Xử Lý
+                  </h3>
+                  <p className="text-xs text-emerald-100/70 leading-relaxed">
+                    Nhận ngay Mã phản ánh (Ví dụ: <code className="bg-emerald-950 px-1 py-0.5 rounded text-emerald-300 font-mono whitespace-nowrap">INC-71044</code>). Đội cứu hộ sẽ đến hiện trường xử lý.
+                  </p>
+                </div>
+              </div>
             </div>
-            <button
-              onClick={onOpenReport}
-              className="px-6 py-3 bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-extrabold text-xs sm:text-sm rounded-full shadow-lg transition-transform active:scale-95 flex items-center gap-2 cursor-pointer shrink-0"
-            >
-              <Send className="w-4 h-4" />
-              <span>Gửi Phản Ánh Ngay (Không Cần Đăng Nhập)</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
           </div>
         </div>
       </section>
 
-      {/* 🏢 4. VỀ TỔ CHỨC CHỦ QUẢN & SỨ MỆNH PHÁT TRIỂN CẦN THƠ */}
-      <section className="bg-white dark:bg-[#0c1812] rounded-3xl p-6 sm:p-10 border border-slate-200/90 dark:border-emerald-500/20 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] space-y-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-100 dark:border-slate-800 pb-6">
-          <div className="space-y-2">
+      {/* 🏢 4. VỀ TỔ CHỨC CHỦ QUẢN & SỨ MỆNH PHÁT TRIỂN CẦN THƠ (DẠNG ACCORDION THU GỌN) */}
+      <section className="bg-white dark:bg-[#0c1812] rounded-3xl p-6 sm:p-8 lg:p-10 border border-slate-200/90 dark:border-emerald-500/20 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] transition-all duration-300">
+        {/* Header Row: Trạng thái mặc định trên 1 hàng (responsive xuống hàng trên mobile) */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6">
+          {/* Bên trái: Nhãn và Tiêu đề */}
+          <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-xs font-bold border border-emerald-100 dark:border-emerald-500/30">
               <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
               <span>CƠ QUAN CHỦ QUẢN VẬN HÀNH</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-snug">
               Ban Quản Lý Công Viên &amp; Cây Xanh Đô Thị TP. Cần Thơ
             </h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
-              Trực thuộc Sở Xây Dựng TP. Cần Thơ. Chịu trách nhiệm quy hoạch, trồng mới, chăm sóc, cắt tỉa và bảo tồn mạng lưới cây xanh cổ thụ, cây di sản và cảnh quan sinh thái trên toàn địa bàn các quận Ninh Kiều, Cái Răng, Bình Thủy, Ô Môn.
-            </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 shrink-0">
-            <div className="p-4 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-500/20 text-left space-y-1">
-              <div className="text-[10px] font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                <PhoneCall className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                Đường dây nóng 24/7
-              </div>
-              <div className="text-lg font-black text-emerald-950 dark:text-emerald-200 font-mono">0292.3838.114</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400">Cứu hộ cây ngã đổ bão lũ</div>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-left space-y-1">
-              <div className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-                Trụ sở điều hành
-              </div>
-              <div className="text-xs font-bold text-slate-900 dark:text-slate-100">Số 01 Đại lộ Hòa Bình</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400">P. Tân An, Q. Ninh Kiều, Cần Thơ</div>
-            </div>
+          {/* Bên phải: Nút phụ Xem chi tiết / Thu gọn */}
+          <div className="flex items-center shrink-0">
+            <button
+              type="button"
+              onClick={() => setIsOrgDetailOpen((prev) => !prev)}
+              className="px-4 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200/80 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-slate-200 dark:border-emerald-500/30 text-slate-800 dark:text-emerald-200 font-bold text-xs sm:text-sm flex items-center gap-2 cursor-pointer transition-all active:scale-95 shadow-2xs"
+            >
+              <span>{isOrgDetailOpen ? 'Thu gọn' : 'Xem chi tiết'}</span>
+              <ChevronDown
+                className={`w-4 h-4 text-emerald-600 dark:text-emerald-400 transition-transform duration-300 ${isOrgDetailOpen ? 'rotate-180' : ''
+                  }`}
+              />
+            </button>
           </div>
         </div>
 
-        {/* 3 Giá trị cốt lõi */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-5 rounded-2xl bg-slate-50/70 dark:bg-[#0f1f17]/60 border border-slate-200/80 dark:border-emerald-500/20 space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400">
-              <Trees className="w-5 h-5" />
-            </div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Bảo Tồn Sinh Quyển Tây Đô</h3>
-            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              Mỗi cá thể cây xanh là một tài sản sinh thái quý báu. Hệ thống hướng đến mục tiêu đạt tỷ lệ che phủ xanh 12m²/người dân đô thị theo tiêu chuẩn quốc gia.
-            </p>
-          </div>
+        {/* Hiệu ứng đóng/mở xổ xuống mượt mà bằng CSS Grid transition */}
+        <div
+          className={`grid transition-[grid-template-rows,opacity] duration-500 ease-in-out ${isOrgDetailOpen ? 'grid-rows-[1fr] opacity-100 mt-6 sm:mt-8 pt-6 border-t border-slate-100 dark:border-slate-800' : 'grid-rows-[0fr] opacity-0'
+            }`}
+        >
+          <div className="overflow-hidden space-y-6">
+            {/* Đoạn mô tả + Cụm 2 Khung: Đường dây nóng & Trụ sở điều hành */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+              <p className="text-sm text-slate-600 dark:text-slate-400 max-w-xl leading-relaxed">
+                Trực thuộc Sở Xây Dựng TP. Cần Thơ. Phụ trách trồng mới, chăm sóc, cắt tỉa và bảo vệ cây xanh tại các quận Ninh Kiều, Cái Răng, Bình Thủy, Ô Môn.
+              </p>
 
-          <div className="p-5 rounded-2xl bg-slate-50/70 dark:bg-[#0f1f17]/60 border border-slate-200/80 dark:border-emerald-500/20 space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-100 dark:bg-teal-950/60 flex items-center justify-center text-teal-700 dark:text-teal-400">
-              <Zap className="w-5 h-5" />
-            </div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Phản Ứng Khẩn Cấp Thần Tốc</h3>
-            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              Đội cơ động phản ứng nhanh trực chiến 24/7 trong mùa mưa dông Tây Nam Bộ, tiếp nhận phản ánh của người dân và xử lý an toàn dưới 2 giờ.
-            </p>
-          </div>
+              {/* Cụm 2 khung thông tin ngang hàng: Đường dây nóng & Trụ sở điều hành */}
+              <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+                {/* Khung Đường dây nóng 24/7 */}
+                <a
+                  href="tel:02923838114"
+                  className="p-3.5 sm:px-4 sm:py-3 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-500/20 text-left space-y-1 hover:bg-emerald-100/80 dark:hover:bg-emerald-900/40 transition-colors cursor-pointer group"
+                  title="Bấm để gọi cứu hộ cây xanh"
+                >
+                  <div className="text-[10px] font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <PhoneCall className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 group-hover:animate-bounce" />
+                    Đường dây nóng 24/7
+                  </div>
+                  <div className="text-base sm:text-lg font-black text-emerald-950 dark:text-emerald-200 font-mono leading-none">
+                    0292.3838.114
+                  </div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                    Cứu hộ cây ngã đổ bão lũ
+                  </div>
+                </a>
 
-          <div className="p-5 rounded-2xl bg-slate-50/70 dark:bg-[#0f1f17]/60 border border-slate-200/80 dark:border-emerald-500/20 space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400">
-              <ShieldCheck className="w-5 h-5" />
+                {/* Khung Trụ sở điều hành */}
+                <div className="p-3.5 sm:px-4 sm:py-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-left space-y-1">
+                  <div className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                    Trụ sở điều hành
+                  </div>
+                  <div className="text-xs font-bold text-slate-900 dark:text-slate-100">Số 01 Đại lộ Hòa Bình</div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400">P. Tân An, Q. Ninh Kiều, Cần Thơ</div>
+                </div>
+              </div>
             </div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Minh Bạch Công Vụ Với Dân</h3>
-            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              Toàn bộ kinh phí duy tu, lịch sử cắt tỉa và xử lý sự cố đều được ký số SHA-256 và công khai trên sổ cái Blockchain bất biến, không thể bị xóa sửa.
-            </p>
+
+            {/* 3 Thẻ thông tin cốt lõi */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 pt-2">
+              <div className="p-5 rounded-2xl bg-slate-50/70 dark:bg-[#0f1f17]/60 border border-slate-200/80 dark:border-emerald-500/20 space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400">
+                  <Trees className="w-5 h-5" />
+                </div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Bảo Tồn Sinh Quyển Tây Đô</h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Chăm sóc và giữ gìn từng cây xanh đô thị, hướng tới mục tiêu 12m² mảng xanh cho mỗi người dân.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-slate-50/70 dark:bg-[#0f1f17]/60 border border-slate-200/80 dark:border-emerald-500/20 space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-teal-100 dark:bg-teal-950/60 flex items-center justify-center text-teal-700 dark:text-teal-400">
+                  <Zap className="w-5 h-5" />
+                </div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Phản Ứng Khẩn Cấp Thần Tốc</h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Đội kỹ thuật trực 24/7 mùa mưa bão, tiếp nhận tin báo của người dân và xử lý an toàn dưới 2 giờ.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-slate-50/70 dark:bg-[#0f1f17]/60 border border-slate-200/80 dark:border-emerald-500/20 space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Minh Bạch Công Vụ Với Dân</h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Lịch sử cắt tỉa, xử lý sự cố và chi phí chăm sóc đều được công khai, lưu trữ rõ ràng và không thể xóa sửa.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -512,164 +578,244 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-xs font-bold border border-emerald-100 dark:border-emerald-500/30">
             <Cpu className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span>KIẾN TRÚC CÔNG NGHỆ 4.0</span>
+            <span>ÔNG NGHỆ THÔNG MINH</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-            Cách Thức Hoạt Động Của Hệ Sinh Thái
+            Hệ Thống Hoạt Động Như Thế Nào?
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-            Sự kết hợp đồng bộ giữa bản đồ không gian GIS, mã định danh vật lý QR Code, AI phân tích hình ảnh và Blockchain A19 bảo chứng dữ liệu.
-          </p>
+            Kết hợp bản đồ số, mã QR gắn trên từng cây, công nghệ phân tích ảnh và lưu trữ dữ liệu minh bạch.          </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 items-start">
           {/* Cột 1: GIS Map */}
-          <div className="bg-white dark:bg-[#0c1812] p-6 rounded-3xl border border-slate-200/80 dark:border-emerald-500/20 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] space-y-4 hover:border-emerald-300 dark:hover:border-emerald-500/50 transition-all hover:shadow-md">
+          <div
+            tabIndex={0}
+            className="group cursor-pointer bg-white dark:bg-[#0c1812] p-6 rounded-3xl border border-slate-200/80 dark:border-emerald-500/20 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] space-y-4 hover:border-emerald-500/50 focus:border-emerald-500/50 transition-all duration-300 hover:shadow-md focus:outline-none"
+          >
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-black text-lg">
               01
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1 flex items-center gap-1.5">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                 <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                Số Hóa GIS Thực Địa
+                Bản Đồ Vị Trí Từng Cây
               </h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Từng gốc cây được gắn tọa độ GPS chuẩn xác (vĩ độ, kinh độ), lưu trữ thông số thực địa: chiều cao, đường kính tán lá, chủng loại sinh học và hiện trạng gốc rễ.
-              </p>
+              <div className="grid grid-rows-[0fr] opacity-0 transition-all duration-300 ease-in-out group-hover:grid-rows-[1fr] group-hover:opacity-100 group-focus:grid-rows-[1fr] group-focus:opacity-100">
+                <div className="overflow-hidden">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed pt-3">
+                    Mỗi cây xanh đều được định vị chính xác trên bản đồ cùng thông tin chi tiết về chiều cao, tán lá, chủng loại và tình trạng gốc rễ.
+                  </p>
+                </div>
+              </div>
             </div>
             <div className="pt-2 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-              <span>Định vị vệ tinh OpenStreetMap</span>
+              <span>Định vị chính xác trên bản đồ</span>
             </div>
           </div>
 
           {/* Cột 2: QR Code */}
-          <div className="bg-white dark:bg-[#0c1812] p-6 rounded-3xl border border-slate-200/80 dark:border-emerald-500/20 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] space-y-4 hover:border-emerald-300 dark:hover:border-emerald-500/50 transition-all hover:shadow-md">
+          <div
+            tabIndex={0}
+            className="group cursor-pointer bg-white dark:bg-[#0c1812] p-6 rounded-3xl border border-slate-200/80 dark:border-emerald-500/20 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] space-y-4 hover:border-emerald-500/50 focus:border-emerald-500/50 transition-all duration-300 hover:shadow-md focus:outline-none"
+          >
             <div className="w-12 h-12 rounded-2xl bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-500/30 flex items-center justify-center text-teal-700 dark:text-teal-400 font-black text-lg">
               02
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1 flex items-center gap-1.5">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                 <QrCode className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-                Mã QR Thân Cây Vật Lý
+                Mã QR Gắn Trên Thân Cây
               </h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Biển nhôm QR Code bền bỉ với thời tiết gắn trực tiếp ở độ cao 1.5m. Người dân quét bằng camera là mở thẳng form báo cáo sự cố ngay tại chỗ, không cần đăng nhập.
-              </p>
+              <div className="grid grid-rows-[0fr] opacity-0 transition-all duration-300 ease-in-out group-hover:grid-rows-[1fr] group-hover:opacity-100 group-focus:grid-rows-[1fr] group-focus:opacity-100">
+                <div className="overflow-hidden">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed pt-3">
+                    Biển nhôm mã QR bền bỉ gắn ở độ cao 1,5m. Người dân chỉ cần quét bằng điện thoại để báo sự cố ngay tại chỗ, không cần đăng nhập.
+                  </p>
+                </div>
+              </div>
             </div>
             <div className="pt-2 text-[11px] font-bold text-teal-700 dark:text-teal-400 flex items-center gap-1">
-              <span>Mở thẳng form phản ánh sự cố</span>
+              <span>Quét mã báo sự cố ngay</span>
             </div>
           </div>
 
           {/* Cột 3: AI Gemini */}
-          <div className="bg-white dark:bg-[#0c1812] p-6 rounded-3xl border border-slate-200/80 dark:border-emerald-500/20 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] space-y-4 hover:border-emerald-300 dark:hover:border-emerald-500/50 transition-all hover:shadow-md">
+          <div
+            tabIndex={0}
+            className="group cursor-pointer bg-white dark:bg-[#0c1812] p-6 rounded-3xl border border-slate-200/80 dark:border-emerald-500/20 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] space-y-4 hover:border-emerald-500/50 focus:border-emerald-500/50 transition-all duration-300 hover:shadow-md focus:outline-none"
+          >
             <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center text-amber-700 dark:text-amber-400 font-black text-lg">
               03
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1 flex items-center gap-1.5">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                Trí Tuệ Nhân Tạo AI
+                Phân Tích Ảnh Thông Minh
               </h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Gemini AI hỗ trợ phân tích hình ảnh tán lá, dấu hiệu rỗng ruột hoặc nấm bệnh, phân cấp rủi ro (GOOD, FAIR, POOR, CRITICAL) để ưu tiên xử lý trước mùa mưa bão.
-              </p>
+              <div className="grid grid-rows-[0fr] opacity-0 transition-all duration-300 ease-in-out group-hover:grid-rows-[1fr] group-hover:opacity-100 group-focus:grid-rows-[1fr] group-focus:opacity-100">
+                <div className="overflow-hidden">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed pt-3">
+                    Công nghệ AI hỗ trợ kiểm tra tán lá, sâu bệnh và dấu hiệu mục ruỗng, giúp phân loại mức độ nguy hiểm để ưu tiên xử lý trước mùa mưa bão.
+                  </p>
+                </div>
+              </div>
             </div>
             <div className="pt-2 text-[11px] font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1">
-              <span>Cảnh báo nguy cơ gãy đổ sớm</span>
+              <span>Cảnh báo sớm nguy cơ gãy đổ</span>
             </div>
           </div>
 
           {/* Cột 4: Blockchain */}
-          <div className="bg-white dark:bg-[#0c1812] p-6 rounded-3xl border border-slate-200/80 dark:border-emerald-500/20 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] space-y-4 hover:border-emerald-300 dark:hover:border-emerald-500/50 transition-all hover:shadow-md">
+          <div
+            tabIndex={0}
+            className="group cursor-pointer bg-white dark:bg-[#0c1812] p-6 rounded-3xl border border-slate-200/80 dark:border-emerald-500/20 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] space-y-4 hover:border-emerald-500/50 focus:border-emerald-500/50 transition-all duration-300 hover:shadow-md focus:outline-none"
+          >
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-black text-lg">
               04
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1 flex items-center gap-1.5">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                Chuỗi Khối Bất Biến A19
+                Lưu Trữ Minh Bạch, An Toàn
               </h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Mọi tác vụ cắt tỉa cành, nhật ký chăm sóc và xử lý sự cố đều được băm SHA-256 Canonical JSON v1 và neo Smart Contract EVM. Dữ liệu vĩnh viễn không thể làm giả.
-              </p>
+              <div className="grid grid-rows-[0fr] opacity-0 transition-all duration-300 ease-in-out group-hover:grid-rows-[1fr] group-hover:opacity-100 group-focus:grid-rows-[1fr] group-focus:opacity-100">
+                <div className="overflow-hidden">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed pt-3">
+                    Mọi lịch sử cắt tỉa, chăm sóc và xử lý sự cố đều được lưu trữ công khai, bảo mật chặt chẽ và hoàn toàn không thể chỉnh sửa hay làm giả.
+                  </p>
+                </div>
+              </div>
             </div>
             <div className="pt-2 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-              <span>Bảo chứng mật mã học On-Chain</span>
+              <span>Dữ liệu công khai, không thể sửa</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 🛠️ 5. QUY TRÌNH VẬN HÀNH THỰC ĐỊA (DÀNH CHO ĐƠN VỊ DUY TU & KỸ THUẬT VIÊN) */}
-      <section className="bg-white dark:bg-[#0c1812] rounded-3xl p-6 sm:p-10 border border-slate-200/90 dark:border-emerald-500/20 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] space-y-8">
-        <div className="max-w-2xl space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-800">
-            <ClipboardList className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span>QUY TRÌNH CHUẨN CÔNG VỤ (SOP)</span>
+      {/* 🛠️ 5. QUY TRÌNH VẬN HÀNH THỰC ĐỊA (DÀNH CHO ĐƠN VỊ DUY TU & KỸ THUẬT VIÊN - DẠNG ACCORDION THU GỌN) */}
+      <section className="bg-white dark:bg-[#0c1812] rounded-3xl p-5 sm:p-8 lg:p-10 border border-slate-200/90 dark:border-emerald-500/20 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] transition-all duration-300">
+        {/* Header Row: Trạng thái mặc định trên 1 hàng (flex-col trên mobile, flex-row items-center justify-between trên desktop) */}
+        <div
+          onClick={() => setIsProcessOpen((prev) => !prev)}
+          className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6 cursor-pointer select-none group"
+        >
+          {/* Bên trái: Nhãn, Tiêu đề và Mô tả đối tượng áp dụng */}
+          <div className="space-y-2 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-800">
+              <ClipboardList className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>QUY TRÌNH CHUẨN CÔNG VỤ (SOP)</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-snug group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
+              Quy Trình Xử Lý &amp; Cắt Tỉa Kỹ Thuật Thực Địa
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+              Áp dụng cho Ban Quản Lý, Đội Kỹ Thuật Viên (Staff) và Tổ Cơ Động Cắt Tỉa Cây Xanh Đô Thị.
+            </p>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-            Quy Trình Xử Lý &amp; Cắt Tỉa Kỹ Thuật Thực Địa
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-            Áp dụng cho Ban Quản Lý, Đội Kỹ Thuật Viên (Staff) và Tổ Cơ Động Cắt Tỉa Cây Xanh Đô Thị.
-          </p>
+
+          {/* Bên phải: Nút phụ Xem quy trình (4 bước) / Thu gọn (full-width trên mobile, dễ bấm bằng ngón cái) */}
+          <div className="flex items-center shrink-0 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsProcessOpen((prev) => !prev);
+              }}
+              className="w-full sm:w-auto px-4 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200/80 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-slate-200 dark:border-emerald-500/30 text-slate-800 dark:text-emerald-200 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 shadow-2xs"
+            >
+              <span>{isProcessOpen ? 'Thu gọn quy trình' : 'Xem quy trình (4 bước)'}</span>
+              <ChevronDown
+                className={`w-4 h-4 text-emerald-600 dark:text-emerald-400 transition-transform duration-300 ${
+                  isProcessOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+          </div>
         </div>
 
-        <div className="relative border-l-2 border-emerald-200 dark:border-emerald-800/60 ml-4 pl-6 sm:pl-8 space-y-8">
-          {/* Step 1 */}
-          <div className="relative group">
-            <div className="absolute -left-[35px] sm:-left-[43px] top-0 w-8 h-8 rounded-full bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 flex items-center justify-center text-xs font-bold shadow-md">
-              1
-            </div>
-            <div className="space-y-1">
-              <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Bước 1: Tiếp nhận &amp; Phân loại ưu tiên</span>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Tiếp nhận báo cáo từ Người dân và Tuần tra số</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-3xl">
-                Hệ thống tự động kích hoạt vé sự cố (Incident Ticket). Trưởng ban điều hành phân công kỹ thuật viên phụ trách tuyến đường qua ứng dụng di động.
-              </p>
-            </div>
-          </div>
+        {/* Hiệu ứng đóng/mở xổ mượt trục dọc 4 bước bằng CSS Grid transition */}
+        <div
+          className={`grid transition-[grid-template-rows,opacity] duration-500 ease-in-out ${
+            isProcessOpen
+              ? 'grid-rows-[1fr] opacity-100 mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-slate-100 dark:border-slate-800'
+              : 'grid-rows-[0fr] opacity-0'
+          }`}
+        >
+          <div className="overflow-hidden">
+            <div className="relative border-l-2 border-emerald-200 dark:border-emerald-800/60 ml-5 sm:ml-7 pl-6 sm:pl-8 space-y-7 sm:space-y-8 my-2">
+              {/* Step 1 */}
+              <div className="relative group">
+                <div className="absolute -left-[37px] sm:-left-[45px] top-0 w-8 h-8 rounded-full bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 flex items-center justify-center text-xs font-bold shadow-md">
+                  1
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+                    Bước 1: Tiếp nhận &amp; Phân loại ưu tiên
+                  </span>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                    Tiếp nhận báo cáo từ Người dân và Tuần tra số
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-3xl">
+                    Hệ thống tự động kích hoạt vé sự cố (Incident Ticket). Trưởng ban điều hành phân công kỹ thuật viên phụ trách tuyến đường qua ứng dụng di động.
+                  </p>
+                </div>
+              </div>
 
-          {/* Step 2 */}
-          <div className="relative group">
-            <div className="absolute -left-[35px] sm:-left-[43px] top-0 w-8 h-8 rounded-full bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 flex items-center justify-center text-xs font-bold shadow-md">
-              2
-            </div>
-            <div className="space-y-1">
-              <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Bước 2: Xuất quân &amp; Khảo sát an toàn</span>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Đội kỹ thuật di chuyển cùng xe thang nâng chuyên dụng</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-3xl">
-                Đặt rào chắn cảnh báo giao thông tạm thời. Kỹ thuật viên quét mã QR trên thân cây để xác nhận đúng cá thể và kiểm tra lịch sử cắt tỉa trước đó.
-              </p>
-            </div>
-          </div>
+              {/* Step 2 */}
+              <div className="relative group">
+                <div className="absolute -left-[37px] sm:-left-[45px] top-0 w-8 h-8 rounded-full bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 flex items-center justify-center text-xs font-bold shadow-md">
+                  2
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+                    Bước 2: Xuất quân &amp; Khảo sát an toàn
+                  </span>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                    Đội kỹ thuật di chuyển cùng xe thang nâng chuyên dụng
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-3xl">
+                    Đặt rào chắn cảnh báo giao thông tạm thời. Kỹ thuật viên quét mã QR trên thân cây để xác nhận đúng cá thể và kiểm tra lịch sử cắt tỉa trước đó.
+                  </p>
+                </div>
+              </div>
 
-          {/* Step 3 */}
-          <div className="relative group">
-            <div className="absolute -left-[35px] sm:-left-[43px] top-0 w-8 h-8 rounded-full bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 flex items-center justify-center text-xs font-bold shadow-md">
-              3
-            </div>
-            <div className="space-y-1">
-              <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Bước 3: Thi công &amp; Chụp ảnh đối chứng</span>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Thực hiện hạ cành nặng, bôi vôi sát khuẩn vết cắt và dọn dẹp</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-3xl">
-                Cắt tỉa theo đúng góc cắt chuẩn lâm nghiệp đô thị. Bắt buộc chụp ảnh hiện trường "SAU KHI XỬ LÝ" để đối chiếu với ảnh ban đầu.
-              </p>
-            </div>
-          </div>
+              {/* Step 3 */}
+              <div className="relative group">
+                <div className="absolute -left-[37px] sm:-left-[45px] top-0 w-8 h-8 rounded-full bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 flex items-center justify-center text-xs font-bold shadow-md">
+                  3
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+                    Bước 3: Thi công &amp; Chụp ảnh đối chứng
+                  </span>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                    Thực hiện hạ cành nặng, bôi vôi sát khuẩn vết cắt và dọn dẹp
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-3xl">
+                    Cắt tỉa theo đúng góc cắt chuẩn lâm nghiệp đô thị. Bắt buộc chụp ảnh hiện trường "SAU KHI XỬ LÝ" để đối chiếu với ảnh ban đầu.
+                  </p>
+                </div>
+              </div>
 
-          {/* Step 4 */}
-          <div className="relative group">
-            <div className="absolute -left-[35px] sm:-left-[43px] top-0 w-8 h-8 rounded-full bg-emerald-700 dark:bg-emerald-500 text-white dark:text-slate-950 flex items-center justify-center text-xs font-bold shadow-md ring-4 ring-emerald-100 dark:ring-emerald-950">
-              4
-            </div>
-            <div className="space-y-1">
-              <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Bước 4: Nghiệm thu &amp; Ký số On-Chain</span>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Ghi nhận nhật ký chăm sóc và neo Smart Contract</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-3xl">
-                Kỹ thuật viên gửi biên bản nghiệm thu; thuật toán tự động băm SHA-256 nội dung và địa chỉ ví nhân viên lên Blockchain. Vé sự cố chuyển trạng thái HOÀN THÀNH (RESOLVED).
-              </p>
+              {/* Step 4 */}
+              <div className="relative group">
+                <div className="absolute -left-[37px] sm:-left-[45px] top-0 w-8 h-8 rounded-full bg-emerald-700 dark:bg-emerald-500 text-white dark:text-slate-950 flex items-center justify-center text-xs font-bold shadow-md ring-4 ring-emerald-100 dark:ring-emerald-950">
+                  4
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+                    Bước 4: Nghiệm thu &amp; Ký số On-Chain
+                  </span>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                    Ghi nhận nhật ký chăm sóc và neo Smart Contract
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-3xl">
+                    Kỹ thuật viên gửi biên bản nghiệm thu; thuật toán tự động băm SHA-256 nội dung và địa chỉ ví nhân viên lên Blockchain. Vé sự cố chuyển trạng thái HOÀN THÀNH (RESOLVED).
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -704,9 +850,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                   {faq.q}
                 </span>
                 <ChevronRight
-                  className={`w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 transition-transform ${
-                    activeFaq === idx ? 'rotate-90' : ''
-                  }`}
+                  className={`w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 transition-transform ${activeFaq === idx ? 'rotate-90' : ''
+                    }`}
                 />
               </button>
               {activeFaq === idx && (

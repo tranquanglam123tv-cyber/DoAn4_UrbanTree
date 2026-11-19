@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CloudRain, ArrowRight, X, AlertTriangle, ShieldCheck, CheckCircle2, Scissors, Leaf, Volume2, VolumeX, Sparkles, Clock } from 'lucide-react';
+import { CloudRain, X, AlertTriangle, ShieldCheck, Volume2, VolumeX } from 'lucide-react';
 import { isSirenSoundEnabled, setSirenSoundEnabled, playEmergencySirenSound } from '../utils/soundAndAlertUtils';
 import { StormCampaign } from '../types';
 
@@ -63,15 +63,12 @@ export const EmergencyStormTicker: React.FC<EmergencyStormTickerProps> = ({
         <button
           onClick={() => setIsDismissed(false)}
           title={isResolved ? 'Xem giám sát an toàn đô thị' : 'Mở lại Báo động Mùa Bão'}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-white text-xs font-bold shadow-lg border cursor-pointer transition-transform hover:scale-105 ${
-            isResolved
-              ? 'bg-emerald-600 hover:bg-emerald-700 border-emerald-400'
-              : isInProgress
-              ? 'bg-blue-600 hover:bg-blue-700 border-blue-400 animate-pulse'
-              : 'bg-amber-500 hover:bg-amber-600 border-amber-300 animate-bounce'
-          }`}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full text-slate-800 dark:text-slate-100 bg-white/95 dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 text-xs font-bold shadow-md cursor-pointer transition-transform hover:scale-105"
         >
-          {isResolved ? <ShieldCheck className="w-4 h-4" /> : <CloudRain className="w-4 h-4" />}
+          <span className="relative flex h-2 w-2 shrink-0">
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isResolved ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${isResolved ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+          </span>
           <span>
             {isResolved
               ? 'Đô Thị: An Toàn Tuyệt Đối'
@@ -87,151 +84,90 @@ export const EmergencyStormTicker: React.FC<EmergencyStormTickerProps> = ({
   // Thông điệp động theo 4 giai đoạn vòng đời chiến dịch
   let message = '';
   let badgeText = '';
-  let containerBg = '';
-  let badgeBg = '';
 
   if (isResolved) {
-    badgeText = '🛡️ ĐÃ HOÀN THÀNH';
-    message = `✅ CHIẾN DỊCH MÙA BÃO ĐÃ HOÀN THÀNH: ${totalTrees}/${totalTrees} cây nguy cơ cao đã được rà soát, cắt tỉa cành an toàn và lưu nhật ký Smart Contract. Toàn thành phố bình yên đón mùa mưa bão!`;
-    containerBg = 'bg-gradient-to-r from-emerald-50/95 via-teal-50/90 to-emerald-50/95 dark:from-slate-900/95 dark:via-emerald-950/50 dark:to-slate-900/95 border-emerald-400/70 dark:border-emerald-600/60 shadow-emerald-950/10';
-    badgeBg = 'bg-emerald-500/20 dark:bg-emerald-900/60 border-emerald-400/70 dark:border-emerald-500/60 text-emerald-900 dark:text-emerald-200';
+    badgeText = 'ĐÃ HOÀN THÀNH';
+    message = `Chiến dịch mùa bão đã hoàn thành: ${totalTrees}/${totalTrees} cây nguy cơ cao đã được rà soát, cắt tỉa an toàn và lưu nhật ký Smart Contract. Toàn thành phố bình yên!`;
   } else if (isNearCompletion) {
-    badgeText = '⏳ SẮP HOÀN THÀNH';
-    message = `🟡 CHIẾN DỊCH SẮP HOÀN THÀNH: Đã xử lý ${resolvedTrees}/${totalTrees} cây (${progressPercent}%). Chỉ còn ${remainingTrees} cây đang chờ hoàn tất và nghiệm thu ngoài hiện trường!`;
-    containerBg = 'bg-gradient-to-r from-amber-50/95 via-yellow-50/90 to-amber-50/95 dark:from-slate-900/95 dark:via-amber-950/50 dark:to-slate-900/95 border-amber-400/60 dark:border-amber-600/50 shadow-amber-950/5';
-    badgeBg = 'bg-amber-500/20 dark:bg-amber-900/60 border-amber-400/60 dark:border-amber-500/50 text-amber-950 dark:text-amber-200';
+    badgeText = 'SẮP HOÀN THÀNH';
+    message = `Chiến dịch sắp hoàn thành: Đã xử lý ${resolvedTrees}/${totalTrees} cây (${progressPercent}%). Chỉ còn ${remainingTrees} cây đang chờ hoàn tất và nghiệm thu ngoài hiện trường!`;
   } else if (isInProgress) {
-    badgeText = '⚡ ĐANG TRIỂN KHAI';
-    message = `🟠 CHIẾN DỊCH MÙA BÃO ĐANG THI CÔNG: Đã xử lý & nghiệm thu ${resolvedTrees}/${totalTrees} cây (${progressPercent}%) — Còn ${remainingTrees} cây đang được các tổ KTV cắt tỉa hạ tán trên tuyến.`;
-    containerBg = 'bg-gradient-to-r from-orange-50/95 via-amber-50/90 to-orange-50/95 dark:from-slate-900/95 dark:via-orange-950/50 dark:to-slate-900/95 border-orange-400/60 dark:border-orange-600/50 shadow-orange-950/5';
-    badgeBg = 'bg-orange-500/20 dark:bg-orange-900/60 border-orange-400/60 dark:border-orange-500/50 text-orange-950 dark:text-orange-200';
+    badgeText = 'ĐANG TRIỂN KHAI';
+    message = `Chiến dịch mùa bão đang thi công: Đã xử lý & nghiệm thu ${resolvedTrees}/${totalTrees} cây (${progressPercent}%) — Còn ${remainingTrees} cây đang được các tổ KTV cắt tỉa hạ tán trên tuyến.`;
   } else {
-    badgeText = '⛈️ BÁO ĐỘNG MÙA BÃO';
-    message = `Chiến Dịch Rà Soát Cắt Tỉa Hạ Độ Cao Đón Mùa Mưa Bão (Tháng 5 – Tháng 11): Hệ thống phát hiện ${remainingTrees} cây loại 2 & loại 3 cao trên 7m chưa được cắt tỉa quá 180 ngày (có ${highUrgencyCount} cây nguy cơ cao). Đề nghị các tổ KTV điều động xe thang xử lý ngay!`;
-    containerBg = 'bg-gradient-to-r from-amber-50/95 via-rose-50/90 to-amber-50/95 dark:from-slate-900/95 dark:via-rose-950/50 dark:to-slate-900/95 border-amber-400/60 dark:border-rose-600/50 shadow-amber-950/5';
-    badgeBg = 'bg-amber-500/20 dark:bg-amber-900/60 border-amber-400/60 dark:border-amber-500/50 text-amber-950 dark:text-amber-200';
+    badgeText = 'BÁO ĐỘNG MÙA BÃO';
+    message = `Chiến dịch cắt tỉa hạ độ cao đón mùa mưa bão: Hệ thống phát hiện ${remainingTrees} cây loại 2 & 3 cao trên 7m chưa được cắt tỉa quá 180 ngày (có ${highUrgencyCount} cây nguy cơ cao). Đề nghị các tổ KTV xử lý ngay!`;
   }
 
   return (
     <div className="relative z-0 w-full max-w-[1440px] mx-auto transition-all duration-300">
-      <div className={`relative overflow-hidden rounded-full border shadow-sm backdrop-blur-xl px-3 sm:px-4 py-1.5 flex items-center justify-between gap-2.5 marquee-container transition-colors duration-500 ${containerBg}`}>
-        {/* Left: Status Badge */}
-        <div className={`flex items-center gap-1.5 shrink-0 z-10 px-2.5 py-0.5 rounded-full border transition-all duration-300 ${badgeBg}`}>
-          {isResolved ? (
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-          ) : isNearCompletion ? (
-            <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 animate-spin" />
-          ) : (
-            <span className="relative flex h-2 w-2">
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isInProgress ? 'bg-orange-400' : 'bg-amber-400'}`} />
-              <span className={`relative inline-flex rounded-full h-2 w-2 ${isInProgress ? 'bg-orange-500' : 'bg-amber-500'}`} />
-            </span>
-          )}
-          <span className="text-[10px] sm:text-[11px] font-black tracking-wide uppercase whitespace-nowrap">
+      {/* 🏛️ Enterprise Glass White Container */}
+      <div className="relative overflow-hidden rounded-full border border-slate-200/90 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 shadow-xs backdrop-blur-md px-3 sm:px-4 py-1.5 flex items-center justify-between gap-2.5 marquee-container transition-colors duration-300">
+        
+        {/* Left: Minimalist Status Badge with 1 subtle amber indicator dot */}
+        <div className="flex items-center gap-2 shrink-0 z-10 px-2.5 py-0.5 rounded-full bg-slate-100/90 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80">
+          <span className="relative flex h-2 w-2 shrink-0">
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isResolved ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${isResolved ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+          </span>
+          <span className="text-[10px] sm:text-[11px] font-bold tracking-wider uppercase whitespace-nowrap text-slate-700 dark:text-slate-200">
             {badgeText}
           </span>
         </div>
 
         {/* Center: Running Marquee Ticker */}
         <div className="flex-1 overflow-hidden relative cursor-default select-none mx-1 sm:mx-2">
-          <div className={`animate-marquee flex items-center gap-8 py-0.5 text-xs font-semibold ${
-            isResolved
-              ? 'text-emerald-900 dark:text-emerald-200'
-              : isInProgress
-              ? 'text-orange-950 dark:text-orange-200'
-              : 'text-amber-950 dark:text-amber-200'
-          }`}>
+          <div className="animate-marquee flex items-center gap-8 py-0.5 text-xs font-medium text-slate-700 dark:text-slate-300">
             <span className="flex items-center gap-2">
               {isResolved ? (
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 inline" />
-              ) : isNearCompletion ? (
-                <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 inline" />
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 inline" />
               ) : (
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 inline" />
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 inline" />
               )}
-              {message}
+              <span>{message}</span>
             </span>
             <span className="flex items-center gap-2">
               {isResolved ? (
-                <Leaf className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0 inline" />
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 inline" />
               ) : (
-                <AlertTriangle className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400 shrink-0 inline" />
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 inline" />
               )}
-              {message}
+              <span>{message}</span>
             </span>
           </div>
         </div>
 
-        {/* Right: Action Buttons */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 z-10">
+        {/* Right: Clean Action Button Hierarchy */}
+        <div className="flex items-center gap-2 shrink-0 z-10">
+          {/* Subtle Siren Sound Icon Toggle (no loud pink box) */}
           {!isResolved && (
             <button
               onClick={handleToggleSiren}
-              className={`p-1 sm:px-2 sm:py-0.5 rounded-full text-[10px] font-bold border transition-colors flex items-center gap-1 cursor-pointer ${
+              className={`w-7 h-7 rounded-full border transition-all flex items-center justify-center cursor-pointer ${
                 sirenOn
-                  ? 'bg-rose-500/20 border-rose-400 text-rose-700 dark:text-rose-300'
-                  : 'bg-slate-200/60 border-slate-300 text-slate-500 dark:bg-slate-800 dark:border-slate-700'
+                  ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 text-amber-600 dark:text-amber-400 shadow-2xs'
+                  : 'bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
               }`}
-              title={sirenOn ? 'Còi hú báo động đang BẬT. Bấm để tắt tiếng' : 'Còi hú báo động đang TẮT. Bấm để bật'}
+              title={sirenOn ? 'Âm thanh còi hú đang BẬT (bấm để tắt tiếng)' : 'Âm thanh còi hú đang TẮT (bấm để bật)'}
             >
-              {sirenOn ? <Volume2 className="w-3 h-3 text-rose-600 animate-pulse" /> : <VolumeX className="w-3 h-3" />}
-              <span className="hidden sm:inline">{sirenOn ? 'Còi Hú' : 'Tắt Còi'}</span>
+              {sirenOn ? <Volume2 className="w-3.5 h-3.5 animate-pulse" /> : <VolumeX className="w-3.5 h-3.5" />}
             </button>
           )}
 
-          <span
-            className={`hidden md:inline-flex px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold text-white shadow-2xs ${
-              isResolved
-                ? 'bg-emerald-600'
-                : isNearCompletion
-                ? 'bg-amber-600'
-                : isInProgress
-                ? 'bg-orange-600'
-                : 'bg-amber-500'
-            }`}
-          >
-            {isResolved
-              ? '✅ 100% An Toàn'
-              : isInProgress
-              ? `Đã Xử Lý: ${progressPercent}% (Còn ${remainingTrees})`
-              : `${remainingTrees} Cây Cần Hạ Tán`}
-          </span>
-
+          {/* Primary Action Button (Emerald Green, Clean Text Only) */}
           <button
             onClick={onOpenAction}
-            className={`px-2.5 sm:px-3 py-1 rounded-full text-white font-bold text-[11px] sm:text-xs transition-all flex items-center gap-1 shadow-xs hover:shadow-sm active:scale-95 cursor-pointer whitespace-nowrap ${
-              isResolved
-                ? 'bg-emerald-600 hover:bg-emerald-700'
-                : isNearCompletion
-                ? 'bg-amber-600 hover:bg-amber-700'
-                : isInProgress
-                ? 'bg-orange-600 hover:bg-orange-700'
-                : 'bg-amber-600 hover:bg-amber-700'
-            }`}
+            className="px-4 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all shadow-xs hover:shadow-sm active:scale-95 cursor-pointer whitespace-nowrap"
             title={isResolved ? 'Xem chi tiết kết quả chiến dịch' : 'Mở điều hành xử lý cắt tỉa'}
           >
-            {isResolved ? (
-              <>
-                <span>Xem kết quả</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </>
-            ) : (
-              <>
-                <Scissors className="w-3.5 h-3.5" />
-                <span>{isInProgress ? 'Vào ca xử lý' : 'Xử lý cắt tỉa ngay'}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </>
-            )}
+            <span>{isResolved ? 'Xem kết quả' : 'Xử lý ngay'}</span>
           </button>
 
+          {/* Close / Dismiss Button */}
           <button
             onClick={() => setIsDismissed(true)}
-            className={`p-1 rounded-full transition-colors cursor-pointer ${
-              isResolved
-                ? 'text-emerald-700 hover:text-emerald-950 dark:text-emerald-400 hover:bg-emerald-500/20'
-                : 'text-amber-700 hover:text-amber-950 dark:text-amber-400 hover:bg-amber-500/20'
-            }`}
-            title="Ẩn thanh này"
+            className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Ẩn thông báo này"
           >
             <X className="w-3.5 h-3.5" />
           </button>

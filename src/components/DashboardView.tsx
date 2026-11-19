@@ -10,40 +10,29 @@ import {
   QrCode,
   MapPin,
   ExternalLink,
-  Sparkles,
   Activity,
   Layers,
-  Search,
   Sliders,
-  Home,
   BarChart3,
   TrendingUp,
   Droplets,
   Scissors,
   Sprout,
-  ShieldAlert,
   Users,
-  UserPlus,
   FileText,
   Printer,
-  CloudRain,
-  Download,
   X,
-  Clock,
+  ChevronDown,
 } from 'lucide-react';
 import { storage } from '../db/storage';
 import { blockchainService } from '../services/blockchainService';
 import { hasPermission, assertPermission } from '../utils/permissionUtils';
 import { useEscapeOverlay } from '../hooks/useEscapeOverlay';
-import { Tree, CareRecord } from '../types';
+import { Tree } from '../types';
 import {
   calculateAllometricCarbon,
   getTreeClassification,
   calculateIncidentSLA,
-  isStormSeasonPruningNeeded,
-  buildLatestPruningMap,
-  getTreeStreetCode,
-  getTreeMilestone,
 } from '../utils/treeUtils';
 
 interface DashboardViewProps {
@@ -54,6 +43,39 @@ interface DashboardViewProps {
   onOpenStaffManagement?: () => void;
 }
 
+interface WeeklyCareItem {
+  day: string;
+  label: string;
+  dateStr: string;
+  count: number;
+  watering: number;
+  pruning: number;
+  fertilizing: number;
+  treatment: number;
+  mainStreet: string;
+}
+
+const HEALTH_LABEL: Record<string, string> = {
+  GOOD: 'Khỏe mạnh',
+  FAIR: 'Bình thường',
+  POOR: 'Kém',
+  CRITICAL: 'Nguy cấp',
+};
+
+const SEVERITY_LABEL: Record<string, string> = {
+  CRITICAL: 'Khẩn cấp',
+  HIGH: 'Cao',
+  MEDIUM: 'Trung bình',
+  LOW: 'Thấp',
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  RECEIVED: 'Mới tiếp nhận',
+  IN_PROGRESS: 'Đang xử lý',
+  RESOLVED: 'Đã xong',
+  REJECTED: 'Đã hủy',
+};
+
 export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigate,
   onOpenAddTree,
@@ -63,6 +85,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   const currentUser = storage.getActiveUser();
   const [dataVersion, setDataVersion] = useState(0);
+
+  // Trạng thái đóng/mở các mục phụ (Mặc định thu gọn cho thoáng mắt)
+  const [showEcoSection, setShowEcoSection] = useState(false);
+  const [showChartSection, setShowChartSection] = useState(false);
+  const [showDetailsSection, setShowDetailsSection] = useState(false);
 
   useEffect(() => {
     const handleSync = () => setDataVersion((v) => v + 1);
@@ -90,7 +117,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [showOfficialReportModal, setShowOfficialReportModal] = useState<boolean>(false);
   const [telemetryData, setTelemetryData] = useState<any>(null);
 
-  // Fetch real maintenance telemetry from SQLite backend (Wave 5.0.3)
   useEffect(() => {
     fetch('http://localhost:5001/api/dashboard/maintenance-telemetry')
       .then((r) => r.json())
@@ -102,28 +128,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       .catch((err) => console.warn('Telemetry fetch error:', err));
   }, [dataVersion, careRecords.length]);
 
-  // Đóng modal báo cáo A4 bằng phím Escape qua global overlay stack
   useEscapeOverlay('dashboard-official-report-modal', showOfficialReportModal, () => {
     setShowOfficialReportModal(false);
   });
 
   const healthyPercent = stats.totalTrees > 0 ? Math.round((stats.healthyTrees / stats.totalTrees) * 100) : 0;
 
-  // ⛈️ RÀ SOÁT CÂY CẦN CẮT TỈA TRƯỚC MÙA MƯA BÃO (PRE-STORM AUDIT)
-  // ⚡ Tối ưu O(1) qua buildLatestPruningMap: 5,000 cây quét trong 2ms thay vì 1.5s
-  const stormPruningAudit = useMemo(() => {
-    const pruningMap = buildLatestPruningMap(careRecords);
-    const list = trees
-      .map((t) => ({ tree: t, audit: isStormSeasonPruningNeeded(t, careRecords, pruningMap) }))
-      .filter((item) => item.audit.isNeeded);
-    return {
-      neededCount: list.length,
-      highUrgencyCount: list.filter((i) => i.audit.urgencyLevel === 'HIGH').length,
-      items: list,
-    };
-  }, [trees, careRecords, dataVersion]);
-
-  // ⏱️ THỐNG KÊ SLA SỰ CỐ TOÀN DIỆN
   const incidentSlaStats = useMemo(() => {
     let onTimeCount = 0;
     let overdueCount = 0;
@@ -137,22 +147,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       if (inc.status === 'RESOLVED') {
         if (sla.isOverdue) overdueCount++;
         else onTimeCount++;
-      } else {
-        if (sla.isOverdue) overdueCount++;
+      } else if (sla.isOverdue) {
+        overdueCount++;
       }
     });
 
     const total = onTimeCount + overdueCount;
     const rate = total > 0 ? Math.round((onTimeCount / total) * 100) : 100;
-    return {
-      onTimeCount,
-      overdueCount,
-      criticalCount,
-      complianceRate: rate,
-    };
+    return { onTimeCount, overdueCount, criticalCount, complianceRate: rate };
   }, [incidents]);
 
-  // 🌿 TÍNH TOÁN KHOA HỌC: SINH KHỐI ALLOMETRIC & HẤP THỤ CO2 TOÀN THÀNH PHỐ
   const ecoAllometricStats = useMemo(() => {
     let totalBiomass = 0;
     let totalCo2Year = 0;
@@ -183,19 +187,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     };
   }, [trees]);
 
-interface WeeklyCareItem {
-  day: string;
-  label: string;
-  dateStr: string;
-  count: number;
-  watering: number;
-  pruning: number;
-  fertilizing: number;
-  treatment: number;
-  mainStreet: string;
-}
-
-  // Aggregate care activity data for the interactive chart from real SQLite telemetry
   const weeklyCareData = useMemo<WeeklyCareItem[]>(() => {
     if (telemetryData?.timeline && Array.isArray(telemetryData.timeline)) {
       return telemetryData.timeline.map((d: any) => ({
@@ -211,7 +202,6 @@ interface WeeklyCareItem {
       }));
     }
 
-    // Dynamic fallback derived strictly from careRecords (Zero Mock Constants)
     const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
     const fullDayLabels = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
     const now = new Date();
@@ -243,16 +233,17 @@ interface WeeklyCareItem {
         pruning,
         fertilizing,
         treatment,
-        mainStreet: 'Khu vực Trung tâm Quận Ninh Kiều',
+        mainStreet: 'Quận Ninh Kiều, TP. Cần Thơ',
       };
     });
   }, [telemetryData, careRecords]);
 
-  const totalWeeklyCare = useMemo(() => weeklyCareData.reduce((acc: number, d: WeeklyCareItem) => acc + d.count, 0), [weeklyCareData]);
-  const maxWeeklyCount = useMemo(() => Math.max(...weeklyCareData.map((d: WeeklyCareItem) => d.count), 20), [weeklyCareData]);
-  const peakDay = useMemo(() => {
-    return weeklyCareData.reduce((prev: WeeklyCareItem, curr: WeeklyCareItem) => (curr.count > prev.count ? curr : prev), weeklyCareData[0]);
-  }, [weeklyCareData]);
+  const totalWeeklyCare = useMemo(() => weeklyCareData.reduce((acc, d) => acc + d.count, 0), [weeklyCareData]);
+  const maxWeeklyCount = useMemo(() => Math.max(...weeklyCareData.map((d) => d.count), 10), [weeklyCareData]);
+  const peakDay = useMemo(
+    () => weeklyCareData.reduce((prev, curr) => (curr.count > prev.count ? curr : prev), weeklyCareData[0]),
+    [weeklyCareData]
+  );
 
   const actionPercentages = useMemo(() => {
     if (telemetryData?.actionDistribution) {
@@ -264,10 +255,10 @@ interface WeeklyCareItem {
       };
     }
     const total = Math.max(1, totalWeeklyCare);
-    const sumWatering = weeklyCareData.reduce((acc: number, d: WeeklyCareItem) => acc + d.watering, 0);
-    const sumPruning = weeklyCareData.reduce((acc: number, d: WeeklyCareItem) => acc + d.pruning, 0);
-    const sumFert = weeklyCareData.reduce((acc: number, d: WeeklyCareItem) => acc + d.fertilizing, 0);
-    const sumTreat = weeklyCareData.reduce((acc: number, d: WeeklyCareItem) => acc + d.treatment, 0);
+    const sumWatering = weeklyCareData.reduce((acc, d) => acc + d.watering, 0);
+    const sumPruning = weeklyCareData.reduce((acc, d) => acc + d.pruning, 0);
+    const sumFert = weeklyCareData.reduce((acc, d) => acc + d.fertilizing, 0);
+    const sumTreat = weeklyCareData.reduce((acc, d) => acc + d.treatment, 0);
     return {
       watering: Number(((sumWatering / total) * 100).toFixed(1)),
       pruning: Number(((sumPruning / total) * 100).toFixed(1)),
@@ -275,8 +266,6 @@ interface WeeklyCareItem {
       treatment: Number(((sumTreat / total) * 100).toFixed(1)),
     };
   }, [telemetryData, weeklyCareData, totalWeeklyCare]);
-
-
 
   const categoryCareData = useMemo(() => {
     const counts: Record<string, number> = {
@@ -288,882 +277,209 @@ interface WeeklyCareItem {
       SUPPORT_STAKE: 0,
     };
     careRecords.forEach((c) => {
-      if (counts[c.actionType] !== undefined) {
-        counts[c.actionType]++;
-      } else {
-        counts[c.actionType] = 1;
-      }
+      counts[c.actionType] = (counts[c.actionType] || 0) + 1;
     });
 
-    const labels: Record<string, { name: string; color: string; icon: any }> = {
-      WATERING: { name: 'Tưới nước sinh thái', color: 'bg-cyan-500', icon: Droplets },
-      PRUNING: { name: 'Cắt tỉa hạ độ cao', color: 'bg-emerald-500', icon: Scissors },
-      FERTILIZING: { name: 'Bón phân hữu cơ', color: 'bg-lime-500', icon: Sprout },
-      PEST_CONTROL: { name: 'Xử lý nấm sâu bệnh', color: 'bg-amber-500', icon: AlertTriangle },
-      SURVEY: { name: 'Khảo sát siêu âm rễ', color: 'bg-indigo-500', icon: Activity },
-      SUPPORT_STAKE: { name: 'Gia cố cọc giằng bão', color: 'bg-teal-500', icon: ShieldCheck },
+    const labels: Record<string, { name: string; icon: any }> = {
+      WATERING: { name: 'Tưới nước', icon: Droplets },
+      PRUNING: { name: 'Cắt tỉa cành', icon: Scissors },
+      FERTILIZING: { name: 'Bón phân', icon: Sprout },
+      PEST_CONTROL: { name: 'Trị sâu bệnh', icon: AlertTriangle },
+      SURVEY: { name: 'Kiểm tra gốc rễ', icon: Activity },
+      SUPPORT_STAKE: { name: 'Gia cố cọc chống', icon: ShieldCheck },
     };
 
     return Object.entries(counts).map(([type, count]) => ({
       type,
       name: labels[type]?.name || type,
-      color: labels[type]?.color || 'bg-emerald-500',
       icon: labels[type]?.icon || ClipboardList,
-      count: Math.max(count, 3), // Ensure attractive visual representation
+      count,
     }));
   }, [careRecords]);
 
   return (
-    <div className="space-y-8 animate-fade-in pb-16">
-      {/* 🧭 Top Admin Dashboard Header Bar (Smart Bento Header) */}
-      <div className="bento-card p-5 sm:p-6 bg-gradient-to-r from-emerald-950/10 via-transparent to-transparent dark:from-[#091a11] dark:via-[#0c1812] dark:to-[#08120c] dark:bg-[#0c1812] dark:border-emerald-500/20 shadow-xs flex flex-col xl:flex-row xl:items-center justify-between gap-5">
-        {/* Left Side: Brand & Title */}
-        <div className="space-y-1.5 max-w-2xl">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-600 text-white font-bold text-[10px] uppercase tracking-wider dark:bg-emerald-500/20 dark:text-[#00FF9D] dark:border dark:border-emerald-500/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#00FF9D] animate-pulse" />
-              ADMIN CONTROL CENTER
-            </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">· Hệ thống điều hành Đô thị thông minh</span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-[#00FF9D] flex items-center justify-center shrink-0 border border-emerald-200 dark:border-emerald-500/30">
+    <div className="space-y-6 pb-14">
+      {/* 1. HEADER TỐI GIẢN */}
+      <div className="bento-card p-5 dark:bg-[#0c1812] dark:border-emerald-500/20 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
               <Sliders className="w-4 h-4" />
             </div>
-            <span>Bảng Điều Khiển Quản Trị Hệ Thống</span>
+            <span>Tổng Quan Quản Lý Cây Xanh</span>
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            Giám sát toàn diện hạ tầng cây xanh, phân công xử lý sự cố và kiểm tra tính toàn vẹn Smart Contract.
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Theo dõi nhanh tình trạng cây xanh, sự cố hiện trường và công việc chăm sóc tại TP. Cần Thơ.
           </p>
         </div>
 
-        {/* Right Side: Grouped & Balanced Action Toolbar */}
-        <div className="flex flex-wrap items-center gap-2.5 self-start xl:self-center shrink-0">
-          {/* Sub-group: Quản lý & Báo cáo */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                if (assertPermission(currentUser, 'EXPORT_REPORT', 'Xuất bản in báo cáo thanh tra Sở Xây Dựng A4')) {
-                  setShowOfficialReportModal(true);
-                }
-              }}
-              className="h-10 px-3.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-300 font-bold text-xs transition-all border border-blue-200 dark:border-blue-800/60 cursor-pointer shadow-2xs flex items-center gap-1.5 active:scale-95"
-              title="Xuất Báo cáo Thanh tra Định kỳ Sở Xây Dựng (Khổ chuẩn A4)"
-            >
-              <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span>Xuất Báo Cáo A4</span>
-            </button>
-
-            {onOpenStaffManagement && hasPermission(currentUser, 'STAFF_MANAGE') && (
-              <button
-                onClick={onOpenStaffManagement}
-                className="h-10 px-3.5 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/50 dark:hover:bg-purple-900/60 text-purple-800 dark:text-purple-300 font-bold text-xs transition-all border border-purple-200 dark:border-purple-800/60 cursor-pointer shadow-2xs flex items-center gap-1.5 active:scale-95"
-                title="Quản lý đội ngũ kỹ thuật viên & phân công địa bàn"
-              >
-                <Users className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                <span>Nhân Sự (Staff)</span>
-              </button>
-            )}
-          </div>
-
-          <div className="hidden sm:block w-[1px] h-6 bg-slate-200 dark:bg-slate-800 mx-1" />
-
-          {/* Sub-group: Tác vụ Thực địa */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                if (assertPermission(currentUser, 'CARE_WRITE', 'Ghi nhật ký chăm sóc, bón phân & cắt tỉa')) {
-                  onOpenCareModal();
-                }
-              }}
-              className="h-10 px-3.5 rounded-xl bg-white hover:bg-emerald-50/80 text-emerald-800 font-bold text-xs transition-all border border-emerald-200 shadow-xs cursor-pointer dark:bg-[#0c1812] dark:hover:bg-[#12281c] dark:text-emerald-300 dark:border-emerald-500/30 dark:shadow-[0_0_10px_rgba(16,185,129,0.12)] flex items-center gap-1.5 active:scale-95"
-            >
-              <ClipboardList className="w-4 h-4 text-emerald-600 dark:text-[#00FF9D]" />
-              <span>Ghi Chăm Sóc</span>
-            </button>
-
-            <button
-              onClick={onOpenAddTree}
-              className="h-10 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white dark:from-emerald-500 dark:to-teal-500 dark:text-slate-950 font-bold text-xs transition-all shadow-md shadow-emerald-700/20 dark:shadow-[0_0_15px_rgba(0,255,157,0.35)] active:scale-95 cursor-pointer flex items-center gap-1.5"
-            >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
-              <span>Thêm Cây Mới</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* 🍱 BENTO GRID KPI STATS (CYBER BOTANICAL ECO-TECH DARK MODE) */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100">Chỉ Số Sinh Thái Đô Thị</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Dữ liệu thời gian thực được đồng bộ trên mạng lưới</p>
-          </div>
+        {/* Cụm nút thao tác nhanh */}
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
-            onClick={() => onNavigate('trees')}
-            className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 dark:text-[#00FF9D] dark:hover:text-emerald-300 flex items-center gap-1 group cursor-pointer"
+            onClick={() => {
+              if (assertPermission(currentUser, 'EXPORT_REPORT', 'Xuất báo cáo A4')) {
+                setShowOfficialReportModal(true);
+              }
+            }}
+            className="h-9 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-colors cursor-pointer flex items-center gap-1.5"
           >
-            <span>Tất cả cây</span>
-            <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+            <FileText className="w-3.5 h-3.5" />
+            <span>Xuất Báo Cáo</span>
+          </button>
+
+          {onOpenStaffManagement && hasPermission(currentUser, 'STAFF_MANAGE') && (
+            <button
+              onClick={onOpenStaffManagement}
+              className="h-9 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>Nhân Sự</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => {
+              if (assertPermission(currentUser, 'CARE_WRITE', 'Ghi nhật ký chăm sóc')) {
+                onOpenCareModal();
+              }
+            }}
+            className="h-9 px-3 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-300 font-semibold text-xs transition-colors cursor-pointer flex items-center gap-1.5"
+          >
+            <ClipboardList className="w-3.5 h-3.5" />
+            <span>Ghi Chăm Sóc</span>
+          </button>
+
+          <button
+            onClick={onOpenAddTree}
+            className="h-9 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-slate-950 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Thêm Cây Mới</span>
           </button>
         </div>
-
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5 sm:gap-4">
-          {/* Card 1: Tổng cây (Drill-down: Tất cả cây xanh) */}
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => onNavigate('trees', { health: 'ALL' })}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onNavigate('trees', { health: 'ALL' });
-              }
-            }}
-            aria-label={`Xem toàn bộ ${stats.totalTrees} cây xanh đô thị`}
-            className="bento-card p-4 sm:p-5 dark:bg-[#0c1812] dark:border-emerald-500/20 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-emerald-500/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 active:scale-98 select-none group"
-          >
-            <div className="flex items-center justify-between text-slate-400 dark:text-slate-500 mb-2">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors">
-                Tổng cây xanh
-              </span>
-              <div className="w-7 h-7 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 dark:text-[#00FF9D] dark:border dark:border-emerald-500/30 group-hover:scale-110 transition-transform">
-                <Trees className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tabular-nums tracking-tight">
-              {stats.totalTrees}
-            </div>
-            <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium mt-1 flex items-center justify-between">
-              <span>Đã cấp mã QR kim loại</span>
-              <span className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity font-bold text-[10px]">Xem →</span>
-            </div>
-          </div>
-
-          {/* Card 2: Tỷ lệ xanh tốt (Drill-down: Nhóm cây khỏe mạnh GOOD & FAIR) */}
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => onNavigate('trees', { health: 'HEALTHY' })}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onNavigate('trees', { health: 'HEALTHY' });
-              }
-            }}
-            aria-label={`Xem ${stats.healthyTrees} cây xanh khỏe mạnh sinh trưởng tốt`}
-            className="bento-card p-4 sm:p-5 dark:bg-[#0c1812] dark:border-emerald-500/20 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-emerald-500/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 active:scale-98 select-none group"
-          >
-            <div className="flex items-center justify-between text-slate-400 dark:text-slate-500 mb-2">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-[#00FF9D] transition-colors">
-                Tỷ lệ xanh tốt
-              </span>
-              <div className="w-7 h-7 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 dark:text-[#00FF9D] dark:border dark:border-emerald-500/30 group-hover:scale-110 transition-transform">
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600 dark:text-[#00FF9D] tabular-nums tracking-tight dark:drop-shadow-[0_0_10px_rgba(0,255,157,0.35)]">
-              {healthyPercent}%
-            </div>
-            <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1 flex items-center justify-between">
-              <span>{stats.healthyTrees} cây sinh trưởng tốt</span>
-              <span className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity font-bold text-[10px]">Lọc →</span>
-            </div>
-          </div>
-
-          {/* Card 3: Cần bảo dưỡng (Drill-down: Nhóm cây có rủi ro POOR & CRITICAL) */}
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => onNavigate('trees', { health: 'AT_RISK' })}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onNavigate('trees', { health: 'AT_RISK' });
-              }
-            }}
-            aria-label={`Xem ${stats.atRiskTrees} cây cần bảo dưỡng và cắt tỉa khẩn`}
-            className="bento-card p-4 sm:p-5 dark:bg-[#0c1812] dark:border-amber-500/20 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-amber-500/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 active:scale-98 select-none group"
-          >
-            <div className="flex items-center justify-between text-slate-400 dark:text-slate-500 mb-2">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors">
-                Cần bảo dưỡng
-              </span>
-              <div className="w-7 h-7 rounded-xl bg-amber-50 dark:bg-amber-950/60 flex items-center justify-center text-amber-600 dark:text-amber-400 dark:border dark:border-amber-500/30 group-hover:scale-110 transition-transform">
-                <AlertTriangle className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-amber-600 dark:text-amber-400 tabular-nums tracking-tight">
-              {stats.atRiskTrees}
-            </div>
-            <div className="text-[11px] text-amber-600 dark:text-amber-400 font-medium mt-1 flex items-center justify-between">
-              <span>Cần cắt tỉa / Gia cố cọc</span>
-              <span className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity font-bold text-[10px]">Xử lý →</span>
-            </div>
-          </div>
-
-          {/* Card 4: Sự cố đang xử lý (Drill-down: Các sự cố tiếp nhận & xử lý ACTIVE) */}
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => onNavigate('incidents', { status: 'ACTIVE' })}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onNavigate('incidents', { status: 'ACTIVE' });
-              }
-            }}
-            aria-label={`Xem ${stats.activeIncidents} sự cố đang tiếp nhận và điều phối`}
-            className="bento-card p-4 sm:p-5 dark:bg-[#0c1812] dark:border-rose-500/20 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-rose-500/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 active:scale-98 select-none group"
-          >
-            <div className="flex items-center justify-between text-slate-400 dark:text-slate-500 mb-2">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 group-hover:text-rose-600 dark:group-hover:text-rose-300 transition-colors">
-                Sự cố đang xử lý
-              </span>
-              <div className="w-7 h-7 rounded-xl bg-rose-50 dark:bg-rose-950/60 flex items-center justify-center text-rose-600 dark:text-rose-400 dark:border dark:border-rose-500/30 group-hover:scale-110 transition-transform">
-                <ClipboardList className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-rose-600 dark:text-rose-400 tabular-nums tracking-tight">
-              {stats.activeIncidents}
-            </div>
-            <div className="text-[11px] text-rose-600 dark:text-rose-400 font-medium mt-1 flex items-center justify-between">
-              <span>Tiếp nhận từ phản ánh</span>
-              <span className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity font-bold text-[10px]">Điều phối →</span>
-            </div>
-          </div>
-
-          {/* Card 5: Smart Contract (Drill-down: Sổ cái & Kiểm chứng Blockchain) */}
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => onNavigate('blockchain')}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onNavigate('blockchain');
-              }
-            }}
-            aria-label={`Xem sổ cái Blockchain với ${stats.totalAnchors} bản ghi On-chain`}
-            className="bento-card p-4 sm:p-5 col-span-2 lg:col-span-1 dark:bg-[#0c1812] dark:border-indigo-500/20 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-indigo-500/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 active:scale-98 select-none group"
-          >
-            <div className="flex items-center justify-between text-slate-400 dark:text-slate-500 mb-2">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">
-                Smart Contract
-              </span>
-              <div className="w-7 h-7 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 dark:border dark:border-indigo-500/30 group-hover:scale-110 transition-transform">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-indigo-600 dark:text-indigo-400 tabular-nums font-mono tracking-tight">
-              {stats.totalAnchors}
-            </div>
-            <div className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium mt-1 flex items-center justify-between">
-              <span>Bản ghi On-chain</span>
-              <span className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity font-bold text-[10px]">Sổ cái →</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 🌿 2 KHỐI MỚI: PHÂN CẤP CÂY THÔNG TƯ 20/2020/TT-BXD & TÍNH TOÁN CARBON ALLOMETRIC */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Khối 1: Phân cấp đô thị */}
-          <div className="bento-card p-4 sm:p-5 dark:bg-[#0c1812] dark:border-emerald-500/20 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Cơ Cấu Phân Cấp Cây (TT 20/2020/TT-BXD)</span>
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono">Quy định Pháp lý</span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <div className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 text-center">
-                <div className="text-lg font-black text-purple-700 dark:text-purple-300 font-mono">
-                  {ecoAllometricStats.heritageCount}
-                </div>
-                <div className="text-[10px] font-bold text-purple-900 dark:text-purple-200 mt-0.5">Loại 3 (Cổ Thụ)</div>
-                <div className="text-[9px] text-purple-600 dark:text-purple-400 mt-0.5 font-medium">Bảo tồn di sản</div>
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-center">
-                <div className="text-lg font-black text-emerald-700 dark:text-emerald-300 font-mono">
-                  {ecoAllometricStats.type2Count}
-                </div>
-                <div className="text-[10px] font-bold text-emerald-900 dark:text-emerald-200 mt-0.5">Loại 2 (Trưởng thành)</div>
-                <div className="text-[9px] text-emerald-600 dark:text-emerald-400 mt-0.5 font-medium">Cắt tỉa mùa bão</div>
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 text-center">
-                <div className="text-lg font-black text-blue-700 dark:text-blue-300 font-mono">
-                  {ecoAllometricStats.type1Count}
-                </div>
-                <div className="text-[10px] font-bold text-blue-900 dark:text-blue-200 mt-0.5">Loại 1 (Mới trồng)</div>
-                <div className="text-[9px] text-blue-600 dark:text-blue-400 mt-0.5 font-medium">Chống cọc & tưới</div>
-              </div>
-            </div>
-
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 italic leading-relaxed">
-              * Theo Nghị định 64/2010/NĐ-CP: Cây Loại 3 có đường kính &ge; 50cm hoặc cao &ge; 12m được bảo vệ nghiêm ngặt, cấm tự ý đốn hạ khi chưa có Giấy phép phê duyệt của cơ quan quản lý đô thị.
-            </p>
-          </div>
-
-          {/* Khối 2: Tính toán Carbon & Sinh khối Allometric */}
-          <div className="bento-card p-4 sm:p-5 dark:bg-[#0c1812] dark:border-emerald-500/20 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
-                <Sprout className="w-4 h-4 text-emerald-600 dark:text-[#00FF9D]" />
-                <span>Sinh Khối & Hấp Thụ $CO_2$ Khoa Học (i-Tree Allometric)</span>
-              </span>
-              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                DBH &times; H Model
-              </span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
-              <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center">
-                <div className="text-sm sm:text-base md:text-lg font-black text-emerald-700 dark:text-emerald-400 font-mono tracking-tight whitespace-nowrap">
-                  {ecoAllometricStats.totalBiomassTon} <span className="text-[10px] sm:text-[11px] font-normal text-slate-400">tấn</span>
-                </div>
-                <div className="text-[9px] sm:text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-0.5 truncate">Tổng Sinh Khối</div>
-              </div>
-
-              <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center">
-                <div className="text-sm sm:text-base md:text-lg font-black text-teal-700 dark:text-teal-400 font-mono tracking-tight whitespace-nowrap">
-                  {ecoAllometricStats.totalCo2TonYear} <span className="text-[10px] sm:text-[11px] font-normal text-slate-400">tấn/năm</span>
-                </div>
-                <div className="text-[9px] sm:text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-0.5 truncate">Cô Lập $CO_2$</div>
-              </div>
-
-              <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center">
-                <div className="text-sm sm:text-base md:text-lg font-black text-cyan-700 dark:text-cyan-400 font-mono tracking-tight whitespace-nowrap">
-                  {ecoAllometricStats.totalO2TonYear} <span className="text-[10px] sm:text-[11px] font-normal text-slate-400">tấn/năm</span>
-                </div>
-                <div className="text-[9px] sm:text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-0.5 truncate">Oxy Cung Cấp</div>
-              </div>
-            </div>
-
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 italic leading-relaxed">
-              * Tính toán chuẩn USDA Forest Service: Dựa trên phương trình allometric lâm sinh $Biomass = 0.0673 \times (\rho \times DBH^2 \times H)^{0.976}$ theo kích thước đường kính ngực và chiều cao thực địa.
-            </p>
-          </div>
-        </div>
       </div>
 
-      {/* 📈 INTERACTIVE CARE ACTIVITY CHART (ECO-TECH TELEMETRY) */}
-      <div className="bento-card p-5 sm:p-6 dark:bg-[#0c1812] dark:border-emerald-500/20 space-y-5">
-        {/* Header & Controls */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/80 pb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-[#00FF9D] dark:border dark:border-emerald-500/30">
-                <BarChart3 className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                  <span>Biểu Đồ Hoạt Động Chăm Sóc & Bảo Dưỡng Thực Địa</span>
-                  <span className="hidden sm:inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-[#00FF9D] border border-emerald-300 dark:border-emerald-500/40">
-                    Telemetry 4.0
-                  </span>
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Giám sát tiến độ 7 ngày qua, phân lớp nghiệp vụ nông học và cơ cấu giải quyết theo trục đường
-                </p>
-              </div>
-            </div>
+      {/* 2. 5 THẺ CHỈ SỐ CHÍNH (LUÔN HIỂN THỊ) */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        {/* Tổng cây */}
+        <button
+          onClick={() => onNavigate('trees', { health: 'ALL' })}
+          className="text-left bento-card p-4 dark:bg-[#0c1812] dark:border-emerald-500/20 hover:border-emerald-500/50 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Tổng số cây</span>
+            <Trees className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </div>
+          <div className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">{stats.totalTrees}</div>
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Đã gắn mã QR</div>
+        </button>
 
-          <div className="flex items-center flex-wrap gap-2.5">
-            {/* View Switcher */}
-            <div className="bg-slate-100 dark:bg-slate-800/90 p-1 rounded-xl flex items-center gap-1 border border-slate-200 dark:border-slate-700/80 text-xs shadow-inner">
-              <button
-                onClick={() => setActiveChartTab('timeline')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  activeChartTab === 'timeline'
-                    ? 'bg-white text-emerald-800 shadow-sm dark:bg-emerald-500 dark:text-slate-950 dark:shadow-[0_0_12px_rgba(0,255,157,0.35)]'
-                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
-                }`}
-              >
-                <Activity className="w-3.5 h-3.5" />
-                <span>Tiến Độ 7 Ngày</span>
-              </button>
-              <button
-                onClick={() => setActiveChartTab('category')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  activeChartTab === 'category'
-                    ? 'bg-white text-emerald-800 shadow-sm dark:bg-emerald-500 dark:text-slate-950 dark:shadow-[0_0_12px_rgba(0,255,157,0.35)]'
-                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Theo Nghiệp Vụ</span>
-              </button>
-            </div>
-
-            <button
-              onClick={() => onNavigate('care')}
-              className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:text-[#00FF9D] dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:border dark:border-emerald-500/40 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-            >
-              <ClipboardList className="w-3.5 h-3.5" />
-              <span>Xem Sổ Chăm Sóc</span>
-              <ArrowRight className="w-3 h-3" />
-            </button>
+        {/* Tỷ lệ khỏe mạnh */}
+        <button
+          onClick={() => onNavigate('trees', { health: 'HEALTHY' })}
+          className="text-left bento-card p-4 dark:bg-[#0c1812] dark:border-emerald-500/20 hover:border-emerald-500/50 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Cây khỏe mạnh</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </div>
-        </div>
+          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{healthyPercent}%</div>
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">{stats.healthyTrees} cây phát triển tốt</div>
+        </button>
 
-        {activeChartTab === 'timeline' ? (
-          <div className="space-y-4">
-            {/* Interactive Filter Pills (Legend + Filter) */}
-            <div className="flex items-center justify-between flex-wrap gap-2 pt-1 pb-1">
-              <div className="flex items-center gap-1.5 flex-wrap text-xs">
-                <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mr-1">Bộ lọc:</span>
-                <button
-                  onClick={() => setHighlightedCategory(null)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
-                    highlightedCategory === null
-                      ? 'bg-slate-900 text-white border-slate-900 dark:bg-emerald-500 dark:text-slate-950 dark:border-emerald-400 shadow-xs'
-                      : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200 dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700'
-                  }`}
-                >
-                  Tất Cả (Stacked)
-                </button>
-                <button
-                  onClick={() => setHighlightedCategory(highlightedCategory === 'watering' ? null : 'watering')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${
-                    highlightedCategory === 'watering'
-                      ? 'bg-cyan-500 text-white border-cyan-600 shadow-sm dark:bg-cyan-400 dark:text-slate-950 dark:shadow-[0_0_10px_rgba(6,182,212,0.4)]'
-                      : 'bg-cyan-50/80 text-cyan-800 border-cyan-200 hover:bg-cyan-100 dark:bg-cyan-950/40 dark:text-cyan-300 dark:border-cyan-800/50'
-                  }`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-cyan-400" />
-                  <span>💧 Tưới nước ({actionPercentages.watering}%)</span>
-                </button>
-                <button
-                  onClick={() => setHighlightedCategory(highlightedCategory === 'pruning' ? null : 'pruning')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${
-                    highlightedCategory === 'pruning'
-                      ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm dark:bg-emerald-400 dark:text-slate-950 dark:shadow-[0_0_10px_rgba(16,185,129,0.4)]'
-                      : 'bg-emerald-50/80 text-emerald-800 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-[#00FF9D] dark:border-emerald-800/50'
-                  }`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span>✂️ Cắt tỉa đón bão ({actionPercentages.pruning}%)</span>
-                </button>
-                <button
-                  onClick={() => setHighlightedCategory(highlightedCategory === 'fertilizing' ? null : 'fertilizing')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${
-                    highlightedCategory === 'fertilizing'
-                      ? 'bg-lime-600 text-white border-lime-700 shadow-sm dark:bg-lime-400 dark:text-slate-950 dark:shadow-[0_0_10px_rgba(132,204,22,0.4)]'
-                      : 'bg-lime-50/80 text-lime-800 border-lime-200 hover:bg-lime-100 dark:bg-lime-950/40 dark:text-lime-300 dark:border-lime-800/50'
-                  }`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-lime-500" />
-                  <span>🧪 Bón dưỡng rễ ({actionPercentages.fertilizing}%)</span>
-                </button>
-                <button
-                  onClick={() => setHighlightedCategory(highlightedCategory === 'treatment' ? null : 'treatment')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${
-                    highlightedCategory === 'treatment'
-                      ? 'bg-amber-600 text-white border-amber-700 shadow-sm dark:bg-amber-400 dark:text-slate-950 dark:shadow-[0_0_10px_rgba(245,158,11,0.4)]'
-                      : 'bg-amber-50/80 text-amber-800 border-amber-200 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/50'
-                  }`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  <span>🛡️ Trị nấm sâu bệnh ({actionPercentages.treatment}%)</span>
-                </button>
-              </div>
-
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium hidden sm:flex items-center gap-1">
-                <span>Rà chuột để soi chi tiết từng ngày</span>
-              </div>
-            </div>
-
-            {/* Main Interactive Chart Canvas with Y-Gridlines */}
-            <div className="relative pt-6 pb-2 px-1 sm:px-3 bg-gradient-to-b from-slate-50/50 to-transparent dark:from-[#08130d]/60 dark:to-transparent rounded-2xl border border-slate-100 dark:border-slate-800/60">
-              {/* Horizontal Reference Grid Lines */}
-              <div className="absolute inset-x-6 top-8 bottom-12 flex flex-col justify-between pointer-events-none opacity-40 dark:opacity-30">
-                <div className="border-b border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                  <span>45 ca</span>
-                  <span className="text-[9px] uppercase tracking-wider text-amber-500 dark:text-amber-400 font-sans font-semibold">Ngưỡng Cao Điểm</span>
-                </div>
-                <div className="border-b border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                  <span>30 ca</span>
-                  <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-sans">Chuẩn trung bình 27 ca/ngày</span>
-                </div>
-                <div className="border-b border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                  <span>15 ca</span>
-                  <span></span>
-                </div>
-                <div className="border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                  <span>0 ca</span>
-                  <span></span>
-                </div>
-              </div>
-
-              {/* Bar Columns Container */}
-              <div className="h-56 flex items-end justify-between gap-2 sm:gap-4 px-2 sm:px-6 relative z-10">
-                {weeklyCareData.map((item, index) => {
-                  const totalHeightPercent = Math.min(100, Math.max(18, Math.round((item.count / maxWeeklyCount) * 100)));
-                  const isHovered = hoveredBar === index;
-                  const isPeak = item.day === peakDay.day;
-
-                  // Segment heights relative to total bar height
-                  const waterH = (item.watering / item.count) * 100;
-                  const pruneH = (item.pruning / item.count) * 100;
-                  const fertH = (item.fertilizing / item.count) * 100;
-                  const treatH = (item.treatment / item.count) * 100;
-
-                  return (
-                    <div
-                      key={item.day}
-                      className="flex-1 flex flex-col items-center gap-2 group cursor-pointer relative"
-                      onMouseEnter={() => setHoveredBar(index)}
-                      onMouseLeave={() => setHoveredBar(null)}
-                    >
-                      {/* Rich Floating Tooltip */}
-                      {isHovered && (
-                        <div className="absolute -top-32 z-30 w-56 sm:w-64 p-3 rounded-2xl bg-slate-900/95 text-white dark:bg-[#040f09]/95 dark:border dark:border-emerald-500/50 text-[11px] shadow-2xl backdrop-blur-md pointer-events-none animate-in fade-in zoom-in-95">
-                          <div className="flex items-center justify-between border-b border-slate-700/80 dark:border-slate-800 pb-1.5 mb-2">
-                            <div className="font-extrabold text-[#00FF9D] text-xs flex items-center gap-1.5">
-                              <span>{item.label}</span>
-                              <span className="text-[10px] text-slate-400 font-normal">({item.dateStr})</span>
-                            </div>
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-[#00FF9D] font-mono font-bold text-[10px] border border-emerald-500/40">
-                              {item.count} lượt
-                            </span>
-                          </div>
-
-                          <div className="space-y-1 text-[10px]">
-                            <div className="flex items-center justify-between">
-                              <span className="flex items-center gap-1 text-cyan-300">
-                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-                                Tưới nước sinh thái:
-                              </span>
-                              <span className="font-mono font-bold">{item.watering} ca ({Math.round(waterH)}%)</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="flex items-center gap-1 text-emerald-300">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                Cắt tỉa đón bão:
-                              </span>
-                              <span className="font-mono font-bold">{item.pruning} ca ({Math.round(pruneH)}%)</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="flex items-center gap-1 text-lime-300">
-                                <span className="w-1.5 h-1.5 rounded-full bg-lime-400" />
-                                Bón dưỡng rễ:
-                              </span>
-                              <span className="font-mono font-bold">{item.fertilizing} ca ({Math.round(fertH)}%)</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="flex items-center gap-1 text-amber-300">
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                                Trị nấm sâu bệnh:
-                              </span>
-                              <span className="font-mono font-bold">{item.treatment} ca ({Math.round(treatH)}%)</span>
-                            </div>
-                          </div>
-
-                          <div className="mt-2 pt-1.5 border-t border-slate-700/80 dark:border-slate-800 text-[9px] text-slate-400 truncate flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-emerald-400 shrink-0" />
-                            <span className="truncate">{item.mainStreet}</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Bar Representation Container */}
-                      <div className="w-full max-w-[48px] h-44 bg-slate-100/80 dark:bg-slate-800/50 rounded-xl relative overflow-hidden flex items-end p-1 transition-all group-hover:bg-slate-200/80 dark:group-hover:bg-slate-800/80 border border-transparent group-hover:border-emerald-500/30">
-                        {/* Peak Badge */}
-                        {isPeak && (
-                          <div className="absolute top-1 inset-x-0 mx-auto w-fit px-1 py-0.2 rounded text-[8px] font-black uppercase tracking-wider bg-amber-500 text-slate-950 z-10 shadow-xs">
-                            Top 1
-                          </div>
-                        )}
-
-                        {/* Stacked Fill Capsule */}
-                        <div
-                          className={`w-full rounded-lg overflow-hidden transition-all duration-300 flex flex-col justify-end ${
-                            isHovered
-                              ? 'shadow-[0_0_16px_rgba(0,255,157,0.45)] ring-2 ring-emerald-400/80'
-                              : ''
-                          }`}
-                          style={{ height: `${totalHeightPercent}%` }}
-                        >
-                          {/* Top Segment: Treatment (Amber) */}
-                          <div
-                            style={{ height: `${treatH}%` }}
-                            className={`w-full bg-amber-500 transition-opacity ${
-                              highlightedCategory && highlightedCategory !== 'treatment' ? 'opacity-25' : 'opacity-100'
-                            }`}
-                            title={`Trị sâu bệnh: ${item.treatment} ca`}
-                          />
-                          {/* Segment 3: Fertilizing (Lime) */}
-                          <div
-                            style={{ height: `${fertH}%` }}
-                            className={`w-full bg-lime-500 transition-opacity ${
-                              highlightedCategory && highlightedCategory !== 'fertilizing' ? 'opacity-25' : 'opacity-100'
-                            }`}
-                            title={`Bón dưỡng rễ: ${item.fertilizing} ca`}
-                          />
-                          {/* Segment 2: Pruning (Emerald) */}
-                          <div
-                            style={{ height: `${pruneH}%` }}
-                            className={`w-full bg-emerald-500 dark:bg-[#00FF9D] transition-opacity ${
-                              highlightedCategory && highlightedCategory !== 'pruning' ? 'opacity-25' : 'opacity-100'
-                            }`}
-                            title={`Cắt tỉa: ${item.pruning} ca`}
-                          />
-                          {/* Bottom Segment: Watering (Cyan) */}
-                          <div
-                            style={{ height: `${waterH}%` }}
-                            className={`w-full bg-cyan-500 transition-opacity rounded-b-md ${
-                              highlightedCategory && highlightedCategory !== 'watering' ? 'opacity-25' : 'opacity-100'
-                            }`}
-                            title={`Tưới nước: ${item.watering} ca`}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Day Label & Count */}
-                      <div className="text-center">
-                        <div
-                          className={`text-xs font-black font-mono transition-colors ${
-                            isHovered || isPeak
-                              ? 'text-emerald-700 dark:text-[#00FF9D]'
-                              : 'text-slate-700 dark:text-slate-300'
-                          }`}
-                        >
-                          {item.day}
-                        </div>
-                        <div className="text-[11px] font-mono font-extrabold text-slate-900 dark:text-slate-100">
-                          {item.count}
-                        </div>
-                        <div className="text-[9px] text-slate-400 dark:text-slate-500">
-                          {item.dateStr.replace('Ngày ', '')}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Bottom KPI Telemetry Strip */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#08140e] border border-slate-200/80 dark:border-emerald-500/20 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-cyan-100 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-400 flex items-center justify-center font-bold">
-                  <Droplets className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold">
-                    Tổng Thực Địa 7 Ngày
-                  </div>
-                  <div className="text-base font-black text-slate-900 dark:text-slate-100 font-mono">
-                    {totalWeeklyCare} <span className="text-xs font-sans font-medium text-slate-500">lượt xử lý</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#08140e] border border-slate-200/80 dark:border-emerald-500/20 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 flex items-center justify-center font-bold">
-                  <TrendingUp className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold">
-                    Đỉnh Điểm Tuần
-                  </div>
-                  <div className="text-base font-black text-amber-600 dark:text-amber-400 font-mono">
-                    {peakDay.label}: {peakDay.count} ca{' '}
-                    <span className="text-xs font-sans font-normal text-slate-500 dark:text-slate-400">
-                      ({telemetryData?.slaStatus || 'Đạt chuẩn SLA vận hành'})
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#08140e] border border-slate-200/80 dark:border-emerald-500/20 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-[#00FF9D] flex items-center justify-center font-bold">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold">
-                    Hoàn Thành Kế Hoạch Tuần
-                  </div>
-                  <div className="text-base font-black text-emerald-600 dark:text-[#00FF9D] font-mono">
-                    {telemetryData?.completionRate ?? 98.2}%{' '}
-                    <span className="text-xs font-sans font-normal text-slate-500 dark:text-slate-400">
-                      (Không tồn đọng)
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+        {/* Cần chăm sóc */}
+        <button
+          onClick={() => onNavigate('trees', { health: 'AT_RISK' })}
+          className="text-left bento-card p-4 dark:bg-[#0c1812] dark:border-amber-500/20 hover:border-amber-500/50 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Cần bảo dưỡng</span>
+            <AlertTriangle className="w-4 h-4 text-amber-500" />
           </div>
-        ) : (
-          /* Enhanced Category Breakdown View */
-          <div className="space-y-4 pt-1">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-              {categoryCareData.map((cat) => {
-                const CatIcon = cat.icon;
-                const totalCatCount = categoryCareData.reduce((acc, c) => acc + c.count, 0);
-                const percent = totalCatCount > 0 ? Math.round((cat.count / totalCatCount) * 100) : 0;
-                return (
-                  <div
-                    key={cat.type}
-                    className="p-4 rounded-2xl bg-slate-50/80 dark:bg-[#08120c]/80 border border-slate-200/80 dark:border-slate-800/80 hover:border-emerald-400/50 transition-all flex flex-col justify-between gap-3 group shadow-xs hover:shadow-md"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200/60 dark:border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-[#00FF9D] shrink-0 group-hover:scale-105 transition-transform">
-                          <CatIcon className="w-5 h-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
-                            {cat.name}
-                          </div>
-                          <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono uppercase">
-                            MÃ: {cat.type}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <div className="text-lg font-black text-emerald-600 dark:text-[#00FF9D] font-mono">
-                          {cat.count}
-                        </div>
-                        <div className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{percent}% tổng</div>
-                      </div>
-                    </div>
+          <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 tabular-nums">{stats.atRiskTrees}</div>
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Cần cắt tỉa, gia cố</div>
+        </button>
 
-                    {/* Progress Bar */}
-                    <div className="space-y-1">
-                      <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-emerald-600 to-[#00FF9D]"
-                          style={{ width: `${Math.min(100, percent * 2.5)}%` }}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 pt-0.5">
-                        <span className="text-emerald-700 dark:text-[#00FF9D] font-medium">✓ Đạt định mức định kỳ</span>
-                        <span className="font-mono">{cat.count * 12} cây được bảo trợ</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+        {/* Sự cố đang xử lý */}
+        <button
+          onClick={() => onNavigate('incidents', { status: 'ACTIVE' })}
+          className="text-left bento-card p-4 dark:bg-[#0c1812] dark:border-rose-500/20 hover:border-rose-500/50 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Sự cố đang xử lý</span>
+            <ClipboardList className="w-4 h-4 text-rose-500" />
           </div>
-        )}
+          <div className="text-2xl font-bold text-rose-600 dark:text-rose-400 tabular-nums">{stats.activeIncidents}</div>
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Tin báo từ người dân</div>
+        </button>
+
+        {/* Dữ liệu xác thực */}
+        <button
+          onClick={() => onNavigate('blockchain')}
+          className="text-left bento-card p-4 col-span-2 lg:col-span-1 dark:bg-[#0c1812] dark:border-indigo-500/20 hover:border-indigo-500/50 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Dữ liệu xác thực</span>
+            <ShieldCheck className="w-4 h-4 text-indigo-500" />
+          </div>
+          <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 tabular-nums">{stats.totalAnchors}</div>
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Bản ghi minh bạch</div>
+        </button>
       </div>
 
-      {/* 📊 MID ROW: HEALTH BREAKDOWN + PRIORITY INCIDENTS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Health Breakdown Bento Card */}
-        <div className="bento-card p-5 sm:p-6 flex flex-col justify-between dark:bg-[#0c1812] dark:border-emerald-500/20">
+      {/* 3. TÌNH TRẠNG SỨC KHỎE & SỰ CỐ CẦN XỬ LÝ (LUÔN HIỂN THỊ) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Sức khỏe cây */}
+        <div className="bento-card p-5 flex flex-col justify-between dark:bg-[#0c1812] dark:border-emerald-500/20">
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100">Phân Phối Sức Khỏe Cây</h2>
-              <span className="text-[10px] bg-slate-100 text-slate-600 dark:bg-slate-800/80 dark:text-slate-300 dark:border dark:border-slate-700 px-2.5 py-1 rounded-full font-medium">
-                Kiểm định thực địa
-              </span>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Tình Trạng Cây Xanh</h2>
+              <button
+                onClick={() => onNavigate('map')}
+                className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                <span>Bản đồ</span>
+              </button>
             </div>
 
-            <div className="space-y-3.5">
-              {/* GOOD */}
-              <div>
-                <div className="flex justify-between text-xs font-semibold mb-1">
-                  <span className="text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-[#00FF9D]" />
-                    Tốt (Khỏe mạnh, tán lá dày)
-                  </span>
-                  <span className="font-mono text-slate-800 dark:text-slate-200">{stats.healthBreakdown.GOOD}</span>
+            <div className="space-y-3">
+              {[
+                { label: 'Khỏe mạnh', count: stats.healthBreakdown.GOOD, color: 'bg-emerald-500' },
+                { label: 'Bình thường', count: stats.healthBreakdown.FAIR, color: 'bg-slate-400' },
+                { label: 'Kém (Sâu bệnh, cành khô)', count: stats.healthBreakdown.POOR, color: 'bg-amber-500' },
+                { label: 'Nguy cấp (Nghiêng, mục rễ)', count: stats.healthBreakdown.CRITICAL, color: 'bg-rose-500' },
+              ].map((row) => (
+                <div key={row.label}>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-slate-600 dark:text-slate-300">{row.label}</span>
+                    <span className="font-semibold text-slate-900 dark:text-white tabular-nums">{row.count}</span>
+                  </div>
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className={`${row.color} h-1.5 rounded-full transition-all duration-300`}
+                      style={{ width: `${(row.count / (stats.totalTrees || 1)) * 100}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800/80 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-emerald-500 dark:bg-[#00FF9D] h-2 rounded-full transition-all duration-500 dark:shadow-[0_0_8px_rgba(0,255,157,0.5)]"
-                    style={{ width: `${(stats.healthBreakdown.GOOD / (stats.totalTrees || 1)) * 100}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* FAIR */}
-              <div>
-                <div className="flex justify-between text-xs font-semibold mb-1">
-                  <span className="text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-500" />
-                    Bình thường (Phát triển ổn định)
-                  </span>
-                  <span className="font-mono text-slate-800 dark:text-slate-200">{stats.healthBreakdown.FAIR}</span>
-                </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800/80 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-slate-400 dark:bg-slate-500 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${(stats.healthBreakdown.FAIR / (stats.totalTrees || 1)) * 100}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* POOR */}
-              <div>
-                <div className="flex justify-between text-xs font-semibold mb-1">
-                  <span className="text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-amber-500" />
-                    Kém (Sâu bệnh, cành khô)
-                  </span>
-                  <span className="font-mono text-slate-800 dark:text-slate-200">{stats.healthBreakdown.POOR}</span>
-                </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800/80 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-amber-500 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${(stats.healthBreakdown.POOR / (stats.totalTrees || 1)) * 100}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* CRITICAL */}
-              <div>
-                <div className="flex justify-between text-xs font-semibold mb-1">
-                  <span className="text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-rose-500" />
-                    Nguy cấp (Nghiêng, mục rễ, sắp đổ)
-                  </span>
-                  <span className="font-mono text-slate-800 dark:text-slate-200">{stats.healthBreakdown.CRITICAL}</span>
-                </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800/80 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-rose-500 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${(stats.healthBreakdown.CRITICAL / (stats.totalTrees || 1)) * 100}%` }}
-                  />
-                </div>
-              </div>
+              ))}
             </div>
-          </div>
-
-          <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-            <span>Tiêu chuẩn: QĐ 1999/QĐ-UBND</span>
-            <button
-              onClick={() => onNavigate('map')}
-              className="text-emerald-700 hover:text-emerald-800 dark:text-[#00FF9D] dark:hover:underline font-semibold flex items-center gap-1 cursor-pointer"
-            >
-              <MapPin className="w-3.5 h-3.5" />
-              <span>Xem trên bản đồ</span>
-            </button>
           </div>
         </div>
 
-        {/* Priority Incidents List Bento */}
-        <div className="lg:col-span-2 bento-card p-5 sm:p-6 dark:bg-[#0c1812] dark:border-emerald-500/20">
+        {/* Sự cố hiện trường */}
+        <div className="lg:col-span-2 bento-card p-5 dark:bg-[#0c1812] dark:border-emerald-500/20">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100">Sự Cố &amp; Phản Ánh Hiện Trường</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Tiếp nhận trực tiếp từ người dân quét mã QR trên thân cây</p>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Sự Cố & Phản Ánh Mới Nhất</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Tin báo trực tiếp từ người dân</p>
             </div>
             <button
               onClick={() => onNavigate('incidents')}
-              className="text-xs font-semibold text-emerald-700 hover:underline dark:text-[#00FF9D] flex items-center gap-1 cursor-pointer"
+              className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
             >
-              <span>Tất cả sự cố</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>Xem tất cả</span>
+
             </button>
           </div>
 
@@ -1171,35 +487,36 @@ interface WeeklyCareItem {
             {incidents.slice(0, 3).map((incident) => {
               const tree = incident.treeId ? trees.find((t) => t.id === incident.treeId) : null;
               return (
-                <div key={incident.id} className="py-3 flex items-start justify-between gap-3 first:pt-0 last:pb-0">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60 dark:text-emerald-300 dark:bg-emerald-950/60 dark:border-emerald-500/30">
+                <div key={incident.id} className="py-3 flex items-center justify-between gap-3 first:pt-0 last:pb-0">
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center flex-wrap gap-2">
+                      <span className="font-mono text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded dark:text-emerald-300 dark:bg-emerald-950/70">
                         {incident.publicCode}
                       </span>
                       <span
                         className={`text-[10px] font-bold px-2 py-0.5 rounded ${incident.severity === 'CRITICAL'
-                            ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300 dark:border dark:border-rose-500/40'
-                            : incident.severity === 'HIGH'
-                              ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/70 dark:text-orange-300 dark:border dark:border-orange-500/40'
-                              : 'bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300 dark:border dark:border-amber-500/40'
+                          ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300'
+                          : incident.severity === 'HIGH'
+                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/70 dark:text-orange-300'
+                            : 'bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300'
                           }`}
                       >
-                        {incident.severity}
+                        Mức độ: {SEVERITY_LABEL[incident.severity] || incident.severity}
                       </span>
-                      <span className="text-xs text-slate-300 dark:text-slate-600">·</span>
-                      <span className="text-xs text-slate-500 dark:text-slate-400">{incident.status}</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        · {STATUS_LABEL[incident.status] || incident.status}
+                      </span>
                     </div>
-                    <p className="text-xs text-slate-800 dark:text-slate-200 font-medium line-clamp-1">{incident.description}</p>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-3">
-                      <span>{incident.address || 'Khu vực nội ô TP.HCM'}</span>
-                      {tree && <span className="text-emerald-700 dark:text-emerald-400 font-medium">Mã cây: {tree.publicCode}</span>}
+                    <p className="text-xs text-slate-800 dark:text-slate-200 font-medium truncate">{incident.description}</p>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                      <span className="truncate">{incident.address || 'TP. Cần Thơ'}</span>
+                      {tree && <span className="text-emerald-600 dark:text-emerald-400 shrink-0">· Mã cây: {tree.publicCode}</span>}
                     </div>
                   </div>
 
                   <button
                     onClick={() => onNavigate('incidents')}
-                    className="px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-50 rounded-full border border-emerald-200/60 transition-colors shrink-0 cursor-pointer dark:text-emerald-300 dark:hover:bg-emerald-950/60 dark:border-emerald-500/30"
+                    className="px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 rounded-lg border border-emerald-200 transition-colors shrink-0 cursor-pointer dark:text-emerald-300 dark:hover:bg-emerald-950/60 dark:border-emerald-500/30"
                   >
                     Xử lý
                   </button>
@@ -1210,136 +527,424 @@ interface WeeklyCareItem {
         </div>
       </div>
 
-      {/* 🌲 BOTTOM ROW: RECENT TREES & BLOCKCHAIN ACTIVITY */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Trees List Bento */}
-        <div className="bento-card p-5 sm:p-6 dark:bg-[#0c1812] dark:border-emerald-500/20">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100">Cây Xanh Đô Thị Tiêu Biểu</h2>
-            <button
-              onClick={() => onNavigate('trees')}
-              className="text-xs font-semibold text-emerald-700 hover:underline dark:text-[#00FF9D] flex items-center gap-1 cursor-pointer"
-            >
-              <span>Xem danh sách</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="space-y-2.5">
-            {trees.slice(0, 4).map((tree) => (
-              <div
-                key={tree.id}
-                onClick={() => onSelectTree(tree)}
-                className="p-3 rounded-2xl border border-slate-100 hover:border-emerald-300 hover:bg-emerald-50/30 dark:border-slate-800/80 dark:hover:border-emerald-500/40 dark:hover:bg-emerald-950/20 transition-all cursor-pointer flex items-center justify-between gap-3 group"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200/60 dark:bg-emerald-950/60 dark:border-emerald-500/30 flex items-center justify-center text-emerald-700 dark:text-[#00FF9D] font-mono text-xs font-bold shrink-0">
-                    <QrCode className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold text-emerald-800 dark:text-[#00FF9D]">{tree.publicCode}</span>
-                      <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">{tree.displayName}</span>
-                    </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{tree.address}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tree.healthStatus === 'GOOD'
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-[#00FF9D] dark:border dark:border-emerald-500/30'
-                        : tree.healthStatus === 'FAIR'
-                          ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:border dark:border-slate-700'
-                          : tree.healthStatus === 'POOR'
-                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300 dark:border dark:border-amber-500/30'
-                            : 'bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300 dark:border dark:border-rose-500/30'
-                      }`}
-                  >
-                    {tree.healthStatus}
-                  </span>
-                  <ExternalLink className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 group-hover:text-emerald-700 dark:group-hover:text-[#00FF9D]" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Blockchain Anchors Feed Bento */}
-        <div className="bento-card p-5 sm:p-6 dark:bg-[#0c1812] dark:border-emerald-500/20">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <span>Nhật Ký Giao Dịch Blockchain</span>
-                <span className="px-2 py-0.5 text-[9px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-[#00FF9D] dark:border dark:border-emerald-500/30 font-bold rounded-full">
-                  Hardhat EVM
-                </span>
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Mọi chỉnh sửa đều được băm SHA-256 và neo lên Smart Contract</p>
+      {/* 4. MỤC THU GỌN 1: PHÂN LOẠI CÂY & LỢI ÍCH MÔI TRƯỜNG */}
+      <div className="bento-card dark:bg-[#0c1812] dark:border-emerald-500/20 overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowEcoSection(!showEcoSection)}
+          className="w-full p-4 sm:p-5 flex items-center justify-between gap-4 text-left hover:bg-slate-50/50 dark:hover:bg-emerald-950/20 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <Sprout className="w-4 h-4" />
             </div>
-            <button
-              onClick={() => onNavigate('blockchain')}
-              className="text-xs font-semibold text-emerald-700 hover:underline dark:text-[#00FF9D] flex items-center gap-1 cursor-pointer"
-            >
-              <span>Xem Sổ cái</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Phân Loại Cây & Lợi Ích Môi Trường</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Cây cổ thụ: {ecoAllometricStats.heritageCount} · Hấp thụ {ecoAllometricStats.totalCo2TonYear} tấn CO₂/năm · Tạo {ecoAllometricStats.totalO2TonYear} tấn Oxy/năm
+              </p>
+            </div>
           </div>
+          <ChevronDown
+            className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-300 ${showEcoSection ? 'rotate-180' : ''}`}
+          />
+        </button>
 
-          <div className="space-y-2.5">
-            {anchors.map((anchor) => (
-              <div
-                key={anchor.txHash}
-                className="p-3 rounded-2xl bg-slate-50/70 border border-slate-100 dark:bg-[#08120c]/80 dark:border-slate-800/80 text-xs hover:border-slate-200 dark:hover:border-emerald-500/30 transition-colors"
-              >
-                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
-                  <span className="font-semibold text-emerald-800 dark:text-emerald-400">{anchor.recordType}</span>
-                  <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">Block #{anchor.blockNumber}</span>
-                </div>
-                <div className="font-mono text-[11px] text-slate-600 dark:text-slate-300 truncate mb-1">
-                  Hash: {anchor.payloadHash}
-                </div>
-                <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500 font-mono">
-                  <span className="truncate max-w-[180px]">Tx: {anchor.txHash}</span>
-                  <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 dark:text-[#00FF9D] dark:bg-emerald-950/60 dark:border-emerald-500/40">
-                    CONFIRMED
+        <div className={`grid transition-all duration-300 ease-in-out ${showEcoSection ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+          <div className="overflow-hidden">
+            <div className="p-4 sm:p-5 pt-0 border-t border-slate-100 dark:border-slate-800/80 grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mt-4">
+              {/* Phân loại cây */}
+              <div className="space-y-3 md:pr-6 lg:pr-8 md:border-r md:border-slate-200/90 dark:md:border-slate-800/90">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-3.5 bg-purple-500 rounded-full shrink-0" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    Phân loại theo kích thước
                   </span>
                 </div>
+                <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+                  <div className="h-full min-h-[96px] p-2.5 sm:p-3 rounded-2xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200/70 dark:border-purple-800/50 flex flex-col items-center justify-between text-center transition-all hover:shadow-xs">
+                    <div className="text-lg sm:text-xl font-bold text-purple-700 dark:text-purple-300 leading-tight">
+                      {ecoAllometricStats.heritageCount}
+                    </div>
+                    <div className="text-[11px] sm:text-xs font-semibold text-purple-900 dark:text-purple-200 mt-1 leading-tight">
+                      Cây cổ thụ
+                    </div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
+                      Bảo vệ nghiêm ngặt
+                    </div>
+                  </div>
+                  <div className="h-full min-h-[96px] p-2.5 sm:p-3 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-800/50 flex flex-col items-center justify-between text-center transition-all hover:shadow-xs">
+                    <div className="text-lg sm:text-xl font-bold text-emerald-700 dark:text-emerald-300 leading-tight">
+                      {ecoAllometricStats.type2Count}
+                    </div>
+                    <div className="text-[11px] sm:text-xs font-semibold text-emerald-900 dark:text-emerald-200 mt-1 leading-tight">
+                      Trưởng thành
+                    </div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
+                      Cắt tỉa định kỳ
+                    </div>
+                  </div>
+                  <div className="h-full min-h-[96px] p-2.5 sm:p-3 rounded-2xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/70 dark:border-blue-800/50 flex flex-col items-center justify-between text-center transition-all hover:shadow-xs">
+                    <div className="text-lg sm:text-xl font-bold text-blue-700 dark:text-blue-300 leading-tight">
+                      {ecoAllometricStats.type1Count}
+                    </div>
+                    <div className="text-[11px] sm:text-xs font-semibold text-blue-900 dark:text-blue-200 mt-1 leading-tight">
+                      Mới trồng
+                    </div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
+                      Chống cọc & tưới
+                    </div>
+                  </div>
+                </div>
               </div>
-            ))}
+
+              {/* Lợi ích môi trường */}
+              <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800/80 md:border-t-0 md:pt-0 md:pl-2 lg:pl-4">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-3.5 bg-emerald-500 rounded-full shrink-0" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    Ước tính giá trị sinh thái hàng năm
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+                  <div className="h-full min-h-[96px] p-2.5 sm:p-3 rounded-2xl bg-slate-50/90 dark:bg-slate-900/60 border border-slate-200/90 dark:border-slate-800 flex flex-col items-center justify-between text-center transition-all hover:shadow-xs">
+                    <div className="text-lg sm:text-xl font-bold text-emerald-700 dark:text-emerald-400 leading-tight">
+                      {ecoAllometricStats.totalBiomassTon} <span className="text-xs font-medium">tấn</span>
+                    </div>
+                    <div className="text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-200 mt-1 leading-tight">
+                      Tổng sinh khối
+                    </div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
+                      Khối lượng gỗ ước tính
+                    </div>
+                  </div>
+                  <div className="h-full min-h-[96px] p-2.5 sm:p-3 rounded-2xl bg-slate-50/90 dark:bg-slate-900/60 border border-slate-200/90 dark:border-slate-800 flex flex-col items-center justify-between text-center transition-all hover:shadow-xs">
+                    <div className="text-lg sm:text-xl font-bold text-teal-700 dark:text-teal-400 leading-tight">
+                      {ecoAllometricStats.totalCo2TonYear} <span className="text-xs font-medium">tấn</span>
+                    </div>
+                    <div className="text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-200 mt-1 leading-tight">
+                      CO₂ hấp thụ
+                    </div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
+                      Mỗi năm / cây xanh
+                    </div>
+                  </div>
+                  <div className="h-full min-h-[96px] p-2.5 sm:p-3 rounded-2xl bg-slate-50/90 dark:bg-slate-900/60 border border-slate-200/90 dark:border-slate-800 flex flex-col items-center justify-between text-center transition-all hover:shadow-xs">
+                    <div className="text-lg sm:text-xl font-bold text-cyan-700 dark:text-cyan-400 leading-tight">
+                      {ecoAllometricStats.totalO2TonYear} <span className="text-xs font-medium">tấn</span>
+                    </div>
+                    <div className="text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-200 mt-1 leading-tight">
+                      Oxy tạo ra
+                    </div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
+                      Thanh lọc khí quyển
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 📄 MODAL XUẤT BÁO CÁO ĐỊNH KỲ CHÍNH QUY (UBND & SỞ XÂY DỰNG TP. CẦN THƠ) */}
-      {showOfficialReportModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto no-print"
-          data-lenis-prevent
+      {/* 5. MỤC THU GỌN 2: BIỂU ĐỒ CHĂM SÓC 7 NGÀY */}
+      <div className="bento-card dark:bg-[#0c1812] dark:border-emerald-500/20 overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowChartSection(!showChartSection)}
+          className="w-full p-4 sm:p-5 flex items-center justify-between gap-4 text-left hover:bg-slate-50/50 dark:hover:bg-emerald-950/20 transition-colors cursor-pointer"
         >
-          <div className="bg-white dark:bg-[#0c1812] rounded-2xl max-w-3xl w-full max-h-[92vh] shadow-2xl flex flex-col border border-slate-200 dark:border-emerald-500/30 overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto">
-            {/* Header Toolbar (Sticky Top) */}
-            <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/90 dark:bg-slate-900/80 shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-400 flex items-center justify-center">
-                  <FileText className="w-4 h-4" />
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <BarChart3 className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Biểu Đồ Chăm Sóc 7 Ngày Qua</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Tổng {totalWeeklyCare} lượt chăm sóc · Cao điểm: {peakDay?.label} ({peakDay?.count} lượt)
+              </p>
+            </div>
+          </div>
+          <ChevronDown
+            className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-300 ${showChartSection ? 'rotate-180' : ''}`}
+          />
+        </button>
+
+        <div className={`grid transition-all duration-300 ease-in-out ${showChartSection ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+          <div className="overflow-hidden">
+            <div className="p-4 sm:p-5 pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-4">
+              {/* Thanh chuyển tab & link sổ chăm sóc */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-lg flex items-center gap-1 text-xs">
+                  <button
+                    onClick={() => setActiveChartTab('timeline')}
+                    className={`px-3 py-1 rounded-md font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${activeChartTab === 'timeline'
+                      ? 'bg-white text-emerald-700 dark:bg-emerald-500 dark:text-slate-950'
+                      : 'text-slate-600 dark:text-slate-400'
+                      }`}
+                  >
+                    <Activity className="w-3.5 h-3.5" />
+                    <span>Theo ngày</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveChartTab('category')}
+                    className={`px-3 py-1 rounded-md font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${activeChartTab === 'category'
+                      ? 'bg-white text-emerald-700 dark:bg-emerald-500 dark:text-slate-950'
+                      : 'text-slate-600 dark:text-slate-400'
+                      }`}
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>Theo công việc</span>
+                  </button>
                 </div>
-                <div>
-                  <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-slate-100">
-                    Bản In Báo Cáo Sở Xây Dựng TP. Cần Thơ
-                  </h3>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                    Khổ chuẩn A4 · Nghị định 64/2010/NĐ-CP & Thông tư 20/2020/TT-BXD
-                  </p>
+
+                <button
+                  onClick={() => onNavigate('care')}
+                  className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Xem sổ chăm sóc</span>
+                </button>
+              </div>
+
+              {activeChartTab === 'timeline' ? (
+                <div className="space-y-4">
+                  {/* Bộ lọc đơn giản */}
+                  <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                    {[
+                      { key: null, label: 'Tất cả', dot: '' },
+                      { key: 'watering', label: `Tưới nước (${actionPercentages.watering}%)`, dot: 'bg-cyan-400' },
+                      { key: 'pruning', label: `Cắt tỉa (${actionPercentages.pruning}%)`, dot: 'bg-emerald-500' },
+                      { key: 'fertilizing', label: `Bón phân (${actionPercentages.fertilizing}%)`, dot: 'bg-lime-500' },
+                      { key: 'treatment', label: `Trị sâu bệnh (${actionPercentages.treatment}%)`, dot: 'bg-amber-500' },
+                    ].map((f) => (
+                      <button
+                        key={String(f.key)}
+                        onClick={() => setHighlightedCategory(highlightedCategory === f.key ? null : f.key)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer border flex items-center gap-1.5 ${highlightedCategory === f.key
+                          ? 'bg-emerald-600 text-white border-emerald-600 dark:bg-emerald-500 dark:text-slate-950'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-700'
+                          }`}
+                      >
+                        {f.dot && <span className={`w-2 h-2 rounded-full ${f.dot}`} />}
+                        <span>{f.label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Cột biểu đồ */}
+                  <div className="h-48 flex items-end justify-between gap-2 sm:gap-4 px-2 pt-4">
+                    {weeklyCareData.map((item, index) => {
+                      const totalHeightPercent = Math.min(100, Math.max(12, Math.round((item.count / maxWeeklyCount) * 100)));
+                      const isHovered = hoveredBar === index;
+                      const safeCount = Math.max(1, item.count);
+                      const waterH = (item.watering / safeCount) * 100;
+                      const pruneH = (item.pruning / safeCount) * 100;
+                      const fertH = (item.fertilizing / safeCount) * 100;
+                      const treatH = (item.treatment / safeCount) * 100;
+
+                      return (
+                        <div
+                          key={item.day}
+                          className="flex-1 flex flex-col items-center gap-1.5 cursor-pointer relative"
+                          onMouseEnter={() => setHoveredBar(index)}
+                          onMouseLeave={() => setHoveredBar(null)}
+                        >
+                          {isHovered && (
+                            <div className="absolute -top-24 z-20 w-44 p-2.5 rounded-xl bg-slate-900 text-white text-[11px] shadow-lg pointer-events-none">
+                              <div className="font-bold text-emerald-400 mb-1">
+                                {item.label} ({item.dateStr}): {item.count} lượt
+                              </div>
+                              <div className="space-y-0.5 text-[10px] text-slate-300">
+                                <div>Tưới nước: {item.watering}</div>
+                                <div>Cắt tỉa: {item.pruning}</div>
+                                <div>Bón phân: {item.fertilizing}</div>
+                                <div>Trị sâu bệnh: {item.treatment}</div>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="w-full max-w-[40px] h-36 bg-slate-100 dark:bg-slate-800/60 rounded-lg overflow-hidden flex items-end p-0.5">
+                            <div className="w-full rounded-md overflow-hidden flex flex-col justify-end" style={{ height: `${totalHeightPercent}%` }}>
+                              <div style={{ height: `${treatH}%` }} className={`w-full bg-amber-500 ${highlightedCategory && highlightedCategory !== 'treatment' ? 'opacity-25' : ''}`} />
+                              <div style={{ height: `${fertH}%` }} className={`w-full bg-lime-500 ${highlightedCategory && highlightedCategory !== 'fertilizing' ? 'opacity-25' : ''}`} />
+                              <div style={{ height: `${pruneH}%` }} className={`w-full bg-emerald-500 ${highlightedCategory && highlightedCategory !== 'pruning' ? 'opacity-25' : ''}`} />
+                              <div style={{ height: `${waterH}%` }} className={`w-full bg-cyan-500 ${highlightedCategory && highlightedCategory !== 'watering' ? 'opacity-25' : ''}`} />
+                            </div>
+                          </div>
+
+                          <div className="text-center">
+                            <div className="text-xs font-bold text-slate-700 dark:text-slate-300">{item.day}</div>
+                            <div className="text-[10px] text-slate-400">{item.count} lượt</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {categoryCareData.map((cat) => {
+                    const CatIcon = cat.icon;
+                    return (
+                      <div key={cat.type} className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/70 dark:border-slate-800 flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <CatIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">{cat.name}</span>
+                        </div>
+                        <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{cat.count} lượt</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 6. MỤC THU GỌN 3: CÂY TIÊU BIỂU & LỊCH SỬ XÁC THỰC DỮ LIỆU */}
+      <div className="bento-card dark:bg-[#0c1812] dark:border-emerald-500/20 overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowDetailsSection(!showDetailsSection)}
+          className="w-full p-4 sm:p-5 flex items-center justify-between gap-4 text-left hover:bg-slate-50/50 dark:hover:bg-emerald-950/20 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Cây Xanh Tiêu Biểu & Lịch Sử Xác Thực</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Xem nhanh danh sách cây gần đây và nhật ký lưu trữ chống sửa đổi
+              </p>
+            </div>
+          </div>
+          <ChevronDown
+            className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-300 ${showDetailsSection ? 'rotate-180' : ''}`}
+          />
+        </button>
+
+        <div className={`grid transition-all duration-300 ease-in-out ${showDetailsSection ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+          <div className="overflow-hidden">
+            <div className="p-4 sm:p-5 pt-4 border-t border-slate-100 dark:border-slate-800/80 grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 lg:gap-8">
+              {/* BẢNG 1: CÂY TIÊU BIỂU (BENTO PANEL RIÊNG BIỆT) */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 dark:bg-slate-900/40 border border-slate-200/90 dark:border-slate-800 space-y-3.5 shadow-2xs">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-slate-800">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-100/80 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                      <Trees className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                        Cây xanh tiêu biểu
+                      </h3>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">Hồ sơ cá thể cây gần đây</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onNavigate('trees')}
+                    className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 flex items-center gap-1 hover:underline cursor-pointer"
+                  >
+                    <span>Xem tất cả</span>
+
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {trees.slice(0, 4).map((tree) => (
+                    <div
+                      key={tree.id}
+                      onClick={() => onSelectTree(tree)}
+                      className="p-3 rounded-xl bg-white dark:bg-[#0c1812] border border-slate-200/80 hover:border-emerald-400 dark:border-slate-800/90 dark:hover:border-emerald-500/50 shadow-2xs transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                          <QrCode className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
+                            <span className="font-mono text-emerald-700 dark:text-emerald-400 mr-1.5">{tree.publicCode}</span>
+                            {tree.displayName}
+                          </div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{tree.address}</div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60 shrink-0">
+                        {HEALTH_LABEL[tree.healthStatus] || tree.healthStatus}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
+              {/* BẢNG 2: LỊCH SỬ XÁC THỰC DỮ LIỆU ON-CHAIN (BENTO PANEL RIÊNG BIỆT) */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 dark:bg-slate-900/40 border border-slate-200/90 dark:border-slate-800 space-y-3.5 shadow-2xs">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-slate-800">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-blue-100/80 dark:bg-blue-950/80 text-blue-700 dark:text-blue-400 flex items-center justify-center shrink-0">
+                      <ShieldCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                        Lịch sử xác thực dữ liệu
+                      </h3>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">Nhật ký On-Chain SHA-256</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onNavigate('blockchain')}
+                    className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 flex items-center gap-1 hover:underline cursor-pointer"
+                  >
+                    <span>Xem sổ cái</span>
+
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {anchors.map((anchor) => (
+                    <div
+                      key={anchor.txHash}
+                      className="p-3 rounded-xl bg-white dark:bg-[#0c1812] border border-slate-200/80 dark:border-slate-800/90 shadow-2xs text-xs space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                          <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{anchor.recordType}</span>
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60 flex items-center gap-1 shrink-0">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                          <span>Đã xác thực</span>
+                        </span>
+                      </div>
+                      <div className="font-mono text-[10px] text-slate-500 dark:text-slate-400 truncate bg-slate-50 dark:bg-slate-900/60 px-2 py-1 rounded-md border border-slate-100 dark:border-slate-800/80">
+                        <span className="text-slate-400 select-none mr-1">Mã xác thực:</span>
+                        {anchor.payloadHash}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* MODAL XUẤT BÁO CÁO A4 (GIỮ NGUYÊN CHỨC NĂNG IN) */}
+      {showOfficialReportModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto no-print"
+          data-lenis-prevent
+        >
+          <div className="bg-white dark:bg-[#0c1812] rounded-2xl max-w-3xl w-full max-h-[92vh] shadow-2xl flex flex-col border border-slate-200 dark:border-emerald-500/30 overflow-hidden my-auto">
+            <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/80 shrink-0">
+              <div>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Bản In Báo Cáo Sở Xây Dựng TP. Cần Thơ</h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">Khổ chuẩn A4</p>
+              </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95"
-                  title="In báo cáo hoặc lưu dạng PDF (Ctrl + P)"
+                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>In / Lưu PDF</span>
@@ -1347,190 +952,58 @@ interface WeeklyCareItem {
                 <button
                   type="button"
                   onClick={() => setShowOfficialReportModal(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                  title="Đóng cửa sổ"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            {/* Document Content (A4 Official Printable Format - Compact & Elegant) */}
-            <div
-              className="p-5 sm:p-7 overflow-y-auto space-y-4 text-slate-800 dark:text-slate-200 font-sans leading-normal print-document"
-              data-lenis-prevent
-            >
-              {/* Official Header */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-700 dark:border-slate-300 pb-2.5 gap-2">
-                <div className="text-center sm:text-left">
-                  <div className="font-semibold text-[10px] tracking-wider uppercase text-slate-600 dark:text-slate-400">
-                    ỦY BAN NHÂN DÂN THÀNH PHỐ CẦN THƠ
-                  </div>
-                  <div className="font-extrabold text-xs uppercase text-slate-900 dark:text-white">
-                    SỞ XÂY DỰNG TP. CẦN THƠ
-                  </div>
-                  <div className="font-mono text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Số: 248/BC-SXD-QLĐT
-                  </div>
+            <div className="p-6 overflow-y-auto space-y-4 text-slate-800 dark:text-slate-200 text-xs print-document" data-lenis-prevent>
+              <div className="flex flex-col sm:flex-row justify-between border-b border-slate-300 dark:border-slate-700 pb-3 gap-2">
+                <div>
+                  <div className="text-[10px] uppercase text-slate-500">ỦY BAN NHÂN DÂN TP. CẦN THƠ</div>
+                  <div className="font-bold uppercase">SỞ XÂY DỰNG TP. CẦN THƠ</div>
                 </div>
-
-                <div className="text-center sm:text-right">
-                  <div className="font-extrabold text-[11px] uppercase text-slate-900 dark:text-white">
-                    CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
-                  </div>
-                  <div className="font-bold text-[10px] underline decoration-1 text-slate-800 dark:text-slate-200">
-                    Độc lập - Tự do - Hạnh phúc
-                  </div>
-                  <div className="text-[10px] italic text-slate-500 dark:text-slate-400 mt-0.5">
+                <div className="sm:text-right">
+                  <div className="font-bold uppercase">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                  <div className="underline text-[11px]">Độc lập - Tự do - Hạnh phúc</div>
+                  <div className="text-[10px] italic text-slate-500 mt-0.5">
                     Cần Thơ, ngày {new Date().getDate()} tháng {new Date().getMonth() + 1} năm {new Date().getFullYear()}
                   </div>
                 </div>
               </div>
 
-              {/* Document Title */}
-              <div className="text-center space-y-0.5 pt-1">
-                <h1 className="text-xs sm:text-sm font-black uppercase text-slate-900 dark:text-white tracking-tight">
-                  BÁO CÁO TỔNG HỢP CÔNG TÁC QUẢN TRỊ CÂY XANH ĐÔ THỊ, TIẾP NHẬN SỰ CỐ & CHỈ SỐ CARBON SINH THÁI
-                </h1>
-                <p className="text-[10px] italic text-slate-500 dark:text-slate-400">
-                  (Căn cứ Thông tư 20/2020/TT-BXD, Nghị định 64/2010/NĐ-CP và Đề án Chuyển đổi số GIS 4.0)
-                </p>
-              </div>
+              <h1 className="text-center font-bold text-sm uppercase pt-1">
+                BÁO CÁO TỔNG HỢP QUẢN LÝ CÂY XANH ĐÔ THỊ & SỰ CỐ HIỆN TRƯỜNG
+              </h1>
 
-              {/* Section 1: Phân loại cây Thông tư 20 */}
               <div className="space-y-1.5">
-                <h2 className="font-extrabold text-xs text-slate-900 dark:text-emerald-400 uppercase tracking-wide flex items-center justify-between">
-                  <span>I. Hiện trạng phân cấp cây xanh đô thị (Thông tư 20/2020/TT-BXD)</span>
-                  <span className="text-[10px] font-normal text-slate-400">Tổng: {stats.totalTrees} cây</span>
-                </h2>
-                <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
-                  <table className="w-full text-left text-[11px]">
-                    <thead className="bg-slate-100 dark:bg-slate-800/80 font-bold text-slate-700 dark:text-slate-300">
-                      <tr>
-                        <th className="py-1.5 px-2.5 border-b border-slate-200 dark:border-slate-700">Phân loại cây</th>
-                        <th className="py-1.5 px-2.5 border-b border-slate-200 dark:border-slate-700">Tiêu chuẩn kích thước</th>
-                        <th className="py-1.5 px-2.5 border-b border-slate-200 dark:border-slate-700 text-center">Số lượng</th>
-                        <th className="py-1.5 px-2.5 border-b border-slate-200 dark:border-slate-700">Quy định quản lý</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-[10px]">
-                      <tr>
-                        <td className="py-1.5 px-2.5 font-bold text-blue-700 dark:text-blue-400">Cây Loại 1 (Mới trồng)</td>
-                        <td className="py-1.5 px-2.5">Đường kính D &lt; 20cm, Cao H &lt; 6m</td>
-                        <td className="py-1.5 px-2.5 text-center font-bold font-mono text-blue-700 dark:text-blue-400">{ecoAllometricStats.type1Count} cây</td>
-                        <td className="py-1.5 px-2.5">Duy trì cọc chống, tưới nước ẩm và kiểm tra định kỳ</td>
-                      </tr>
-                      <tr>
-                        <td className="py-1.5 px-2.5 font-bold text-emerald-700 dark:text-emerald-400">Cây Loại 2 (Trưởng thành)</td>
-                        <td className="py-1.5 px-2.5">Đường kính D: 20–50cm, Cao H: 6–12m</td>
-                        <td className="py-1.5 px-2.5 text-center font-bold font-mono text-emerald-700 dark:text-emerald-400">{ecoAllometricStats.type2Count} cây</td>
-                        <td className="py-1.5 px-2.5">Cắt tỉa cành định kỳ trước mùa mưa bão</td>
-                      </tr>
-                      <tr className="bg-purple-50/40 dark:bg-purple-950/20">
-                        <td className="py-1.5 px-2.5 font-bold text-purple-800 dark:text-purple-300">Cây Di Sản Cổ Thụ (Loại 3)</td>
-                        <td className="py-1.5 px-2.5">Đường kính D &ge; 50cm hoặc Cao H &ge; 12m</td>
-                        <td className="py-1.5 px-2.5 text-center font-bold font-mono text-purple-700 dark:text-purple-300">{ecoAllometricStats.heritageCount} cây</td>
-                        <td className="py-1.5 px-2.5 font-semibold text-purple-900 dark:text-purple-300">
-                          Bảo tồn nghiêm ngặt, cấm đốn hạ trái phép
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                <h2 className="font-bold uppercase text-emerald-700 dark:text-emerald-400">I. Phân loại cây xanh (Tổng: {stats.totalTrees} cây)</h2>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="p-2 rounded border border-slate-200 dark:border-slate-700">Mới trồng: <strong>{ecoAllometricStats.type1Count}</strong></div>
+                  <div className="p-2 rounded border border-slate-200 dark:border-slate-700">Trưởng thành: <strong>{ecoAllometricStats.type2Count}</strong></div>
+                  <div className="p-2 rounded border border-slate-200 dark:border-slate-700">Cổ thụ: <strong>{ecoAllometricStats.heritageCount}</strong></div>
                 </div>
               </div>
 
-              {/* Section 2: Sự cố & SLA Cam Kết */}
               <div className="space-y-1.5">
-                <h2 className="font-extrabold text-xs text-slate-900 dark:text-emerald-400 uppercase tracking-wide">
-                  II. Tiếp nhận xử lý sự cố & Cam kết thời gian đáp ứng (SLA)
-                </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800">
-                    <div className="text-[9px] text-slate-500 uppercase font-bold">Tổng số sự cố tiếp nhận</div>
-                    <div className="text-base font-black text-slate-900 dark:text-white font-mono mt-0.5">{incidents.length} vụ</div>
-                  </div>
-                  <div className="p-2 rounded-lg bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-900/50">
-                    <div className="text-[9px] text-rose-700 dark:text-rose-400 uppercase font-bold">Nguy cấp (CRITICAL - SLA 30p)</div>
-                    <div className="text-base font-black text-rose-700 dark:text-rose-400 font-mono mt-0.5">{incidentSlaStats.criticalCount} vụ</div>
-                  </div>
-                  <div className="p-2 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/50">
-                    <div className="text-[9px] text-emerald-700 dark:text-emerald-400 uppercase font-bold">Tuân thủ cam kết SLA</div>
-                    <div className="text-base font-black text-emerald-700 dark:text-emerald-400 font-mono mt-0.5">{incidentSlaStats.complianceRate}%</div>
-                  </div>
-                  <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800">
-                    <div className="text-[9px] text-slate-500 uppercase font-bold">Nghiệm thu On-Chain</div>
-                    <div className="text-base font-black text-slate-900 dark:text-white font-mono mt-0.5">{incidents.filter(i => i.status === 'RESOLVED').length} vụ</div>
-                  </div>
+                <h2 className="font-bold uppercase text-emerald-700 dark:text-emerald-400">II. Xử lý sự cố</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                  <div className="p-2 rounded border border-slate-200 dark:border-slate-700">Tổng sự cố: <strong>{incidents.length}</strong></div>
+                  <div className="p-2 rounded border border-slate-200 dark:border-slate-700">Khẩn cấp: <strong>{incidentSlaStats.criticalCount}</strong></div>
+                  <div className="p-2 rounded border border-slate-200 dark:border-slate-700">Đúng hạn: <strong>{incidentSlaStats.complianceRate}%</strong></div>
+                  <div className="p-2 rounded border border-slate-200 dark:border-slate-700">Đã xong: <strong>{incidents.filter((i) => i.status === 'RESOLVED').length}</strong></div>
                 </div>
               </div>
 
-              {/* Section 3: Sinh khối & Allometric Carbon */}
               <div className="space-y-1.5">
-                <h2 className="font-extrabold text-xs text-slate-900 dark:text-emerald-400 uppercase tracking-wide">
-                  III. Chỉ số sinh khối & Hấp thụ Carbon (Mô hình USDA i-Tree Eco)
-                </h2>
-                <div className="p-2.5 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/50 flex flex-wrap items-center justify-between gap-3 text-xs">
-                  <div>
-                    <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-bold">Tổng sinh khối gỗ (Biomass)</span>
-                    <strong className="text-sm text-emerald-800 dark:text-emerald-300 font-mono">{ecoAllometricStats.totalBiomassTon} tấn</strong>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-bold">CO2 cô lập tích lũy</span>
-                    <strong className="text-sm text-teal-800 dark:text-teal-300 font-mono">{ecoAllometricStats.totalCo2TonYear} tấn CO2/năm</strong>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-bold">Oxy tạo ra cho phố</span>
-                    <strong className="text-sm text-cyan-800 dark:text-cyan-300 font-mono">{ecoAllometricStats.totalO2TonYear} tấn O2/năm</strong>
-                  </div>
+                <h2 className="font-bold uppercase text-emerald-700 dark:text-emerald-400">III. Giá trị môi trường ước tính</h2>
+                <div className="p-3 rounded bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex flex-wrap justify-between gap-2">
+                  <span>Khối lượng gỗ: <strong>{ecoAllometricStats.totalBiomassTon} tấn</strong></span>
+                  <span>CO₂ hấp thụ: <strong>{ecoAllometricStats.totalCo2TonYear} tấn/năm</strong></span>
+                  <span>Oxy tạo ra: <strong>{ecoAllometricStats.totalO2TonYear} tấn/năm</strong></span>
                 </div>
-              </div>
-
-              {/* Signatures */}
-              <div className="pt-4 border-t border-slate-200 dark:border-slate-800 grid grid-cols-3 text-center text-[11px]">
-                <div>
-                  <div className="font-bold uppercase text-slate-800 dark:text-slate-200">NGƯỜI LẬP BIỂU</div>
-                  <div className="text-[9px] text-slate-400 italic">(Ký và ghi rõ họ tên)</div>
-                  <div className="mt-7 font-semibold text-slate-700 dark:text-slate-300">Đặng Thế Thuận</div>
-                </div>
-                <div>
-                  <div className="font-bold uppercase text-slate-800 dark:text-slate-200">TRƯỞNG PHÒNG QLĐT</div>
-                  <div className="text-[9px] text-slate-400 italic">(Ký và ghi rõ họ tên)</div>
-                  <div className="mt-7 font-semibold text-slate-700 dark:text-slate-300">Lê Tuấn Anh</div>
-                </div>
-                <div>
-                  <div className="font-bold uppercase text-slate-800 dark:text-slate-200">GIÁM ĐỐC SỞ XÂY DỰNG</div>
-                  <div className="text-[9px] text-slate-400 italic">(Ký tên và đóng dấu)</div>
-                  <div className="mt-7 font-bold text-emerald-700 dark:text-emerald-400 flex items-center justify-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-[#00FF9D]" />
-                    <span>ĐÃ PHÊ DUYỆT ON-CHAIN</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Sticky Bottom Footer Toolbar (Tiện ích xem & In nhanh không cần cuộn) */}
-            <div className="px-5 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 flex items-center justify-between shrink-0 text-xs">
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-[#00FF9D] animate-pulse" />
-                <span>Trang 1/1 · Khổ A4 chuẩn hóa tự động</span>
-              </span>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowOfficialReportModal(false)}
-                  className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                >
-                  Đóng
-                </button>
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>In Báo Cáo Ngay</span>
-                </button>
               </div>
             </div>
           </div>

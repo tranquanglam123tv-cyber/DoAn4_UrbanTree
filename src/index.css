@@ -268,6 +268,286 @@ html.dark, .dark {
   animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* ✨ Hero Title Light Sweep Shimmer & Ambient Glow */
+@keyframes titleLightSweep {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes titleGlowPulse {
+  0%, 100% {
+    filter: drop-shadow(0 2px 8px rgba(16, 185, 129, 0.12));
+  }
+  50% {
+    filter: drop-shadow(0 4px 18px rgba(16, 185, 129, 0.28));
+  }
+}
+
+.hero-title-glow {
+  animation: titleGlowPulse 4s ease-in-out infinite;
+}
+
+.shimmer-text-slate {
+  background: linear-gradient(
+    115deg,
+    #0f172a 0%,
+    #1e293b 25%,
+    #64748b 50%,
+    #1e293b 75%,
+    #0f172a 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  animation: titleLightSweep 7s ease-in-out infinite;
+  display: inline;
+}
+
+.dark .shimmer-text-slate {
+  background: linear-gradient(
+    115deg,
+    #f8fafc 0%,
+    #cbd5e1 25%,
+    #ffffff 50%,
+    #cbd5e1 75%,
+    #f8fafc 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.shimmer-text-emerald {
+  background: linear-gradient(
+    115deg,
+    #047857 0%,
+    #059669 25%,
+    #34d399 50%,
+    #10b981 75%,
+    #047857 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  animation: titleLightSweep 5s ease-in-out infinite;
+  display: inline;
+}
+
+.dark .shimmer-text-emerald {
+  background: linear-gradient(
+    115deg,
+    #10b981 0%,
+    #34d399 25%,
+    #a7f3d0 50%,
+    #34d399 75%,
+    #059669 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* 🍃 Ambient Leaves & Sunlight Beams Background Animations (LA.png) */
+@keyframes ambientLeafDrift1 {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0) rotate(0deg) scale(1);
+  }
+  25% {
+    transform: translate3d(18px, -14px, 0) rotate(2.5deg) scale(1.02);
+  }
+  50% {
+    transform: translate3d(32px, 12px, 0) rotate(1deg) scale(0.99);
+  }
+  75% {
+    transform: translate3d(12px, 24px, 0) rotate(-2deg) scale(1.01);
+  }
+}
+
+@keyframes ambientLeafDrift2 {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0) rotate(0deg) scale(1);
+  }
+  33% {
+    transform: translate3d(-24px, 18px, 0) rotate(-3.5deg) scale(0.98);
+  }
+  66% {
+    transform: translate3d(16px, -16px, 0) rotate(3deg) scale(1.02);
+  }
+}
+
+@keyframes ambientLeafDrift3 {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(-18px, -22px, 0) rotate(-4deg);
+  }
+}
+
+@keyframes ambientSunbeamShift {
+  0%, 100% {
+    transform: rotate(0deg) scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: rotate(3.5deg) scale(1.06) translateY(-10px);
+    opacity: 1;
+  }
+}
+
+@keyframes ambientSunGlowPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.9;
+  }
+}
+
+.animate-ambient-leaf-1 {
+  animation: ambientLeafDrift1 24s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-ambient-leaf-2 {
+  animation: ambientLeafDrift2 32s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-ambient-leaf-3 {
+  animation: ambientLeafDrift3 20s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-ambient-sunbeam {
+  animation: ambientSunbeamShift 16s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-ambient-sunglow {
+  animation: ambientSunGlowPulse 10s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+/* 🍃 Hero Foliage Framing Keyframes (6s - 10s, ±2deg to ±3deg gentle breeze) */
+@keyframes heroLeafSwayTopLeft {
+  0%, 100% {
+    transform: rotate(20deg) translate3d(0px, 0px, 0);
+  }
+  50% {
+    transform: rotate(22.5deg) translate3d(4px, -4px, 0);
+  }
+}
+
+@keyframes heroLeafSwayBottomLeft {
+  0%, 100% {
+    transform: rotate(-10deg) translate3d(0px, 0px, 0);
+  }
+  50% {
+    transform: rotate(-7.5deg) translate3d(-3px, 4px, 0);
+  }
+}
+
+@keyframes heroLeafSwayTopRight {
+  0%, 100% {
+    transform: rotate(-18deg) translate3d(0px, 0px, 0);
+  }
+  50% {
+    transform: rotate(-15.5deg) translate3d(-4px, -4px, 0);
+  }
+}
+
+@keyframes heroLeafSwayBottomRight {
+  0%, 100% {
+    transform: rotate(14deg) translate3d(0px, 0px, 0);
+  }
+  50% {
+    transform: rotate(16.5deg) translate3d(3px, 4px, 0);
+  }
+}
+
+.animate-hero-leaf-tl {
+  animation: heroLeafSwayTopLeft 8s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-hero-leaf-bl {
+  animation: heroLeafSwayBottomLeft 9.5s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-hero-leaf-tr {
+  animation: heroLeafSwayTopRight 7.5s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-hero-leaf-br {
+  animation: heroLeafSwayBottomRight 9s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes heroLeafBgLeft {
+  0%, 100% {
+    transform: rotate(15deg) translate3d(0px, 0px, 0);
+  }
+  50% {
+    transform: rotate(17deg) translate3d(5px, -6px, 0);
+  }
+}
+
+@keyframes heroLeafBgRight {
+  0%, 100% {
+    transform: rotate(-14deg) translate3d(0px, 0px, 0);
+  }
+  50% {
+    transform: rotate(-12deg) translate3d(-5px, -5px, 0);
+  }
+}
+
+.animate-hero-leaf-bg-l {
+  animation: heroLeafBgLeft 10s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-hero-leaf-bg-r {
+  animation: heroLeafBgRight 11s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ambient-leaf-1,
+  .animate-ambient-leaf-2,
+  .animate-ambient-leaf-3,
+  .animate-ambient-sunbeam,
+  .animate-ambient-sunglow,
+  .animate-hero-leaf-tl,
+  .animate-hero-leaf-bl,
+  .animate-hero-leaf-tr,
+  .animate-hero-leaf-br,
+  .animate-hero-leaf-bg-l,
+  .animate-hero-leaf-bg-r {
+    animation: none !important;
+  }
+}
+
 .animate-pulse-glow {
   animation: pulseGlow 2.5s infinite ease-in-out;
 }

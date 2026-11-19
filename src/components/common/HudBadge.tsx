@@ -1,5 +1,4 @@
 import React from 'react';
-import { Sparkles } from 'lucide-react';
 
 interface HudBadgeProps {
   label: string;
@@ -8,18 +7,10 @@ interface HudBadgeProps {
 
 export const HudBadge: React.FC<HudBadgeProps> = ({ label, className = '' }) => {
   return (
-    <div className={`hero-badge-anim ${className}`}>
-      {/* 4 Chấm Vuông Nở Bung Góc */}
-      <div className="rect-container">
-        <span className="rectangle tl" />
-        <span className="rectangle bl" />
-        <span className="rectangle br" />
-        <span className="rectangle tr" />
-      </div>
-
-      <Sparkles className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-      <span className="badge-content">{label}</span>
-      <Sparkles className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+    <div
+      className={`inline-flex items-center justify-center px-4 sm:px-5 py-1.5 rounded-full bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-[11px] sm:text-xs font-bold tracking-wider uppercase shadow-xs backdrop-blur-md transition-all hover:scale-[1.01] select-none ${className}`}
+    >
+      <span>{label}</span>
     </div>
   );
 };

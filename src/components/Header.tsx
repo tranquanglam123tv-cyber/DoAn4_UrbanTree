@@ -143,25 +143,18 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="relative z-20 max-w-[1440px] mx-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800 rounded-2xl lg:rounded-full shadow-md shadow-emerald-950/4 px-3 sm:px-4 lg:px-5 py-1.5 transition-colors duration-200">
           <div className="flex items-center justify-between h-11 sm:h-12 gap-2 min-w-0">
             
-            {/* LEFT: Logo & Hệ Thống */}
-            <div className="flex items-center gap-2 shrink-0">
+            {/* LEFT: Logo Hệ Thống (Thuần Logo, Phóng To Tinh Tế) */}
+            <div className="flex items-center shrink-0">
               <button
                 onClick={() => setActiveTab('home')}
-                className="flex items-center gap-2.5 text-left group focus:outline-none cursor-pointer"
+                className="flex items-center group focus:outline-none cursor-pointer py-0.5"
                 title="Về Trang Chủ UrbanTree"
               >
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs transition-transform group-hover:scale-105">
-                  <Trees className="w-4 h-4 sm:w-5 sm:h-5" />
-                </div>
-                <div>
-                  <span className="text-sm sm:text-base font-bold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                    UrbanTree
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  </span>
-                  <span className="hidden xl:block text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold leading-none">
-                    Cần Thơ GIS 4.0
-                  </span>
-                </div>
+                <img
+                  src="/LOGO.png"
+                  alt="UrbanTree Logo"
+                  className="h-10 w-10 sm:h-11 sm:w-11 object-contain transition-transform duration-200 group-hover:scale-105 drop-shadow-sm"
+                />
               </button>
             </div>
 
@@ -173,48 +166,46 @@ export const Header: React.FC<HeaderProps> = ({
                   {/* 1. Tổng quan */}
                   <button
                     onClick={() => setActiveTab('dashboard')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center px-3.5 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                       activeTab === 'dashboard'
                         ? 'bg-emerald-700 text-white shadow-xs'
-                        : 'text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700/60'
+                        : 'text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700/60'
                     }`}
                   >
-                    <Sliders className="w-3.5 h-3.5" />
-                    <span>Tổng quan</span>
+                    <span>TỔNG QUAN</span>
                   </button>
 
                   {/* 2. Tài sản cây (Bao gồm Bảng dữ liệu & Bản đồ GIS) */}
                   <div className="flex items-center">
                     <button
                       onClick={() => setActiveTab(activeTab === 'map' ? 'map' : 'trees')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                      className={`flex items-center px-3.5 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                         activeTab === 'trees' || activeTab === 'map'
                           ? 'bg-emerald-700 text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700/60'
+                          : 'text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700/60'
                       }`}
                     >
-                      <Trees className="w-3.5 h-3.5" />
-                      <span>Tài sản cây</span>
+                      <span>TÀI SẢN CÂY</span>
                     </button>
                     {(activeTab === 'trees' || activeTab === 'map') && (
                       <div className="flex items-center ml-1 bg-slate-200/80 dark:bg-slate-700/80 p-0.5 rounded-full text-[10px]">
                         <button
                           type="button"
                           onClick={() => setActiveTab('trees')}
-                          className={`px-2 py-0.5 rounded-full font-bold transition-all ${
+                          className={`px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider transition-all ${
                             activeTab === 'trees' ? 'bg-white dark:bg-slate-900 text-emerald-800 dark:text-emerald-300 shadow-2xs' : 'text-slate-600 dark:text-slate-400'
                           }`}
                         >
-                          Bảng
+                          BẢNG
                         </button>
                         <button
                           type="button"
                           onClick={() => setActiveTab('map')}
-                          className={`px-2 py-0.5 rounded-full font-bold transition-all ${
+                          className={`px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider transition-all ${
                             activeTab === 'map' ? 'bg-white dark:bg-slate-900 text-emerald-800 dark:text-emerald-300 shadow-2xs' : 'text-slate-600 dark:text-slate-400'
                           }`}
                         >
-                          Bản đồ
+                          BẢN ĐỒ
                         </button>
                       </div>
                     )}
@@ -223,40 +214,37 @@ export const Header: React.FC<HeaderProps> = ({
                   {/* 3. Điều hành & Xe */}
                   <button
                     onClick={() => setActiveTab('work_orders')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center px-3.5 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                       activeTab === 'work_orders'
                         ? 'bg-amber-600 text-white shadow-xs'
-                        : 'text-amber-800 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/40 hover:bg-amber-100'
+                        : 'text-amber-900 dark:text-amber-300 bg-amber-50/90 dark:bg-amber-950/40 hover:bg-amber-100'
                     }`}
                   >
-                    <Truck className="w-3.5 h-3.5" />
-                    <span>Điều hành &amp; Xe</span>
+                    <span>ĐIỀU HÀNH &amp; XE</span>
                   </button>
 
                   {/* 4. Sự cố */}
                   <button
                     onClick={() => setActiveTab('incidents')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center px-3.5 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                       activeTab === 'incidents'
                         ? 'bg-rose-600 text-white shadow-xs'
-                        : 'text-slate-600 dark:text-slate-300 hover:text-rose-600 hover:bg-white dark:hover:bg-slate-700/60'
+                        : 'text-slate-700 dark:text-slate-200 hover:text-rose-600 hover:bg-white dark:hover:bg-slate-700/60'
                     }`}
                   >
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    <span>Sự cố</span>
+                    <span>SỰ CỐ</span>
                   </button>
 
                   {/* 5. Kiểm toán (Blockchain On-Chain) */}
                   <button
                     onClick={() => setActiveTab('blockchain')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center px-3.5 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                       activeTab === 'blockchain'
                         ? 'bg-emerald-700 text-white shadow-xs'
-                        : 'text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700/60'
+                        : 'text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700/60'
                     }`}
                   >
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>Kiểm toán</span>
+                    <span>KIỂM TOÁN</span>
                   </button>
                 </>
               )}
@@ -266,50 +254,46 @@ export const Header: React.FC<HeaderProps> = ({
                 <>
                   <button
                     onClick={() => setActiveTab('staff_workstation')}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center px-3.5 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                       activeTab === 'staff_workstation'
                         ? 'bg-emerald-700 text-white shadow-xs'
                         : 'text-emerald-800 dark:text-emerald-300 hover:bg-white dark:hover:bg-slate-700/60'
                     }`}
                   >
-                    <Wrench className="w-3.5 h-3.5" />
-                    <span>Bàn làm việc</span>
+                    <span>BÀN LÀM VIỆC</span>
                   </button>
 
                   <button
                     onClick={() => setActiveTab('work_orders')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center px-3.5 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                       activeTab === 'work_orders'
                         ? 'bg-amber-600 text-white shadow-xs'
-                        : 'text-slate-600 dark:text-slate-300 hover:bg-white'
+                        : 'text-slate-700 dark:text-slate-200 hover:bg-white'
                     }`}
                   >
-                    <Truck className="w-3.5 h-3.5" />
-                    <span>Lệnh công tác</span>
+                    <span>LỆNH CÔNG TÁC</span>
                   </button>
 
                   <button
                     onClick={() => setActiveTab('map')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center px-3.5 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                       activeTab === 'map'
                         ? 'bg-emerald-700 text-white shadow-xs'
-                        : 'text-slate-600 dark:text-slate-300 hover:bg-white'
+                        : 'text-slate-700 dark:text-slate-200 hover:bg-white'
                     }`}
                   >
-                    <MapPin className="w-3.5 h-3.5" />
-                    <span>Bản đồ</span>
+                    <span>BẢN ĐỒ</span>
                   </button>
 
                   <button
                     onClick={() => setActiveTab('incidents')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center px-3.5 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                       activeTab === 'incidents'
                         ? 'bg-rose-600 text-white shadow-xs'
-                        : 'text-slate-600 dark:text-slate-300 hover:bg-white'
+                        : 'text-slate-700 dark:text-slate-200 hover:bg-white'
                     }`}
                   >
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    <span>Sự cố</span>
+                    <span>SỰ CỐ</span>
                   </button>
                 </>
               )}
@@ -319,50 +303,46 @@ export const Header: React.FC<HeaderProps> = ({
                 <>
                   <button
                     onClick={() => setActiveTab('home')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center px-3.5 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                       activeTab === 'home'
                         ? 'bg-emerald-700 text-white shadow-xs'
-                        : 'text-slate-600 dark:text-slate-300 hover:bg-white'
+                        : 'text-slate-700 dark:text-slate-200 hover:bg-white'
                     }`}
                   >
-                    <Home className="w-3.5 h-3.5" />
-                    <span>Trang chủ</span>
+                    <span>TRANG CHỦ</span>
                   </button>
 
                   <button
                     onClick={() => setActiveTab('map')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center px-3.5 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                       activeTab === 'map'
                         ? 'bg-emerald-700 text-white shadow-xs'
-                        : 'text-slate-600 dark:text-slate-300 hover:bg-white'
+                        : 'text-slate-700 dark:text-slate-200 hover:bg-white'
                     }`}
                   >
-                    <MapPin className="w-3.5 h-3.5" />
-                    <span>Bản đồ số</span>
+                    <span>BẢN ĐỒ SỐ</span>
                   </button>
 
                   <button
                     onClick={() => setActiveTab('incidents')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center px-3.5 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                       activeTab === 'incidents'
                         ? 'bg-rose-600 text-white shadow-xs'
-                        : 'text-slate-600 dark:text-slate-300 hover:bg-white'
+                        : 'text-slate-700 dark:text-slate-200 hover:bg-white'
                     }`}
                   >
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    <span>Phản ánh sự cố</span>
+                    <span>PHẢN ÁNH SỰ CỐ</span>
                   </button>
 
                   <button
                     onClick={() => setActiveTab('citizen_portal')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center px-3.5 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                       activeTab === 'citizen_portal'
                         ? 'bg-emerald-700 text-white shadow-xs'
-                        : 'text-slate-600 dark:text-slate-300 hover:bg-white'
+                        : 'text-slate-700 dark:text-slate-200 hover:bg-white'
                     }`}
                   >
-                    <Award className="w-3.5 h-3.5" />
-                    <span>Hồ sơ của tôi</span>
+                    <span>HỒ SƠ CỦA TÔI</span>
                   </button>
                 </>
               )}
