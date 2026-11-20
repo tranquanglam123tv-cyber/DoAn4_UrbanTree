@@ -1481,7 +1481,7 @@ export const MapView: React.FC<MapViewProps> = ({
               <select
                 value={selectedHealth}
                 onChange={(e) => setSelectedHealth(e.target.value)}
-                className="px-2.5 py-1 text-xs border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500"
+                className="h-8 pl-3 pr-7 text-xs border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 custom-select-arrow cursor-pointer"
               >
                 <option value="ALL">Tất cả</option>
                 <option value="GOOD">Tốt</option>

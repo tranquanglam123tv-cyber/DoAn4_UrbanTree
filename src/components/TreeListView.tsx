@@ -603,7 +603,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
               setSelectedArea('ALL');
               setSelectedCorridorFilter('ALL');
             }}
-            className="h-9 px-3 text-xs font-semibold border border-slate-200 dark:border-slate-700/80 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 shadow-2xs cursor-pointer shrink-0 min-w-fit whitespace-nowrap"
+            className="h-9 pl-3 pr-8.5 text-xs font-semibold border border-slate-200 dark:border-slate-700/80 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 shadow-2xs cursor-pointer shrink-0 min-w-fit whitespace-nowrap custom-select-arrow"
           >
             {NATIONAL_PROVINCES.map((prov) => (
               <option key={prov.id} value={prov.id}>
@@ -619,7 +619,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
               setSelectedArea(e.target.value);
               setSelectedCorridorFilter('ALL');
             }}
-            className="h-9 px-3 text-xs font-semibold border border-slate-200 dark:border-slate-700/80 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 shadow-2xs cursor-pointer shrink-0 min-w-fit whitespace-nowrap"
+            className="h-9 pl-3 pr-8.5 text-xs font-semibold border border-slate-200 dark:border-slate-700/80 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 shadow-2xs cursor-pointer shrink-0 min-w-fit whitespace-nowrap custom-select-arrow"
           >
             <option value="ALL">Tất cả địa phương ({availableAreas.length})</option>
             {availableAreas.map(([areaName, count]) => (
@@ -633,7 +633,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
           <select
             value={selectedCorridorFilter}
             onChange={(e) => setSelectedCorridorFilter(e.target.value)}
-            className="h-9 px-3 text-xs font-medium border border-slate-200 dark:border-slate-700/80 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 shadow-2xs cursor-pointer shrink-0 min-w-fit whitespace-nowrap"
+            className="h-9 pl-3 pr-8.5 text-xs font-medium border border-slate-200 dark:border-slate-700/80 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 shadow-2xs cursor-pointer shrink-0 min-w-fit whitespace-nowrap custom-select-arrow"
           >
             <option value="ALL">
               {selectedArea !== 'ALL' ? `Tất cả tuyến (${selectedArea.split('(')[0].trim()})` : 'Tất cả tuyến đường'} ({availableCorridors.length})
@@ -652,7 +652,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
-            className={`h-8 min-w-fit whitespace-nowrap px-3 text-xs rounded-xl border focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all font-medium ${
+            className={`h-8 min-w-fit whitespace-nowrap pl-3 pr-8 text-xs rounded-xl border focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all font-medium custom-select-arrow ${
               selectedType !== 'ALL'
                 ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-[#00FF9D] font-bold shadow-2xs'
                 : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
@@ -671,7 +671,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
           <select
             value={selectedHeight}
             onChange={(e) => setSelectedHeight(e.target.value)}
-            className={`h-8 min-w-fit whitespace-nowrap px-3 text-xs rounded-xl border focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all font-medium ${
+            className={`h-8 min-w-fit whitespace-nowrap pl-3 pr-8 text-xs rounded-xl border focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all font-medium custom-select-arrow ${
               selectedHeight !== 'ALL'
                 ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-[#00FF9D] font-bold shadow-2xs'
                 : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
@@ -689,7 +689,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
           <select
             value={selectedDiameter}
             onChange={(e) => setSelectedDiameter(e.target.value)}
-            className={`h-8 min-w-fit whitespace-nowrap px-3 text-xs rounded-xl border focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all font-medium ${
+            className={`h-8 min-w-fit whitespace-nowrap pl-3 pr-8 text-xs rounded-xl border focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all font-medium custom-select-arrow ${
               selectedDiameter !== 'ALL'
                 ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-[#00FF9D] font-bold shadow-2xs'
                 : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
@@ -707,7 +707,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
           <select
             value={selectedHealth}
             onChange={(e) => setSelectedHealth(e.target.value)}
-            className={`h-8 min-w-fit whitespace-nowrap px-3 text-xs rounded-xl border focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all font-medium ${
+            className={`h-8 min-w-fit whitespace-nowrap pl-3 pr-8 text-xs rounded-xl border focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all font-medium custom-select-arrow ${
               selectedHealth === 'AT_RISK'
                 ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 font-bold shadow-2xs'
                 : selectedHealth === 'HEALTHY'
@@ -731,7 +731,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
           <select
             value={selectedPruning}
             onChange={(e) => setSelectedPruning(e.target.value)}
-            className={`h-8 min-w-fit whitespace-nowrap px-3 text-xs rounded-xl border focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all font-medium ${
+            className={`h-8 min-w-fit whitespace-nowrap pl-3 pr-8 text-xs rounded-xl border focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all font-medium custom-select-arrow ${
               selectedPruning !== 'ALL'
                 ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold shadow-2xs'
                 : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
@@ -751,7 +751,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
           <select
             value={selectedTraq}
             onChange={(e) => setSelectedTraq(e.target.value)}
-            className={`h-8 min-w-fit whitespace-nowrap px-3 text-xs rounded-xl border focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all font-medium ${
+            className={`h-8 min-w-fit whitespace-nowrap pl-3 pr-8 text-xs rounded-xl border focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all font-medium custom-select-arrow ${
               selectedTraq !== 'ALL'
                 ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 font-bold shadow-2xs'
                 : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
@@ -769,7 +769,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
           <select
             value={selectedTilt}
             onChange={(e) => setSelectedTilt(e.target.value)}
-            className={`h-8 min-w-fit whitespace-nowrap px-3 text-xs rounded-xl border focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all font-medium ${
+            className={`h-8 min-w-fit whitespace-nowrap pl-3 pr-8 text-xs rounded-xl border focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all font-medium custom-select-arrow ${
               selectedTilt !== 'ALL'
                 ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold shadow-2xs'
                 : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
@@ -786,7 +786,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
           <select
             value={selectedHollow}
             onChange={(e) => setSelectedHollow(e.target.value)}
-            className={`h-8 min-w-fit whitespace-nowrap px-3 text-xs rounded-xl border focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all font-medium ${
+            className={`h-8 min-w-fit whitespace-nowrap pl-3 pr-8 text-xs rounded-xl border focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all font-medium custom-select-arrow ${
               selectedHollow !== 'ALL'
                 ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 font-bold shadow-2xs'
                 : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
