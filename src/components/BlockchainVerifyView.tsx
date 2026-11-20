@@ -41,7 +41,7 @@ export const BlockchainVerifyView: React.FC = () => {
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
   const [tamperNotice, setTamperNotice] = useState<string | null>(null);
 
-  // ⚡ Batch Anchoring & Live Verification States
+  // Batch Anchoring & Live Verification States
   const [dataVersion, setDataVersion] = useState(0);
   const [isBatchAnchoring, setIsBatchAnchoring] = useState(false);
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; label: string } | null>(null);
@@ -60,7 +60,7 @@ export const BlockchainVerifyView: React.FC = () => {
   const [tablePage, setTablePage] = useState(1);
   const [ledgerRecordFilter, setLedgerRecordFilter] = useState<string>('ALL');
 
-  // ⚡ Phân trang & Tìm kiếm Sổ cái On-Chain A18 (Chống đơ giật khi có 4,800+ bản ghi)
+  // Phân trang & Tìm kiếm Sổ cái On-Chain A18 (Chống đơ giật khi có 4,800+ bản ghi)
   const [anchorSearch, setAnchorSearch] = useState('');
   const [anchorTypeFilter, setAnchorTypeFilter] = useState<string>('ALL');
   const [anchorPage, setAnchorPage] = useState(1);
@@ -89,7 +89,7 @@ export const BlockchainVerifyView: React.FC = () => {
   const anchors = useMemo(() => blockchainService.getAllAnchors(), [dataVersion]);
   const nodeStatus = blockchainService.getNodeStatus();
 
-  // ⚡ Lọc và Phân trang cho Sổ cái On-Chain (Mục A18)
+  // Lọc và Phân trang cho Sổ cái On-Chain (Mục A18)
   const filteredAnchors = useMemo(() => {
     const q = anchorSearch.trim().toLowerCase();
     return anchors.filter((anc) => {
@@ -112,7 +112,7 @@ export const BlockchainVerifyView: React.FC = () => {
     return filteredAnchors.slice(start, start + anchorPageSize);
   }, [filteredAnchors, anchorPage, anchorPageSize]);
 
-  // 📊 THỐNG KÊ BAO PHỦ BLOCKCHAIN (ANCHOR COVERAGE METRICS TỪ SQLITE PERSISTENT SOURCE)
+  // THỐNG KÊ BAO PHỦ BLOCKCHAIN (ANCHOR COVERAGE METRICS TỪ SQLITE PERSISTENT SOURCE)
   const totalTrees = remoteStatus?.trees?.total ?? trees.length;
   const anchoredTreesCount = useMemo(() => {
     if (remoteStatus?.trees) return remoteStatus.trees.anchored;
@@ -254,7 +254,7 @@ export const BlockchainVerifyView: React.FC = () => {
     setVerifyResult(null);
   };
 
-  // ⚡ Neo hàng loạt tất cả cây chưa neo lên Blockchain
+  // Neo hàng loạt tất cả cây chưa neo lên Blockchain
   const handleBatchAnchorUnanchoredTrees = async () => {
     if (!nodeOnline) {
       alert('Node EVM đang ngoại tuyến, vui lòng bật lại kết nối Node trước khi neo!');
@@ -279,7 +279,7 @@ export const BlockchainVerifyView: React.FC = () => {
       for (let i = 0; i < unanchored.length; i += CHUNK_SIZE) {
         const chunk = unanchored.slice(i, i + CHUNK_SIZE);
         setBatchResultNotice(
-          `⚡ Đang xử lý băm & neo khối ${i + 1} - ${Math.min(i + CHUNK_SIZE, unanchored.length)} trên tổng số ${unanchored.length} cây...`
+          `Đang xử lý băm & neo khối ${i + 1} - ${Math.min(i + CHUNK_SIZE, unanchored.length)} trên tổng số ${unanchored.length} cây...`
         );
 
         // Nhường luồng cho UI render không bị freeze
@@ -319,16 +319,16 @@ export const BlockchainVerifyView: React.FC = () => {
 
       setDataVersion((v) => v + 1);
       setBatchResultNotice(
-        `✅ Đã neo thành công ${totalAnchored} cây xanh lên Smart Contract on-chain (từ Block #${startBlock} đến #${endBlock})! Tính toàn vẹn đạt 100%.`
+        `Đã neo thành công ${totalAnchored} cây xanh lên Smart Contract on-chain (từ Block #${startBlock} đến #${endBlock})! Tính toàn vẹn đạt 100%.`
       );
     } catch (err: any) {
-      setBatchResultNotice(`❌ Lỗi khi neo hàng loạt: ${err?.message || err}`);
+      setBatchResultNotice(`Lỗi khi neo hàng loạt: ${err?.message || err}`);
     } finally {
       setIsBatchAnchoring(false);
     }
   };
 
-  // ⚡ Neo hàng loạt nhật ký chăm sóc chưa neo
+  // Neo hàng loạt nhật ký chăm sóc chưa neo
   const handleBatchAnchorCareRecords = async () => {
     if (!nodeOnline) {
       alert('Node EVM đang ngoại tuyến, vui lòng bật lại kết nối Node!');
@@ -365,15 +365,15 @@ export const BlockchainVerifyView: React.FC = () => {
         .catch(() => {});
 
       setDataVersion((v) => v + 1);
-      setBatchResultNotice(`✅ Đã neo thành công ${res.count} nhật ký chăm sóc lên Smart Contract!`);
+      setBatchResultNotice(`Đã neo thành công ${res.count} nhật ký chăm sóc lên Smart Contract!`);
     } catch (err: any) {
-      setBatchResultNotice(`❌ Lỗi: ${err?.message || err}`);
+      setBatchResultNotice(`Lỗi: ${err?.message || err}`);
     } finally {
       setIsBatchAnchoring(false);
     }
   };
 
-  // 🛡️ Kiểm toán đối soát toàn bộ cây on-chain
+  // Kiểm toán đối soát toàn bộ cây on-chain
   const handleBatchAuditAllTrees = async () => {
     setIsBatchVerifying(true);
     setBatchAuditResult(null);
@@ -456,17 +456,17 @@ export const BlockchainVerifyView: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Banner / EVM Node Telemetry */}
-      <div className="rounded-2xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-br from-emerald-50 via-teal-50/40 to-slate-50 border border-emerald-200/80 text-slate-800 dark:bg-gradient-to-r dark:from-[#05130b] dark:via-[#091f13] dark:to-[#06140c] dark:border-emerald-500/30 dark:text-white dark:shadow-[0_0_30px_rgba(0,255,157,0.08)] transition-colors">
+      <div className="rounded-2xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-br from-emerald-50 via-teal-50/40 to-slate-50 border border-emerald-200/80 text-slate-800 dark:bg-gradient-to-r dark:from-[#05130b] dark:via-[#091f13] dark:to-[#06140c] dark:border-emerald-500/30 dark:text-white transition-colors">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 dark:bg-[#00FF9D] animate-pulse dark:shadow-[0_0_10px_#00FF9D]" />
+            <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-[#00FF9D]" />
             <span className="text-xs font-mono font-bold text-emerald-800 dark:text-[#00FF9D] uppercase tracking-wider">
               Smart Contract: UrbanTreeRegistry.sol
             </span>
           </div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">Sổ cái Hoạt động &amp; Xác minh Tính toàn vẹn Blockchain</h1>
+          <h1 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Sổ Cái Hoạt Động &amp; Xác Minh Tính Toàn Vẹn Blockchain</h1>
           <p className="text-xs text-slate-600 dark:text-emerald-100/70 max-w-xl">
-            Màn hình A18/A19: Đối chiếu chuỗi băm Canonical SHA-256 hiện tại với chữ ký điện tử đã neo trên mạng EVM để chứng minh tính bất biến.
+            Đối chiếu chuỗi băm Canonical SHA-256 với chữ ký điện tử trên mạng EVM để xác thực tính bất biến.
           </p>
         </div>
 
@@ -477,7 +477,7 @@ export const BlockchainVerifyView: React.FC = () => {
             <span
               className={`font-mono font-bold px-2 py-0.5 rounded text-[10px] ${
                 nodeOnline
-                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-500/20 dark:text-[#00FF9D] dark:border-emerald-500/40 dark:shadow-[0_0_10px_rgba(0,255,157,0.3)]'
+                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-500/20 dark:text-[#00FF9D] dark:border-emerald-500/40'
                   : 'bg-red-100 text-red-800 border border-red-300 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-500/40'
               }`}
             >
@@ -495,7 +495,7 @@ export const BlockchainVerifyView: React.FC = () => {
             onClick={handleToggleNode}
             className="w-full py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 dark:bg-emerald-950/70 dark:hover:bg-emerald-900/70 dark:border-emerald-500/30 dark:text-[#00FF9D] font-semibold rounded text-[11px] transition-colors cursor-pointer"
           >
-            {nodeOnline ? 'Mô phỏng ngắt kết nối Node' : 'Bật lại kết nối Node'}
+            {nodeOnline ? 'Ngắt kết nối Node' : 'Kết nối lại Node'}
           </button>
         </div>
       </div>
@@ -504,16 +504,20 @@ export const BlockchainVerifyView: React.FC = () => {
       <div className="bg-white dark:bg-[#0c1812] p-5 rounded-2xl border border-[#E0EBDD] dark:border-slate-800 shadow-2xs space-y-4">
         {/* KPI Mini-Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px] mb-1">
-              <span>Bao phủ Cây xanh</span>
-              <Database className="w-3.5 h-3.5 text-emerald-600 dark:text-[#00FF9D]" />
-            </div>
-            <div className="text-xl font-bold font-mono text-[#174B36] dark:text-[#00FF9D]">
-              {treeCoveragePercent}%
-            </div>
-            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-              {anchoredTreesCount}/{trees.length} cây đã neo
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs mb-1">
+                <span>Bao phủ Cây xanh</span>
+                <div className="w-6 h-6 rounded-md bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-[#00FF9D] flex items-center justify-center">
+                  <Database className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <div className="text-xl font-bold font-mono text-[#174B36] dark:text-[#00FF9D]">
+                {treeCoveragePercent}%
+              </div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                {anchoredTreesCount}/{trees.length} cây đã neo
+              </div>
             </div>
             <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
               <div
@@ -523,42 +527,54 @@ export const BlockchainVerifyView: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px] mb-1">
-              <span>Cây chưa neo on-chain</span>
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-            </div>
-            <div className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400">
-              {unanchoredTreesCount}
-            </div>
-            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-              Cần neo để bảo vệ toàn vẹn
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px] mb-1">
-              <span>Nhật ký chăm sóc</span>
-              <FileCheck className="w-3.5 h-3.5 text-blue-500" />
-            </div>
-            <div className="text-xl font-bold font-mono text-blue-700 dark:text-blue-400">
-              {anchoredCareCount}/{careRecords.length}
-            </div>
-            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-              Đã bảo chứng SHA-256
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs mb-1">
+                <span>Cây chưa neo On-chain</span>
+                <div className="w-6 h-6 rounded-md bg-amber-100 dark:bg-amber-950/50 text-amber-600 flex items-center justify-center">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <div className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400">
+                {unanchoredTreesCount}
+              </div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Cần neo để bảo vệ toàn vẹn
+              </div>
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px] mb-1">
-              <span>Sự cố &amp; Nghiệm thu</span>
-              <ShieldCheck className="w-3.5 h-3.5 text-purple-500" />
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs mb-1">
+                <span>Nhật ký chăm sóc</span>
+                <div className="w-6 h-6 rounded-md bg-blue-100 dark:bg-blue-950/50 text-blue-600 flex items-center justify-center">
+                  <FileCheck className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <div className="text-xl font-bold font-mono text-blue-700 dark:text-blue-400">
+                {anchoredCareCount}/{careRecords.length}
+              </div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Đã bảo chứng SHA-256
+              </div>
             </div>
-            <div className="text-xl font-bold font-mono text-purple-700 dark:text-purple-400">
-              {anchoredIncidentsCount}/{incidents.length}
-            </div>
-            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-              Chống gian lận đền bù
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs mb-1">
+                <span>Sự cố &amp; Nghiệm thu</span>
+                <div className="w-6 h-6 rounded-md bg-purple-100 dark:bg-purple-950/50 text-purple-600 flex items-center justify-center">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <div className="text-xl font-bold font-mono text-purple-700 dark:text-purple-400">
+                {anchoredIncidentsCount}/{incidents.length}
+              </div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Chống gian lận đền bù
+              </div>
             </div>
           </div>
         </div>
@@ -566,9 +582,8 @@ export const BlockchainVerifyView: React.FC = () => {
         {/* Action Hub: Batch Anchor & Batch Audit */}
         <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-0.5">
-            <h3 className="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-              <Zap className="w-4 h-4 text-emerald-600 dark:text-[#00FF9D]" />
-              Trung tâm Điều hành Neo Hàng loạt &amp; Kiểm toán On-Chain (Batch Engine)
+            <h3 className="text-xs font-bold text-slate-800 dark:text-slate-100">
+              Trung Tâm Neo Hàng Loạt &amp; Kiểm Toán On-Chain (Batch Engine)
             </h3>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
               Tự động gom nhóm tất cả hồ sơ hợp lệ, tính Canonical SHA-256 song song và neo đồng loạt lên Smart Contract.
@@ -580,7 +595,7 @@ export const BlockchainVerifyView: React.FC = () => {
               type="button"
               onClick={handleBatchAnchorUnanchoredTrees}
               disabled={isBatchAnchoring || unanchoredTreesCount === 0}
-              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-xs ${
+              className={`h-8 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
                 unanchoredTreesCount === 0
                   ? 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600 cursor-not-allowed'
                   : 'bg-[#174B36] hover:bg-[#123829] text-white dark:bg-[#00FF9D] dark:hover:bg-[#00e68d] dark:text-[#022c1b]'
@@ -589,12 +604,12 @@ export const BlockchainVerifyView: React.FC = () => {
               {isBatchAnchoring ? (
                 <>
                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  Đang neo {unanchoredTreesCount} cây...
+                  <span>Đang neo ({unanchoredTreesCount} cây)...</span>
                 </>
               ) : (
                 <>
                   <Link2 className="w-3.5 h-3.5" />
-                  Neo hàng loạt {unanchoredTreesCount} cây chưa neo
+                  <span>Neo hàng loạt ({unanchoredTreesCount} cây)</span>
                 </>
               )}
             </button>
@@ -604,10 +619,10 @@ export const BlockchainVerifyView: React.FC = () => {
                 type="button"
                 onClick={handleBatchAnchorCareRecords}
                 disabled={isBatchAnchoring}
-                className="px-3 py-2 rounded-xl text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800 transition-colors cursor-pointer flex items-center gap-1.5"
+                className="h-8 px-3 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800 transition-colors cursor-pointer flex items-center gap-1.5"
               >
                 <FileCheck className="w-3.5 h-3.5" />
-                Neo {careRecords.length - anchoredCareCount} nhật ký chăm sóc
+                <span>Neo {careRecords.length - anchoredCareCount} nhật ký chăm sóc</span>
               </button>
             )}
 
@@ -615,17 +630,17 @@ export const BlockchainVerifyView: React.FC = () => {
               type="button"
               onClick={handleBatchAuditAllTrees}
               disabled={isBatchVerifying}
-              className="px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 transition-colors cursor-pointer flex items-center gap-1.5"
+              className="h-8 px-3 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
             >
               {isBatchVerifying ? (
                 <>
                   <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-500" />
-                  Đang đối soát toàn bộ...
+                  <span>Đang đối soát...</span>
                 </>
               ) : (
                 <>
                   <CheckSquare className="w-3.5 h-3.5 text-emerald-600 dark:text-[#00FF9D]" />
-                  Kiểm toán toàn bộ {trees.length} cây (Audit All)
+                  <span>Kiểm toán toàn bộ ({trees.length} cây)</span>
                 </>
               )}
             </button>
@@ -726,7 +741,7 @@ export const BlockchainVerifyView: React.FC = () => {
                   A19 — Công cụ Kiểm tra Tính toàn vẹn (Live Verifier)
                 </h2>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Tái tạo Canonical JSON ➔ Tính SHA-256 ➔ Đọc hợp đồng ➔ Đối chiếu kết quả
+                  Tái tạo Canonical JSON → Tính SHA-256 → Đối chiếu chữ ký điện tử On-Chain
                 </p>
               </div>
             </div>
@@ -735,12 +750,11 @@ export const BlockchainVerifyView: React.FC = () => {
         {/* Selector */}
         <div className="space-y-3">
           {selectedRecordType === 'TREE_PROFILE' && (
-            <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/80 dark:border-slate-800">
-              <span className="font-semibold text-slate-700 dark:text-slate-300 text-[11px] flex items-center gap-1.5">
-                <Database className="w-3.5 h-3.5 text-emerald-600 dark:text-[#00FF9D]" />
-                Lọc cây hiển thị theo tình trạng neo:
+            <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/80 dark:border-slate-800">
+              <span className="font-semibold text-slate-700 dark:text-slate-300 text-xs">
+                Tình trạng neo:
               </span>
-              <div className="flex items-center gap-1 bg-white dark:bg-slate-950 p-1 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px]">
+              <div className="flex items-center gap-1 bg-white dark:bg-slate-950 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px]">
                 <button
                   type="button"
                   onClick={() => setTreeAnchorFilter('ALL')}
@@ -755,25 +769,23 @@ export const BlockchainVerifyView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setTreeAnchorFilter('UNANCHORED')}
-                  className={`px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                  className={`px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer ${
                     treeAnchorFilter === 'UNANCHORED'
                       ? 'bg-amber-600 text-white dark:bg-amber-500 dark:text-slate-950 shadow-xs'
                       : 'text-amber-700 dark:text-amber-400 hover:text-amber-800'
                   }`}
                 >
-                  <AlertTriangle className="w-3 h-3" />
                   Chưa neo ({unanchoredTreesCount})
                 </button>
                 <button
                   type="button"
                   onClick={() => setTreeAnchorFilter('ANCHORED')}
-                  className={`px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                  className={`px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer ${
                     treeAnchorFilter === 'ANCHORED'
                       ? 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-slate-950 shadow-xs'
                       : 'text-emerald-700 dark:text-[#00FF9D] hover:text-emerald-800'
                   }`}
                 >
-                  <CheckCircle2 className="w-3 h-3" />
                   Đã neo ({anchoredTreesCount})
                 </button>
               </div>
@@ -936,7 +948,7 @@ export const BlockchainVerifyView: React.FC = () => {
                     className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer shadow-xs transition-all active:scale-95"
                   >
                     <Link className="w-4 h-4" />
-                    <span>🔗 Neo bản ghi này lên Smart Contract ngay (Anchor on Chain)</span>
+                    <span>Neo bản ghi này lên Smart Contract ngay</span>
                   </button>
                 </div>
               )}
@@ -980,7 +992,7 @@ export const BlockchainVerifyView: React.FC = () => {
                   <div className="font-bold text-red-900 dark:text-rose-200">Chi tiết các trường dữ liệu bị sửa đổi trái phép:</div>
                   {verifyResult.diffFields.map((d) => (
                     <div key={d.field} className="font-mono text-red-800 dark:text-rose-300">
-                      • <strong>{d.field}</strong>: Hiện thời = <span className="bg-red-200 dark:bg-rose-900/80 px-1 rounded">"{String(d.currentValue)}"</span> ➔ Gốc trên Chain = <span className="bg-emerald-200 dark:bg-emerald-950 px-1 rounded text-emerald-900 dark:text-[#00FF9D]">"{String(d.anchoredValue)}"</span>
+                      • <strong>{d.field}</strong>: Hiện thời = <span className="bg-red-200 dark:bg-rose-900/80 px-1 rounded">"{String(d.currentValue)}"</span> → Gốc trên Chain = <span className="bg-emerald-200 dark:bg-emerald-950 px-1 rounded text-emerald-900 dark:text-[#00FF9D]">"{String(d.anchoredValue)}"</span>
                     </div>
                   ))}
                 </div>
@@ -999,14 +1011,14 @@ export const BlockchainVerifyView: React.FC = () => {
         {/* Right: Tamper Simulation Lab & Payload Inspector */}
         <div className="lg:col-span-5 space-y-5 text-xs">
           {/* Tamper Demonstration Box (Roadmap item 10 defense scenario) */}
-          <div className="bg-amber-50/70 dark:bg-[#140e04]/80 p-5 rounded-2xl border border-amber-200 dark:border-amber-500/30 shadow-2xs space-y-3">
+          <div className="bg-amber-50/70 dark:bg-[#140e04]/80 p-4 sm:p-5 rounded-2xl border border-amber-200 dark:border-amber-500/30 shadow-2xs space-y-3">
             <div className="flex items-center gap-2 font-bold text-amber-900 dark:text-amber-300 text-sm">
-              <Bug className="w-5 h-5 text-amber-700 dark:text-amber-400" />
-              <span>Phòng Thí nghiệm Giả lập Gian lận (Tamper Lab)</span>
+              <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <span>Phòng Thí Nghiệm Giả Lập Gian Lận (Tamper Lab)</span>
             </div>
 
             <p className="text-amber-800 dark:text-amber-400/90 leading-relaxed text-[11px]">
-              Kịch bản bảo vệ đồ án: Giả lập tình huống người quản trị hoặc kẻ gian thâm nhập cơ sở dữ liệu sửa trộm tình trạng sức khỏe của cây (ví dụ sửa từ Kém/Nguy cấp thành Tốt) nhằm che giấu sai sót.
+              Giả lập tình huống dữ liệu bị can thiệp trái phép trong CSDL để kiểm chứng năng lực phát hiện sai lệch của Blockchain.
             </p>
 
             {tamperNotice && (
@@ -1018,17 +1030,17 @@ export const BlockchainVerifyView: React.FC = () => {
             <div className="flex flex-col gap-2 pt-1">
               <button
                 onClick={handleTamperSelectedTree}
-                className="w-full py-2 bg-amber-600 hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-500 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                className="w-full h-8 px-3 bg-amber-600 hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-500 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer text-xs"
               >
-                <Bug className="w-4 h-4" />
-                <span>1. Sửa trộm dữ liệu cây đang chọn</span>
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Giả lập sửa trộm dữ liệu cây</span>
               </button>
 
               <button
                 onClick={handleRestoreDefaults}
-                className="w-full py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-xl transition-colors cursor-pointer"
+                className="w-full h-8 px-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-lg transition-colors cursor-pointer text-xs"
               >
-                2. Khôi phục dữ liệu mẫu gốc từ Blockchain
+                <span>Khôi phục dữ liệu gốc từ Blockchain</span>
               </button>
             </div>
           </div>
@@ -1173,7 +1185,7 @@ export const BlockchainVerifyView: React.FC = () => {
           </table>
         </div>
 
-        {/* 📑 THANH PHÂN TRANG CHỐNG NGHẼN DOM CHO MỤC A18 */}
+        {/* THANH PHÂN TRANG CHỐNG NGHẼN DOM CHO MỤC A18 */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
           <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
             <span>Hiển thị</span>
@@ -1339,8 +1351,8 @@ export const BlockchainVerifyView: React.FC = () => {
                           {tree.healthStatus} · {tree.classification || 'TYPE_1'}
                         </div>
                       </td>
-                      <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300">
-                        {milestone ? `${milestone}, ` : ''}{tree.address || 'TP. Cần Thơ'}
+                      <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300 max-w-xs truncate" title={tree.address}>
+                        {tree.address || milestone || 'TP. Cần Thơ'}
                       </td>
                       <td className="py-2.5 px-3">
                         {isAnchored ? (
@@ -1370,10 +1382,10 @@ export const BlockchainVerifyView: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleAnchorSpecificTree(tree.id)}
-                              className="px-2.5 py-1 rounded-lg bg-[#174B36] hover:bg-[#123829] text-white dark:bg-[#00FF9D] dark:hover:bg-[#00e68d] dark:text-[#022c1b] font-semibold text-[10px] transition-colors cursor-pointer flex items-center gap-1"
+                              className="h-7 px-3 rounded-lg bg-[#174B36] hover:bg-[#123829] text-white dark:bg-[#00FF9D] dark:hover:bg-[#00e68d] dark:text-[#022c1b] font-semibold text-xs transition-colors cursor-pointer inline-flex items-center justify-center gap-1 whitespace-nowrap min-w-[80px]"
                             >
-                              <Link2 className="w-3 h-3" />
-                              Neo ngay
+                              <Link2 className="w-3.5 h-3.5" />
+                              <span>Neo ngay</span>
                             </button>
                           ) : (
                             <button
@@ -1384,10 +1396,10 @@ export const BlockchainVerifyView: React.FC = () => {
                                 handleVerify();
                                 window.scrollTo({ top: 400, behavior: 'smooth' });
                               }}
-                              className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 text-[10px] transition-colors cursor-pointer flex items-center gap-1"
+                              className="h-7 px-3 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60 font-semibold text-xs transition-colors cursor-pointer inline-flex items-center justify-center gap-1 whitespace-nowrap min-w-[80px]"
                             >
-                              <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-[#00FF9D]" />
-                              Kiểm tra
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-[#00FF9D]" />
+                              <span>Kiểm tra</span>
                             </button>
                           )}
                         </div>

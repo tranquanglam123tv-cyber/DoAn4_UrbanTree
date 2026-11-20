@@ -110,9 +110,6 @@ export const TreeSearchSelect: React.FC<TreeSearchSelectProps> = ({
         }`}
       >
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <div className="w-6 h-6 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200/60 dark:border-emerald-800/40 flex items-center justify-center text-emerald-700 dark:text-emerald-400 shrink-0">
-            <Trees className="w-3.5 h-3.5" />
-          </div>
           {selectedTree ? (
             <div className="min-w-0 flex-1 text-xs">
               <div className="flex items-center gap-1.5 flex-wrap">
@@ -124,9 +121,8 @@ export const TreeSearchSelect: React.FC<TreeSearchSelectProps> = ({
                 </span>
                 {getStatusBadge(selectedTree.healthStatus)}
               </div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-1 mt-0.5">
-                <MapPin className="w-3 h-3 shrink-0 text-slate-400" />
-                <span className="truncate">{selectedTree.address}</span>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                {selectedTree.address}
               </div>
             </div>
           ) : (
@@ -217,9 +213,8 @@ export const TreeSearchSelect: React.FC<TreeSearchSelectProps> = ({
                         </span>
                         {getStatusBadge(tree.healthStatus)}
                       </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3 h-3 shrink-0 text-slate-400" />
-                        <span className="truncate">{tree.address}</span>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                        {tree.address}
                       </div>
                     </div>
                     {isSelected && (
