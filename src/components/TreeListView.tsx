@@ -946,7 +946,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                           {/* Card Top: Sequential Street Tag + Health */}
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5">
-                              <span className="px-2.5 py-1 rounded-xl bg-slate-900 text-amber-300 font-mono text-xs font-black tracking-wider shadow-2xs border border-slate-700">
+                              <span className="min-w-[84px] h-6.5 inline-flex items-center justify-center whitespace-nowrap px-2.5 py-0.5 rounded-xl bg-slate-900 text-amber-300 font-mono text-xs font-black tracking-wider shadow-2xs border border-slate-700">
                                 [{streetCode}]
                               </span>
                               <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 font-bold">
@@ -1134,7 +1134,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
 
                     {/* Dual Code Badge: [HB-01] + TREE-001 */}
                     <div className="absolute top-3 left-3 flex items-center gap-1.5">
-                      <span className="px-2.5 py-1 rounded-xl bg-slate-900/90 backdrop-blur-md text-amber-300 font-mono text-xs font-black shadow-md border border-slate-700">
+                      <span className="min-w-[84px] h-6.5 inline-flex items-center justify-center whitespace-nowrap px-2.5 py-0.5 rounded-xl bg-slate-900/90 backdrop-blur-md text-amber-300 font-mono text-xs font-black shadow-md border border-slate-700">
                         [{streetCode}]
                       </span>
                       <span className="px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-md text-slate-200 font-mono text-[10px]">
@@ -1274,7 +1274,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 dark:bg-[#08120c] border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
                 <tr>
-                  <th className="py-3 px-4">Mã Tuyến &amp; QR</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Mã Tuyến &amp; QR</th>
                   <th className="py-3 px-4">Tên &amp; Loài Cây</th>
                   <th className="py-3 px-4">Cột Mốc Số Nhà (Tuyến Phố)</th>
                   <th className="py-3 px-4">Sức Khỏe</th>
@@ -1302,9 +1302,9 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                           : 'hover:bg-emerald-50/60 dark:hover:bg-emerald-950/20'
                       }`}
                     >
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-1.5">
-                          <span className="px-2 py-0.5 rounded-lg bg-slate-900 text-amber-300 font-mono text-[11px] font-black">
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span className="w-[84px] h-6 inline-flex items-center justify-center whitespace-nowrap px-1.5 py-0.5 rounded-lg bg-slate-900 text-amber-300 font-mono text-[11px] font-black shrink-0 border border-slate-700/60 shadow-2xs">
                             [{streetCode}]
                           </span>
                           <button
@@ -1313,7 +1313,7 @@ export const TreeListView: React.FC<TreeListViewProps> = ({
                               e.stopPropagation();
                               onOpenQrModal(tree);
                             }}
-                            className="font-mono text-slate-500 hover:text-emerald-700 dark:text-slate-400 text-[10px] cursor-pointer"
+                            className="font-mono text-slate-500 hover:text-emerald-700 dark:text-slate-400 text-[10px] cursor-pointer whitespace-nowrap"
                           >
                             {tree.publicCode}
                           </button>
