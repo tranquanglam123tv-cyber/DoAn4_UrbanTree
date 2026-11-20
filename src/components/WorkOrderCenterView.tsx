@@ -215,17 +215,17 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
       const res = await storage.evaluateMaintenanceRulesAndGenerateWorkOrdersAsync();
       setDataVersion((v) => v + 1);
       if (res.createdCount > 0) {
-        showToast(`⚡ Đã tự động lập và điều phối ${res.createdCount} Lệnh công tác theo tuyến! (Lên lịch ${res.totalTreesScheduled} cây)`);
+        showToast(`Đã tự động lập và điều phối ${res.createdCount} Lệnh công tác theo tuyến! (Lên lịch ${res.totalTreesScheduled} cây)`);
       } else {
-        showToast(`ℹ️ Các tuyến trọng điểm hiện đã có Lệnh công tác đang hoạt động (${res.skippedCount} tuyến được bảo vệ). Hệ thống không sinh trùng lặp!`);
+        showToast(`Các tuyến trọng điểm hiện đã có Lệnh công tác đang hoạt động (${res.skippedCount} tuyến được bảo vệ). Hệ thống không sinh trùng lặp!`);
       }
     } catch {
       const res = storage.evaluateMaintenanceRulesAndGenerateWorkOrders();
       setDataVersion((v) => v + 1);
       if (res.createdCount > 0) {
-        showToast(`⚡ Đã tự động lập và điều phối ${res.createdCount} Lệnh công tác theo tuyến!`);
+        showToast(`Đã tự động lập và điều phối ${res.createdCount} Lệnh công tác theo tuyến!`);
       } else {
-        showToast('ℹ️ Các tuyến trọng điểm hiện đã có Lệnh công tác đang hoạt động (Đảm bảo không sinh trùng lặp).');
+        showToast('Các tuyến trọng điểm hiện đã có Lệnh công tác đang hoạt động (Đảm bảo không sinh trùng lặp).');
       }
     }
   };
@@ -236,9 +236,9 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
       const res = await storage.triggerStormEmergencyDispatch();
       setDataVersion((v) => v + 1);
       if (res.createdCount > 0) {
-        showToast(`⛈️ ĐÃ KÍCH HOẠT CHIẾN DỊCH BÃO: Lập ${res.createdCount} Lệnh khẩn cấp & điều xe (${res.totalTreesScheduled} cây)!`);
+        showToast(`ĐÃ KÍCH HOẠT CHIẾN DỊCH BÃO: Lập ${res.createdCount} Lệnh khẩn cấp & điều xe (${res.totalTreesScheduled} cây)!`);
       } else {
-        showToast(`ℹ️ Toàn bộ ${res.skippedCount} tuyến nguy cơ bão hiện đã có Lệnh đang thi công. Hệ thống không sinh trùng lặp!`);
+        showToast(`Toàn bộ ${res.skippedCount} tuyến nguy cơ bão hiện đã có Lệnh đang thi công. Hệ thống không sinh trùng lặp!`);
       }
     } catch (err: any) {
       showToast(`Lỗi kích hoạt bão: ${err.message}`);
@@ -273,7 +273,7 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
         `"${wo?.routeCorridorName || 'Trực tại trạm'}"`,
         `"${wo?.title || 'Không có lệnh mở'}"`,
         wo ? `${wo.completedItems}/${wo.totalItems} (${wo.progressPercent}%)` : '-',
-        wo?.isOverdue ? '⚠️ CẢNH BÁO TRỄ HẠN' : 'ĐÚNG HẠN',
+        wo?.isOverdue ? 'CẢNH BÁO TRỄ HẠN' : 'ĐÚNG HẠN',
       ];
     });
 
@@ -297,7 +297,7 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast('📊 Đã xuất Báo cáo Điều Xe Hiện Trường thành công!');
+    showToast('Đã xuất Báo cáo Điều Xe Hiện Trường thành công!');
   };
 
   // Chuyển trạng thái Lệnh công tác
@@ -345,8 +345,8 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
       setVerifyingModalData(null);
       showToast(
         isApproved
-          ? `🎉 Đã duyệt nghiệm thu ĐẠT CHUẨN lệnh [${order.code}] và neo sổ cái Blockchain!`
-          : `⚠️ Đã gửi yêu cầu làm lại cho tổ phụ trách lệnh [${order.code}]!`
+          ? `Đã duyệt nghiệm thu ĐẠT CHUẨN lệnh [${order.code}] và neo sổ cái Blockchain!`
+          : `Đã gửi yêu cầu làm lại cho tổ phụ trách lệnh [${order.code}]!`
       );
     } catch (err: any) {
       alert(`Lỗi nghiệm thu: ${err.message}`);
@@ -355,7 +355,7 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
     }
   };
 
-  // ⚡ Phê duyệt nhanh toàn tuyến (1-chạm): Dành cho Admin khi muốn duyệt trọn gói cả tuyến
+  // Phê duyệt nhanh toàn tuyến (1-chạm): Dành cho Admin khi muốn duyệt trọn gói cả tuyến
   const handleFastApproveEntireRoute = async (order: WorkOrder) => {
     if (isVerifying) return;
     setIsVerifying(true);
@@ -369,7 +369,7 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
       );
 
       setDataVersion((v) => v + 1);
-      showToast(`⚡ Đã phê duyệt hoàn tất toàn tuyến [${order.code}] (${order.totalItems || 0} cây)!`);
+      showToast(`Đã phê duyệt hoàn tất toàn tuyến [${order.code}] (${order.totalItems || 0} cây)!`);
     } catch (err: any) {
       alert(`Lỗi duyệt nhanh: ${err.message}`);
     } finally {
@@ -377,7 +377,7 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
     }
   };
 
-  // ⚡ Phê duyệt 1-chạm TOÀN BỘ các lệnh đang chờ nghiệm thu (Batch Inspection)
+  // Phê duyệt 1-chạm TOÀN BỘ các lệnh đang chờ nghiệm thu (Batch Inspection)
   const handleBatchApproveAllWaitingOrders = async () => {
     const ordersToApprove = workOrders.filter((w) => w.status === 'SUBMITTED_FOR_REVIEW');
     if (ordersToApprove.length === 0) {
@@ -401,7 +401,7 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
         }
       }
       setDataVersion((v) => v + 1);
-      showToast(`🎉 Đã duyệt nghiệm thu 1-chạm thành công ${successCount}/${ordersToApprove.length} Lệnh công tác!`);
+      showToast(`Đã duyệt nghiệm thu 1-chạm thành công ${successCount}/${ordersToApprove.length} Lệnh công tác!`);
     } catch (err: any) {
       alert(`Lỗi duyệt hàng loạt: ${err.message}`);
     } finally {
@@ -409,7 +409,7 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
     }
   };
 
-  // 📋 Đánh dấu hoàn tất toàn bộ cây còn lại (không đóng lệnh)
+  // Đánh dấu hoàn tất toàn bộ cây còn lại (không đóng lệnh)
   const handleCompleteAllPendingTrees = async (orderId: string) => {
     if (isBatchCompleting) return;
     setIsBatchCompleting(true);
@@ -427,7 +427,7 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
         'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=800&q=80'
       );
       setDataVersion((v) => v + 1);
-      showToast(`✅ Đã hoàn tất ${pendingIds.length} cây trên tuyến!`);
+      showToast(`Đã hoàn tất ${pendingIds.length} cây trên tuyến!`);
     } catch (err: any) {
       alert(`Lỗi hoàn tất cây: ${err.message}`);
     } finally {
@@ -435,7 +435,7 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
     }
   };
 
-  // 🧹 Dọn sạch toàn bộ lệnh công tác cũ và tái lập 3 lệnh chuẩn mẫu trên SQLite
+  // Dọn sạch toàn bộ lệnh công tác cũ và tái lập 3 lệnh chuẩn mẫu trên SQLite
   const [isPurging, setIsPurging] = useState(false);
   const handlePurgeAllOrders = async () => {
     if (!window.confirm('Bạn có chắc muốn dọn sạch các lệnh công tác cũ và tái lập 3 lệnh chuẩn mẫu trên máy chủ SQLite không?')) {
@@ -445,7 +445,7 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
     try {
       const res = await storage.purgeAllWorkOrders();
       setDataVersion((v) => v + 1);
-      showToast(res.message || '🧹 Đã dọn dẹp và làm sạch danh sách lệnh công tác thành công!');
+      showToast(res.message || 'Đã dọn dẹp và làm sạch danh sách lệnh công tác thành công!');
     } catch (err: any) {
       alert(`Lỗi dọn dẹp: ${err.message}`);
     } finally {
@@ -500,77 +500,77 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
-              <Truck className="w-6 h-6" />
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/20 shrink-0">
+              <Truck className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-                  Trung Tâm Điều Hành & Vận Hành Hiện Trường (Work Order Center)
+                <h1 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight uppercase">
+                  Trung Tâm Điều Hành & Vận Hành Hiện Trường
                 </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
                   {metrics.activeDispatchedCount}/{teams.length} TỔ ĐANG TÁC CHIẾN
                 </span>
                 {metrics.delayedCount > 0 && (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-300 dark:border-rose-800 animate-pulse flex items-center gap-1">
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200 dark:border-rose-800 flex items-center gap-1">
                     <AlertOctagon className="w-3.5 h-3.5" />
                     {metrics.delayedCount} LỆNH TRỄ HẠN SLA
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Quy trình vận hành chuẩn: Tuyến Đường → Quy Tắc Vận Hành → Auto-Scheduler → Lệnh Công Tác → Phân Đội Cơ Giới → Nghiệm Thu → Neo Blockchain.
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Điều phối xe cơ giới, theo dõi tiến độ thi công và nghiệm thu bảo dưỡng tuyến đường.
               </p>
             </div>
           </div>
 
           {/* Action buttons */}
-          <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
               onClick={handleTriggerEmergencyStorm}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-600 via-amber-600 to-orange-600 hover:from-rose-700 hover:to-orange-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-transform active:scale-95 cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
               title="Kích hoạt Chiến dịch Cắt tỉa Mùa bão Khẩn cấp (Tạo lệnh & điều động xe thang)"
             >
-              <AlertTriangle className="w-4 h-4 text-amber-200" />
-              <span>⛈️ Kích Hoạt Chiến Dịch Bão</span>
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>Kích Hoạt Chiến Dịch Bão</span>
             </button>
 
             <button
               type="button"
               onClick={handleRunAutoScheduler}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-transform active:scale-95 cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
               title="Quét bộ quy tắc và tự động lập lệnh công tác theo tuyến"
             >
-              <Zap className="w-4 h-4" />
-              <span>Chạy Auto-Scheduler Tuyến</span>
+              <Zap className="w-3.5 h-3.5" />
+              <span>Auto-Scheduler Tuyến</span>
             </button>
 
             <button
               type="button"
               onClick={handleExportDispatchReport}
-              className="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-2xs transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 font-semibold text-xs flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
             >
-              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-              <span>Xuất Báo Cáo Điều Xe</span>
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Xuất Báo Cáo</span>
             </button>
 
-            {/* 🧹 Nút Dọn Dẹp / Reset Lệnh Công Tác Rác */}
+            {/* Nút Dọn Dẹp / Reset Lệnh Công Tác */}
             <button
               type="button"
               disabled={isPurging}
               onClick={handlePurgeAllOrders}
-              className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-700 dark:bg-slate-800 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 hover:text-rose-700 dark:bg-slate-800 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
               title="Xóa sạch các lệnh thử nghiệm/rác và tái lập 3 lệnh chuẩn mẫu trên SQLite"
             >
-              <Trash2 className="w-4 h-4 text-rose-500" />
-              <span>{isPurging ? 'Đang dọn...' : '🧹 Dọn Sạch Lệnh Cũ'}</span>
+              <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+              <span>{isPurging ? 'Đang dọn...' : 'Dọn Sạch Lệnh Cũ'}</span>
             </button>
           </div>
         </div>
 
         {/* 4 Tabs Điều Hướng */}
-        <div className="flex items-center gap-1.5 mt-5 border-t border-slate-100 dark:border-slate-800 pt-3 overflow-x-auto">
+        <div className="flex items-center gap-1.5 mt-4 border-t border-slate-100 dark:border-slate-800 pt-3 overflow-x-auto">
           {[
             { id: 'DASHBOARD', label: 'Báo Cáo Điều Xe Ca Trực', icon: Truck },
             { id: 'WORK_ORDERS', label: `Hàng Đợi Lệnh Công Tác (${workOrders.length})`, icon: Clock },
@@ -584,9 +584,9 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                   isActive
-                    ? 'bg-emerald-600 text-white shadow-xs shadow-emerald-600/30'
+                    ? 'bg-emerald-600 text-white shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
@@ -602,108 +602,113 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
       {/* TAB 1: BÁO CÁO ĐIỀU XE CA TRỰC & DASHBOARD TỔNG HỢP */}
       {/* ===================================================================== */}
       {activeTab === 'DASHBOARD' && (
-        <div className="space-y-5">
+        <div className="space-y-4">
           {/* 4 Thẻ KPI Chỉ Số Vận Hành */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-xs font-semibold text-slate-500 flex items-center justify-between">
-                <span>Tổ Đã Xuất Kích Ngoài Đường</span>
-                <Truck className="w-4 h-4 text-emerald-500" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+              <div className="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                <span>Tổ Đang Tác Chiến</span>
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 flex items-center justify-center">
+                  <Truck className="w-3.5 h-3.5" />
+                </div>
               </div>
-              <div className="text-2xl font-black text-slate-900 dark:text-white mt-1.5">
+              <div className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
                 <span className="text-emerald-600">{metrics.activeDispatchedCount}</span>
-                <span className="text-slate-400 text-base font-normal"> / {teams.length} tổ</span>
+                <span className="text-slate-400 text-sm font-normal"> / {teams.length} tổ</span>
               </div>
               <div className="text-[11px] text-slate-500 font-medium mt-1">
-                {metrics.standbyCount} tổ đang trực bãi sẵn sàng
+                {metrics.standbyCount} tổ trực bãi sẵn sàng
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-xs font-semibold text-slate-500 flex items-center justify-between">
-                <span>Lệnh Đang Thi Công & Chờ Duyệt</span>
-                <Clock className="w-4 h-4 text-blue-500" />
+            <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+              <div className="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                <span>Lệnh Đang Thi Công</span>
+                <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 flex items-center justify-center">
+                  <Clock className="w-3.5 h-3.5" />
+                </div>
               </div>
-              <div className="text-2xl font-black text-slate-900 dark:text-white mt-1.5">
+              <div className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
                 {workOrders.filter((w) => w.status === 'IN_PROGRESS' || w.status === 'SUBMITTED_FOR_REVIEW').length}
                 <span className="text-xs font-normal text-slate-500 ml-1.5">lệnh mở</span>
               </div>
-              <div className="text-[11px] text-amber-600 font-bold mt-1">
-                {metrics.waitingVerificationCount} lệnh đang chờ nghiệm thu
+              <div className="text-[11px] text-amber-600 font-medium mt-1">
+                {metrics.waitingVerificationCount} lệnh chờ nghiệm thu
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-xs font-semibold text-slate-500 flex items-center justify-between">
-                <span>Độ Tuân Thủ Đúng Hạn SLA</span>
-                <Timer className="w-4 h-4 text-indigo-500" />
+            <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+              <div className="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                <span>Độ Tuân Thủ SLA</span>
+                <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 flex items-center justify-center">
+                  <Timer className="w-3.5 h-3.5" />
+                </div>
               </div>
-              <div className="text-2xl font-black text-slate-900 dark:text-white mt-1.5">
+              <div className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
                 <span className={metrics.delayedCount > 0 ? 'text-amber-600' : 'text-emerald-600'}>
                   {metrics.onTimeRate}%
                 </span>
               </div>
               <div className="text-[11px] text-slate-500 font-medium mt-1">
                 {metrics.delayedCount > 0 ? (
-                  <span className="text-rose-600 font-bold">{metrics.delayedCount} lệnh vượt thời gian cam kết</span>
+                  <span className="text-rose-600 font-semibold">{metrics.delayedCount} lệnh trễ hạn</span>
                 ) : (
-                  <span className="text-emerald-600 font-medium">100% trong khung thời gian quy định</span>
+                  <span className="text-emerald-600 font-medium">100% đúng hạn cam kết</span>
                 )}
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-xs font-semibold text-slate-500 flex items-center justify-between">
-                <span>Đã Hoàn Tất & Neo Blockchain</span>
-                <ShieldCheck className="w-4 h-4 text-teal-500" />
+            <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+              <div className="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                <span>Đã Hoàn Tất & Neo Chuỗi</span>
+                <div className="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-teal-600 flex items-center justify-center">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                </div>
               </div>
-              <div className="text-2xl font-black text-slate-900 dark:text-white mt-1.5">
+              <div className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
                 <span className="text-teal-600">{metrics.completedCount}</span>
-                <span className="text-xs font-normal text-slate-500 ml-1.5">lệnh thành công</span>
+                <span className="text-xs font-normal text-slate-500 ml-1.5">lệnh</span>
               </div>
               <div className="text-[11px] text-slate-500 font-medium mt-1">
-                Bảo chứng đối soát bất biến On-chain
+                Bảo chứng đối soát On-chain
               </div>
             </div>
           </div>
 
           {/* BẢNG TỔNG HỢP: XEM TỔ NÀO ĐÃ CHIA XE ĐI RỒI, TỔ NÀO CHƯA ĐI */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs">
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
               <div>
-                <h3 className="font-black text-base text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
-                  <span>Bảng Tổng Hợp Điều Xe & Trực Ban Ca Trực</span>
-                  <span className="text-xs font-normal text-slate-500 lowercase">(theo thời gian thực)</span>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white tracking-tight">
+                  Bảng Tổng Hợp Điều Xe & Trực Ban Ca Trực
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Kiểm soát rõ ràng tổ nào đã điều xe ra hiện trường, tổ nào đang trực bãi, tiến độ xử lý và cảnh báo trễ hạn.
+                  Theo dõi xuất bến, lộ trình công tác và tình trạng sẵn sàng của các tổ đội.
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 text-xs font-bold">
-                <span className="flex items-center gap-1.5 text-emerald-600">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-                  Đang Ở Hiện Trường ({metrics.activeDispatchedCount})
+              <div className="flex items-center gap-2 text-xs font-semibold">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Hiện trường: {metrics.activeDispatchedCount}
                 </span>
-                <span className="text-slate-300">|</span>
-                <span className="flex items-center gap-1.5 text-slate-500">
-                  <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
-                  Trực Bãi ({metrics.standbyCount})
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  Trực bãi: {metrics.standbyCount}
                 </span>
               </div>
             </div>
 
             <div className="overflow-x-auto rounded-xl border border-slate-100 dark:border-slate-800">
               <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
-                <thead className="bg-slate-50 dark:bg-slate-800/80 uppercase font-black text-slate-500 text-[11px] border-b border-slate-200 dark:border-slate-800">
+                <thead className="bg-slate-50 dark:bg-slate-800/80 uppercase font-semibold text-slate-500 text-[11px] border-b border-slate-200 dark:border-slate-800">
                   <tr>
-                    <th className="py-3 px-3.5">Tổ / Đội Hiện Trường</th>
-                    <th className="py-3 px-3.5">Đội Trưởng & SĐT</th>
-                    <th className="py-3 px-3.5">Xe Cơ Giới Biên Chế</th>
-                    <th className="py-3 px-3.5">Tình Trạng Điều Xe</th>
-                    <th className="py-3 px-3.5">Tuyến Đường & Lệnh Công Tác</th>
-                    <th className="py-3 px-3.5 text-center">Tiến Độ Cây</th>
-                    <th className="py-3 px-3.5 text-right">Thao Tác</th>
+                    <th className="py-2.5 px-3.5">Tổ / Đội Hiện Trường</th>
+                    <th className="py-2.5 px-3.5">Đội Trưởng & SĐT</th>
+                    <th className="py-2.5 px-3.5">Xe Cơ Giới Biên Chế</th>
+                    <th className="py-2.5 px-3.5">Tình Trạng Điều Xe</th>
+                    <th className="py-2.5 px-3.5">Tuyến Đường & Lệnh Công Tác</th>
+                    <th className="py-2.5 px-3.5 text-center">Tiến Độ Cây</th>
+                    <th className="py-2.5 px-3.5 text-right">Thao Tác</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -712,26 +717,22 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
                     const isDispatched = td.isDispatched;
                     return (
                       <tr key={td.team.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
-                        <td className="py-3.5 px-3.5 font-bold text-slate-900 dark:text-white">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                            <span>{td.team.name}</span>
-                          </div>
+                        <td className="py-3 px-3.5">
+                          <div className="font-semibold text-slate-900 dark:text-white">{td.team.name}</div>
                           <div className="text-[10px] text-slate-400 font-mono mt-0.5">{td.team.code}</div>
                         </td>
 
-                        <td className="py-3.5 px-3.5">
-                          <div className="font-semibold text-slate-800 dark:text-slate-200">{td.team.leaderName || 'N/A'}</div>
+                        <td className="py-3 px-3.5">
+                          <div className="font-medium text-slate-800 dark:text-slate-200">{td.team.leaderName || 'N/A'}</div>
                           <div className="text-[11px] text-slate-500 font-mono">{td.team.leaderPhone || 'N/A'}</div>
                         </td>
 
-                        <td className="py-3.5 px-3.5">
+                        <td className="py-3 px-3.5">
                           {td.equipmentList.length > 0 ? (
                             <div className="space-y-1">
                               {td.equipmentList.map((eq) => (
-                                <div key={eq.id} className="flex items-center gap-1.5 font-mono text-[11px]">
-                                  <Truck className="w-3 h-3 text-amber-500 shrink-0" />
-                                  <span className="font-semibold text-slate-700 dark:text-slate-200">{eq.name}</span>
+                                <div key={eq.id} className="font-mono text-[11px] text-slate-700 dark:text-slate-300">
+                                  {eq.name}
                                 </div>
                               ))}
                             </div>
@@ -740,44 +741,43 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
                           )}
                         </td>
 
-                        <td className="py-3.5 px-3.5">
+                        <td className="py-3 px-3.5">
                           {isDispatched ? (
                             <div className="space-y-1">
-                              <span className="px-2.5 py-1 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 flex items-center gap-1.5 w-fit">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                                ĐÃ ĐI XE RA ĐƯỜNG
+                              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 inline-flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                Xuất bến
                               </span>
                               {wo?.isOverdue && (
-                                <span className="px-2 py-0.5 rounded text-[10px] font-black bg-rose-500 text-white flex items-center gap-1 w-fit animate-pulse">
-                                  <AlertOctagon className="w-3 h-3" /> TRỄ HẠN SLA
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800 flex items-center gap-1 w-fit">
+                                  <AlertOctagon className="w-3 h-3" /> Trễ hạn SLA
                                 </span>
                               )}
                             </div>
                           ) : (
-                            <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 w-fit">
-                              TRỰC BÃI (SẴN SÀNG)
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 inline-flex items-center">
+                              Trực bãi
                             </span>
                           )}
                         </td>
 
-                        <td className="py-3.5 px-3.5 max-w-xs">
+                        <td className="py-3 px-3.5 max-w-xs">
                           {wo ? (
                             <div>
-                              <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1">
-                                <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                                <span>{wo.routeCorridorName || 'Tuyến đô thị'}</span>
+                              <div className="font-semibold text-slate-900 dark:text-white">
+                                {wo.routeCorridorName || 'Tuyến đô thị'}
                               </div>
-                              <div className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">{wo.title}</div>
+                              <div className="text-[11px] text-slate-500 truncate max-w-[260px] mt-0.5">{wo.title}</div>
                             </div>
                           ) : (
                             <span className="text-slate-400 italic">Chưa giao nhiệm vụ ca này</span>
                           )}
                         </td>
 
-                        <td className="py-3.5 px-3.5 text-center">
+                        <td className="py-3 px-3.5 text-center">
                           {wo ? (
                             <div>
-                              <div className="font-black text-sm text-slate-900 dark:text-white">
+                              <div className="font-bold text-sm text-slate-900 dark:text-white">
                                 {wo.progressPercent}%
                               </div>
                               <div className="text-[10px] text-slate-500">
@@ -789,24 +789,24 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
                           )}
                         </td>
 
-                        <td className="py-3.5 px-3.5 text-right">
+                        <td className="py-3 px-3.5 text-right">
                           {wo ? (
                             <button
                               type="button"
                               onClick={() => setSelectedOrderId(wo.id)}
-                              className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors cursor-pointer text-xs flex items-center gap-1 ml-auto"
+                              className="h-7 px-3 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors cursor-pointer text-xs inline-flex items-center justify-center gap-1.5 ml-auto whitespace-nowrap"
                             >
                               <Eye className="w-3.5 h-3.5" />
-                              <span>Mở Chi Tiết</span>
+                              <span>Chi tiết</span>
                             </button>
                           ) : (
                             <button
                               type="button"
                               onClick={() => setActiveTab('WORK_ORDERS')}
-                              className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 font-semibold hover:bg-slate-200 transition-colors cursor-pointer text-xs flex items-center gap-1 ml-auto"
+                              className="h-7 px-3 rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 font-medium hover:bg-slate-200 transition-colors cursor-pointer text-xs inline-flex items-center justify-center gap-1.5 ml-auto whitespace-nowrap"
                             >
                               <Plus className="w-3.5 h-3.5" />
-                              <span>Giao Lệnh Mới</span>
+                              <span>Giao lệnh</span>
                             </button>
                           )}
                         </td>
@@ -819,7 +819,6 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
           </div>
         </div>
       )}
-
       {/* ===================================================================== */}
       {/* TAB 2: HÀNG ĐỢI LỆNH CÔNG TÁC (WORK ORDERS QUEUE) */}
       {/* ===================================================================== */}
@@ -869,7 +868,7 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
             </div>
           </div>
 
-          {/* 🧭 HÀNG ĐỢI NHANH CHO GIÁM SÁT VIÊN & ĐIỀU PHỐI (QUICK QUEUE PILLS) */}
+          {/* HÀNG ĐỢI NHANH CHO GIÁM SÁT VIÊN & ĐIỀU PHỐI (QUICK QUEUE PILLS) */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
             <button
               type="button"
@@ -938,7 +937,7 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
               <span>Đã Nghiệm Thu ({completedOrdersCount})</span>
             </button>
 
-            {/* ⚡ NÚT DUYỆT 1-CHẠM TOÀN BỘ CÁC LỆNH ĐANG CHỜ NGHIỆM THU */}
+            {/* NÚT DUYỆT 1-CHẠM TOÀN BỘ CÁC LỆNH ĐANG CHỜ NGHIỆM THU */}
             {waitingVerificationCount > 0 && (
               <button
                 type="button"
@@ -948,7 +947,7 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
                 title="Duyệt nghiệm thu toàn bộ tất cả các lệnh đang chờ nghiệm thu chỉ với 1 cú click"
               >
                 <Zap className="w-4 h-4 text-amber-300" />
-                <span>{isVerifying ? 'Đang duyệt hàng loạt...' : `⚡ Duyệt 1-Chạm Toàn Bộ (${waitingVerificationCount} Lệnh Chờ)`}</span>
+                <span>{isVerifying ? 'Đang duyệt hàng loạt...' : `Duyệt 1-Chạm Toàn Bộ (${waitingVerificationCount} Lệnh Chờ)`}</span>
               </button>
             )}
           </div>
@@ -969,7 +968,7 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
                         </span>
                         {wo.incidentId && (
                           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
-                            🚨 Sự cố #{wo.incidentId}
+                            Sự cố #{wo.incidentId}
                           </span>
                         )}
                       </div>
@@ -1362,7 +1361,7 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
               )}
             </div>
 
-            {/* 🌟 BẢNG ĐIỀU HÀNH NGHIỆM THU DÀNH CHO ADMIN / GIÁM SÁT VIÊN */}
+            {/* BẢNG ĐIỀU HÀNH NGHIỆM THU DÀNH CHO ADMIN / GIÁM SÁT VIÊN */}
             <div className="mx-4 sm:mx-5 p-4 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-900/60 to-slate-900 border border-emerald-500/40 shadow-lg space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="space-y-1">
@@ -1378,10 +1377,10 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
                   </div>
                   <div className="text-[11px] text-slate-400">
                     {selectedOrderDetails.workOrder.status === 'SUBMITTED_FOR_REVIEW'
-                      ? '👉 Lệnh đã được tổ hiện trường nộp báo cáo. Giám sát viên kiểm tra và chốt nghiệm thu.'
+                      ? 'Lệnh đã được tổ hiện trường nộp báo cáo. Giám sát viên kiểm tra và chốt nghiệm thu.'
                       : selectedOrderDetails.workOrder.status === 'COMPLETED'
-                      ? '✅ Lệnh đã được nghiệm thu ĐẠT CHUẨN và bảo chứng On-Chain.'
-                      : '⚡ Lệnh đang tác chiến. Giám sát viên có thể duyệt nhanh toàn tuyến hoặc hoàn tất danh sách cây 1-chạm.'}
+                      ? 'Lệnh đã được nghiệm thu đạt chuẩn và bảo chứng On-chain.'
+                      : 'Lệnh đang tác chiến. Giám sát viên có thể duyệt nhanh toàn tuyến hoặc hoàn tất danh sách cây 1-chạm.'}
                   </div>
                 </div>
 
@@ -1398,7 +1397,7 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
                         title="Duyệt hoàn tất nghiệm thu toàn tuyến 1-chạm không cần qua form trung gian"
                       >
                         <Zap className="w-4 h-4 text-amber-300" />
-                        <span>{isVerifying ? 'Đang duyệt...' : '⚡ Duyệt Nhanh Toàn Tuyến (1-Chạm)'}</span>
+                        <span>{isVerifying ? 'Đang duyệt...' : 'Duyệt Nhanh Toàn Tuyến (1-Chạm)'}</span>
                       </button>
 
                       <button
@@ -1435,7 +1434,7 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
                         title="Tự động hoàn tất tất cả cây trên tuyến và phê duyệt nghiệm thu chốt sổ cái ngay tức khắc"
                       >
                         <Zap className="w-4 h-4 text-amber-300" />
-                        <span>{isVerifying ? 'Đang duyệt...' : '⚡ Phê Duyệt Nhanh Toàn Tuyến (1-Chạm)'}</span>
+                        <span>{isVerifying ? 'Đang duyệt...' : 'Phê Duyệt Nhanh Toàn Tuyến (1-Chạm)'}</span>
                       </button>
 
                       <button
@@ -1601,7 +1600,7 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
                           <div className="text-[11px] text-slate-500 mt-0.5">{item.notes}</div>
                           {item.skipOrFailureReason && (
                             <div className="text-[11px] text-amber-600 font-bold mt-0.5">
-                              ⚠️ Lý do bỏ qua: {item.skipOrFailureReason}
+                              Lý do bỏ qua: {item.skipOrFailureReason}
                             </div>
                           )}
                         </div>
@@ -1785,7 +1784,7 @@ export const WorkOrderCenterView: React.FC<WorkOrderCenterViewProps> = ({
         </div>
       )}
 
-      {/* 🏛️ IN-APP VERIFICATION MODAL (Không dùng window.prompt / confirm) */}
+      {/* IN-APP VERIFICATION MODAL (Không dùng window.prompt / confirm) */}
       {verifyingModalData && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white dark:bg-[#0c1812] border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
