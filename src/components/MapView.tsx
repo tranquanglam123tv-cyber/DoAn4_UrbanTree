@@ -15,14 +15,12 @@ import {
   Trash2,
   Navigation,
   Crosshair,
-  Building2,
   CheckCircle,
   X,
   Compass,
   Save,
   RotateCcw,
   Search,
-  Globe2,
   HelpCircle,
   Zap,
   Truck,
@@ -1297,7 +1295,7 @@ export const MapView: React.FC<MapViewProps> = ({
                 }`}
               >
                 <Crosshair className="w-3.5 h-3.5" />
-                <span>{isPinAddMode ? 'Hủy ghim' : '➕ Ghim thêm cây'}</span>
+                <span>{isPinAddMode ? 'Hủy ghim' : 'Ghim thêm cây'}</span>
               </button>
             )}
           </div>
@@ -1306,50 +1304,45 @@ export const MapView: React.FC<MapViewProps> = ({
         {/* Row 2: Bộ chọn Tỉnh/Thành & Quận/Huyện tích hợp gọn gàng + Tìm kiếm & Tuyến đường */}
         <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center gap-2 text-xs">
           {/* Tỉnh / Thành phố */}
-          <div className="flex items-center gap-1.5 bg-blue-50/70 dark:bg-blue-950/40 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-900/60">
-            <Globe2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-            <select
-              value={selectedProvinceId}
-              onChange={(e) => handleSelectProvince(e.target.value)}
-              className="bg-transparent text-xs font-bold text-blue-900 dark:text-blue-200 border-none outline-hidden cursor-pointer"
-            >
-              {NATIONAL_PROVINCES.map((prov) => (
-                <option key={prov.id} value={prov.id} className="text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900">
-                  {prov.name} ({prov.id === 'all' ? trees.length : (treesByProvince[prov.id] || 0)})
-                </option>
-              ))}
-            </select>
-          </div>
+          <select
+            value={selectedProvinceId}
+            onChange={(e) => handleSelectProvince(e.target.value)}
+            className="h-8 pl-3.5 pr-8.5 text-xs font-bold border border-blue-300 dark:border-blue-800 rounded-full bg-blue-50/80 dark:bg-blue-950/60 text-blue-900 dark:text-blue-200 focus:border-blue-500 shadow-2xs cursor-pointer max-w-[240px] truncate custom-select-arrow"
+          >
+            {NATIONAL_PROVINCES.map((prov) => (
+              <option key={prov.id} value={prov.id} className="text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900">
+                {prov.name.replace(/^[^\p{L}\p{N}]+/u, '').trim() || prov.name} ({prov.id === 'all' ? trees.length : (treesByProvince[prov.id] || 0)})
+              </option>
+            ))}
+          </select>
 
           {/* Quận / Khu vực */}
-          <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-800">
-            <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <select
-              value={selectedZoneId}
-              onChange={(e) => handleSelectZone(e.target.value)}
-              className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 border-none outline-hidden cursor-pointer max-w-[150px] truncate"
-            >
-              {availableZones.map((zone) => {
-                const countInZone =
-                  zone.id === 'all'
-                    ? currentProvinceTrees.length
-                    : currentProvinceTrees.filter((t) => getTreeZoneId(t) === zone.id).length;
-                return (
-                  <option key={zone.id} value={zone.id} className="text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900">
-                    {zone.shortName} ({countInZone})
-                  </option>
-                );
-              })}
-            </select>
-          </div>
+          <select
+            value={selectedZoneId}
+            onChange={(e) => handleSelectZone(e.target.value)}
+            className="h-8 pl-3.5 pr-8.5 text-xs font-bold border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:border-emerald-500 shadow-2xs cursor-pointer max-w-[180px] truncate custom-select-arrow"
+          >
+            {availableZones.map((zone) => {
+              const countInZone =
+                zone.id === 'all'
+                  ? currentProvinceTrees.length
+                  : currentProvinceTrees.filter((t) => getTreeZoneId(t) === zone.id).length;
+              const cleanZoneName = zone.shortName.replace(/^[^\p{L}\p{N}]+/u, '').trim() || zone.shortName;
+              return (
+                <option key={zone.id} value={zone.id} className="text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900">
+                  {cleanZoneName} ({countInZone})
+                </option>
+              );
+            })}
+          </select>
 
           {/* Tuyến đường */}
           <select
             value={selectedCorridorFilter}
             onChange={(e) => setSelectedCorridorFilter(e.target.value)}
-            className="px-2.5 py-1 text-xs font-semibold border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 cursor-pointer max-w-[170px] truncate"
+            className="h-8 pl-3.5 pr-8.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 shadow-2xs cursor-pointer max-w-[180px] truncate custom-select-arrow"
           >
-            <option value="ALL">🛣️ Tất cả tuyến</option>
+            <option value="ALL">Tất cả tuyến</option>
             {availableCorridors.map((c) => (
               <option key={c.name} value={c.name}>
                 {c.name} ({c.prefix})
@@ -1361,32 +1354,32 @@ export const MapView: React.FC<MapViewProps> = ({
           <select
             value={selectedLocation}
             onChange={(e) => handleSelectLocation(e.target.value)}
-            className="px-2.5 py-1 text-xs font-bold border border-emerald-300 dark:border-emerald-600/70 rounded-full bg-emerald-50/80 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 focus:ring-1 focus:ring-emerald-500 cursor-pointer max-w-[170px] truncate"
+            className="h-8 pl-3.5 pr-8.5 text-xs font-bold border border-emerald-300 dark:border-emerald-600/70 rounded-full bg-emerald-50/80 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 focus:ring-1 focus:ring-emerald-500 shadow-2xs cursor-pointer max-w-[180px] truncate custom-select-arrow"
             title="Chọn địa điểm để bản đồ tự động bay tới"
           >
-            <option value="ALL">📍 Địa điểm nổi tiếng</option>
+            <option value="ALL">Địa điểm nổi tiếng</option>
             {availableLandmarks.map((loc) => (
               <option key={loc.id} value={loc.id}>
-                {loc.name}
+                {loc.name.replace(/^[^\p{L}\p{N}]+/u, '').trim() || loc.name}
               </option>
             ))}
           </select>
 
           {/* Ô tìm kiếm nhanh */}
           <div className="relative flex items-center ml-auto">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 text-slate-400 pointer-events-none" />
+            <Search className="w-3.5 h-3.5 absolute left-3 text-slate-400 pointer-events-none" />
             <input
               type="text"
               placeholder="Tìm số nhà, vị trí..."
               value={searchLocationInput}
               onChange={(e) => setSearchLocationInput(e.target.value)}
-              className="pl-7 pr-6 py-1 text-xs border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 w-36 sm:w-44 focus:ring-1 focus:ring-emerald-500 transition-all"
+              className="h-8 pl-8 pr-7 text-xs border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:border-emerald-500 w-36 sm:w-44 focus:ring-1 focus:ring-emerald-500 transition-all shadow-2xs"
             />
             {searchLocationInput && (
               <button
                 type="button"
                 onClick={() => setSearchLocationInput('')}
-                className="absolute right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs cursor-pointer"
+                className="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs cursor-pointer"
                 title="Xóa tìm kiếm"
               >
                 ✕
